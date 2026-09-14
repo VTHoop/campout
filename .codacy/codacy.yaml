@@ -1,0 +1,11 @@
+# Codacy CLI v2 configuration (AGENTS.md §1).
+#
+# ESLint is deliberately absent. The CLI's ESLint install ships no TypeScript
+# parser, so every .ts file fails with "Parsing error: Unexpected token", and the
+# CLI cannot load plugin rules at all. The server-side codacy-eslint the PR bot
+# runs does both. Net: a clean local run does not imply a clean Codacy check.
+runtimes:
+  - node@24.16.0
+tools:
+  - trivy@0.59.1
+  - opengrep@1.0.0

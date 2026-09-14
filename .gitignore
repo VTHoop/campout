@@ -1,0 +1,39 @@
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Test + coverage output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Environment — ⛔ never commit a real value (ADR-0010)
+.env
+.env.local
+.env*.local
+
+# Supabase local stack
+supabase/.temp/
+supabase/.branches/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Agent-local settings (machine-specific permission grants)
+.claude/settings.local.json
+
+# Scratch: verification working files, source PDFs pulled down while checking a
+# camp record. Facts go in the database; the source artifacts do not go in git.
+scratch/
+*.local.json
+
+dist/

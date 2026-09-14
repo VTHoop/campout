@@ -1,0 +1,11 @@
+packages:
+  - "."
+  - "packages/*"
+
+# pnpm 11 requires explicit approval before a dependency may run install scripts.
+# Keep this list minimal and deliberate — an unreviewed build script is arbitrary
+# code executing at install time.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  "@tailwindcss/oxide": true

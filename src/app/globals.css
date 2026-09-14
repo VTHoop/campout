@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Design tokens land with the directory UI (ADR-0012 phase 1). Kept minimal on
+   purpose — the visual language is a decision to make deliberately, not to
+   accumulate by default. */
+:root {
+  color-scheme: light dark;
+}

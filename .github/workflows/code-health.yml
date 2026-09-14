@@ -1,0 +1,27 @@
+name: Code Health
+
+# The absolute ratchet (AGENTS.md §1). The CodeScene PR bot answers "is this
+# change healthy?"; it stays green while the repo slides downward one acceptable
+# PR at a time. Only the aggregate catches that, and only after the merge — so
+# this is an alarm, not a blocker.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+
+jobs:
+  ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm codescene:check
+        env:
+          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
