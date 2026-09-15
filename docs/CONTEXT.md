@@ -50,6 +50,7 @@ If one fires, **fix the code — do not work around the hook.** Both were tested
 | Area | State |
 |---|---|
 | Engineering contract, ADRs, orientation docs | in place |
+| `main` branch protection | on — PR required, 4 checks must pass, admins included |
 | Toolchain — Biome · tsc · Vitest · Playwright · Lefthook · CI | wired and passing |
 | Agent guards — TDD guard, privacy guard | installed, and tested against their own failure cases |
 | Schema — catalog and household migrations, RLS on every table | written, **not yet applied to a Supabase project** |
