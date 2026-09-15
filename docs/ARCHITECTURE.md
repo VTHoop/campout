@@ -74,12 +74,13 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/adr/` | Decisions and rationale; immutable once accepted. |
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, PostGIS, catalog RLS |
-| `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, the creator-claims-household trigger |
+| `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Placeholder landing page; proves the planner-in-a-Server-Component seam. |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
 | `.claude/agents/challenger.md` | Adversarial reviewer for the Automatic Code Review Protocol |
+| `supabase/tests/` | The RLS policy suite — two households, two JWTs, real Postgres (ADR-0004) |
 | `vitest.config.ts` | Two projects (`unit`, `rls`) and the two ratcheted coverage floors |
 | `scripts/check-code-health.ts` | The absolute CodeScene ratchet. **Needs a project id before it does anything** — it exits 2 until then, rather than passing silently. |
 | `.env.example` | Required env var names, no values |

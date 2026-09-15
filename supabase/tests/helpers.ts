@@ -122,18 +122,21 @@ export function anonClient(): SupabaseClient {
 }
 
 /**
- * Create a household owned by `user`, relying on the claim trigger to make them
- * its first member, and return its id.
+ * Create a household owned by `user` and return its id.
+ *
+ * Goes through the create_household RPC because that is the only path there is —
+ * households carry no INSERT policy, so a direct insert is refused for everyone.
  */
 export async function createHousehold(user: TestUser, name: string): Promise<string> {
-  const { data, error } = await user.client
-    .from('households')
-    .insert({ name, district: 'chesterfield' })
-    .select('id')
-    .single();
+  const { data, error } = await user.client.rpc('create_household', {
+    household_name: name,
+    household_district: 'chesterfield',
+  });
 
   if (error) throw new Error(`Could not create household "${name}": ${error.message}`);
-  return data.id as string;
+  const id = (data as { id?: string } | null)?.id;
+  if (!id) throw new Error(`create_household returned no id for "${name}"`);
+  return id;
 }
 
 /** Remove every user this suite created, along with the rows that cascade from them. */

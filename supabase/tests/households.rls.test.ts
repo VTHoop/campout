@@ -47,9 +47,29 @@ afterAll(async () => {
   await deleteTestUsers([alice, bob]);
 });
 
-describe('the claim trigger', () => {
-  // Without this, a household exists that its own creator cannot select, and the
-  // permissive insert policy becomes a way to orphan rows.
+describe('create_household', () => {
+  // The only path to a household. A direct insert has no policy to satisfy, so
+  // there is no way to produce a household without its first member.
+  it('refuses a direct insert into households', async () => {
+    const { error } = await alice.client
+      .from('households')
+      .insert({ name: 'Back Door', district: 'henrico' });
+
+    expect(error).not.toBeNull();
+
+    const all = await serviceClient().from('households').select('name').eq('name', 'Back Door');
+    expect(all.data).toEqual([]);
+  });
+
+  it('refuses an unauthenticated caller', async () => {
+    const { error } = await anonClient().rpc('create_household', {
+      household_name: 'Nobody',
+      household_district: 'hanover',
+    });
+
+    expect(error).not.toBeNull();
+  });
+
   it('makes the creator a member in the same transaction', async () => {
     const { data, error } = await alice.client
       .from('household_members')
