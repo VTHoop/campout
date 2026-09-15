@@ -25,11 +25,14 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 |---|---|---|
 | `name` | yes | The organization's own name, spelled the way they spell it. |
 | `summary` | no | **A short description we wrote.** ⛔ Never paste the camp's marketing copy — that is someone else's copyrighted text in a public repo (ADR-0010). Two sentences of plain fact is the target. |
-| `website_url` | yes | The organization's home page. |
+| `website_url` | no | The organization's home page, when it has one. Many small camps do not. |
 | `phone`, `email` | no | Only if published publicly by the camp. |
-| `source_url` | yes | The exact page the facts came from. Not the home page — the page with the sessions on it. |
+| `source_url` | **one of these two** | The exact page the facts came from. Not the home page — the page with the sessions on it. |
+| `source_document_path` | **one of these two** | A file in the `camp-sources` bucket: a saved PDF, a photo of a paper flyer, a screenshot of a Facebook post. Use this whenever the facts did not come from a durable URL. |
 | `verified_at` | yes | When a human last confirmed these facts. |
 | `verified_by` | yes | Who. A name or initials is enough. |
+
+**Every record needs evidence, and it does not have to be a link.** The database enforces `source_url OR source_document_path` — a record with neither cannot be inserted. A camp whose only published information is a flyer on a parish noticeboard is perfectly listable; somebody just has to keep a copy of the flyer (ADR-0012).
 
 ## `locations`
 
@@ -55,15 +58,17 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 | `min_grade`, `max_grade` | no | `-1` is pre-K, `0` is kindergarten. |
 | `price_cents` | no | ⛔ **Integer cents, never a float.** $325 is `32500`. |
 | `price_note` | no | Everything the number cannot carry: member pricing, sibling discount, sliding scale, deposit terms. |
-| `registration_url` | yes | Where the parent goes to register. **Campout never handles registration or payment.** |
+| `registration_url` | **one of these two** | Where the parent goes to register. **Campout never handles registration or payment.** |
+| `registration_note` | **one of these two** | How to register when there is no link: "paper form, mail by March 1", "call the parish office". |
 | `capacity_note` | no | Waitlist status, "fills in January", lottery. |
-| `source_url`, `verified_at`, `verified_by` | yes | Per-session, because sessions change independently of the organization. |
+| `verified_at`, `verified_by` | yes | Per-session, because sessions change independently of the organization. |
+| `source_url` / `source_document_path` | **one of these two** | Same rule as a camp. Per-session, because sessions change independently. |
 
 **Constraints the database enforces**, so you will hit them rather than silently storing something wrong: `end_date >= start_date`, `daily_end > daily_start`, `max_age >= min_age`, `price_cents >= 0`.
 
 ## `school_calendars`
 
-Keyed by `(district, year)`. `last_day_of_school`, `first_day_of_school`, plus `source_url` and `verified_at`.
+Keyed by `(district, year)`. `last_day_of_school`, `first_day_of_school`, `verified_at`, plus evidence — `source_url` or `source_document_path`, same rule as a camp. Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes.
 
 This is the reference data every summer week is derived from. A wrong date here shifts every coverage gap for every family in that district, so it gets the same verification discipline as a camp record — from the district's published calendar, not from a news article about it.
 
@@ -71,14 +76,14 @@ This is the reference data every summer week is derived from. A wrong date here 
 
 ## What "verified" means
 
-`verified_at` means: **a human opened `source_url` on that date and confirmed every fact in the record against it.**
+`verified_at` means: **a human looked at the evidence on that date and confirmed every fact in the record against it.** The evidence is whichever of `source_url` or `source_document_path` the record carries — a live page, or a saved copy of a flyer, PDF, or post. `verified_by` records who did it, and both stay mandatory whichever form the evidence takes.
 
 It does **not** mean, and must never be presented as meaning, that Campout inspected the camp, checked its licensing or staffing, endorsed it, or judged its quality. We list camps; we do not vet them (AGENTS.md §2).
 
 A record is ready to go live when:
 
 1. Every required field is filled from the source page, not inferred.
-2. `source_url` points at the page carrying the session facts.
+2. Evidence is attached: `source_url` points at the page carrying the session facts, **or** `source_document_path` points at a saved copy of what the camp said. A written claim with nothing behind it does not count.
 3. The geocoded pin has been looked at on a map.
 4. Dates, ages, and hours have been read twice — these are the three fields a parent acts on.
 5. `verified_at` and `verified_by` are set.

@@ -43,6 +43,14 @@ Every household-side RLS policy resolves identity through this one `SECURITY DEF
 
 When you add a household-scoped table: add the `household_id` column, enable RLS in the same migration, write the policies through this function, and ship the **negative-case test in the same PR** (ADR-0004).
 
+## `create_household()` — the only way to make a household
+
+`households` has no `INSERT` policy. Creating one goes through the `create_household` RPC, which inserts the household and its first membership row together (ADR-0011).
+
+**Do not add an `INSERT` policy to work around this.** It was tried as a permissive policy plus an `AFTER INSERT` trigger and it fails: Postgres evaluates the SELECT policy on a `RETURNING` clause *before* after-row triggers fire, so `insert … returning id` is rejected even though the insert itself is allowed. The policy suite caught it on the first run.
+
+The general rule this leaves behind: **if a policy depends on state a trigger creates, the trigger is too late.**
+
 ## Catalog provenance
 
 `camps` and `sessions` both carry `source_url`, `verified_at`, and `verified_by`, all `NOT NULL`.

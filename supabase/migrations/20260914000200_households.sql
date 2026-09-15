@@ -112,10 +112,11 @@ create policy "members read their household" on households
   for select using (is_household_member(id));
 create policy "members update their household" on households
   for update using (is_household_member(id)) with check (is_household_member(id));
--- Any authenticated user may create a household; the trigger below makes the
--- creator its first member, so nobody can create one they cannot then reach.
-create policy "authenticated users create a household" on households
-  for insert to authenticated with check (true);
+
+-- Note the absence of an INSERT policy. Households are created ONLY through
+-- create_household() below, so there is no client path that produces a household
+-- without its first member. See the comment on that function for why a trigger
+-- cannot do this job.
 
 create policy "members read their own membership rows" on household_members
   for select using (user_id = auth.uid() or is_household_member(household_id));
@@ -140,22 +141,53 @@ create policy "members write their plan" on plan_entries
 create policy "members delete from their plan" on plan_entries
   for delete using (is_household_member(household_id));
 
--- The creator of a household becomes its first member in the same transaction.
--- Without this there is a window in which a household exists that its creator
--- cannot select, and the insert policy above would be a way to orphan rows.
-create function claim_new_household()
-returns trigger
+-- Creating a household and its first membership row is ONE operation, and this
+-- function is the only way to perform it. No INSERT policy exists on households,
+-- so there is no other path — the invariant "every household has at least one
+-- member" is structural rather than remembered.
+--
+-- This was first written as an AFTER INSERT trigger, which does not work, and the
+-- reason is worth keeping: Postgres applies the SELECT policy to an INSERT's
+-- RETURNING clause, evaluating it *before* AFTER-row triggers fire. The household
+-- SELECT policy requires membership, the trigger had not yet created it, and so
+-- `insert ... returning id` — the app's most basic write — failed with "new row
+-- violates row-level security policy". The row landed; the caller could not learn
+-- its id. SECURITY DEFINER sidesteps the ordering entirely by doing both inserts
+-- itself.
+--
+-- SECURITY DEFINER runs as the function's owner, which owns these tables. Table
+-- owners bypass RLS unless FORCE ROW LEVEL SECURITY is set, and it is not — so
+-- both inserts here are permitted while the caller's own direct writes are not.
+create function create_household(
+  household_name text,
+  household_district school_district
+)
+returns households
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  created households;
+  caller uuid := auth.uid();
 begin
+  -- SECURITY DEFINER means this function runs with elevated rights, so it must
+  -- refuse an unauthenticated caller itself rather than relying on a policy.
+  if caller is null then
+    raise exception 'create_household requires an authenticated caller'
+      using errcode = '42501';
+  end if;
+
+  insert into households (name, district)
+  values (household_name, household_district)
+  returning * into created;
+
   insert into household_members (household_id, user_id)
-  values (new.id, auth.uid());
-  return new;
+  values (created.id, caller);
+
+  return created;
 end;
 $$;
 
-create trigger households_claim_creator
-  after insert on households
-  for each row execute function claim_new_household();
+revoke all on function create_household(text, school_district) from public, anon;
+grant execute on function create_household(text, school_district) to authenticated;

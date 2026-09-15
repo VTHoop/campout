@@ -18,15 +18,24 @@
     "composite": true,
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "plugins": [{ "name": "next" }],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "references": [{ "path": "./packages/planner" }],
+  "references": [
+    {
+      "path": "./packages/planner"
+    }
+  ],
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "supabase/tests/**/*.ts",
     "vitest.setup.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"

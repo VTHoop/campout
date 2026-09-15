@@ -22,7 +22,14 @@ See `docs/adr/` for the "why" behind each choice.
 
 **A camp is an organization. A session is a dated offering.** The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available.
 
-**Every catalog record carries provenance.** `source_url` and `verified_at` are `NOT NULL` on both `camps` and `sessions`. This is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms.
+**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
+
+Everything else about evidence is a contract the verification workflow keeps, not a rule the database applies (ADR-0012):
+
+- `source_document_path` holds an **object key inside the private `camp-sources` bucket**, with no bucket prefix. The constraint does not parse it.
+- **Nothing verifies the object exists.** A path pointing at a file nobody uploaded satisfies the constraint. Keeping the two in step is the verifier's job, and a dangling path is a data-quality bug rather than something Postgres will catch.
+
+Together this is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `website_url` and `registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
 
 ## Data model
 
@@ -74,12 +81,14 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/adr/` | Decisions and rationale; immutable once accepted. |
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, PostGIS, catalog RLS |
-| `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, the creator-claims-household trigger |
+| `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
+| `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Placeholder landing page; proves the planner-in-a-Server-Component seam. |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
 | `.claude/agents/challenger.md` | Adversarial reviewer for the Automatic Code Review Protocol |
+| `supabase/tests/` | The RLS policy suite — two households, two JWTs, real Postgres (ADR-0004) |
 | `vitest.config.ts` | Two projects (`unit`, `rls`) and the two ratcheted coverage floors |
 | `scripts/check-code-health.ts` | The absolute CodeScene ratchet. **Needs a project id before it does anything** — it exits 2 until then, rather than passing silently. |
 | `.env.example` | Required env var names, no values |

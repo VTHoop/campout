@@ -2,7 +2,9 @@
 
 A summer-planning web app for working parents: a verified local camp directory plus a week-by-week planner grid that shows which weeks of summer are still uncovered. Launch market is the Richmond, Virginia metro (Richmond city, Chesterfield, Henrico, Hanover). Built largely with AI coding agents — this file is the contract every agent (and human) follows.
 
-> **Status:** greenfield. The toolchain is wired and enforcing — Lefthook `pre-commit` (Biome + typecheck) and `pre-push` (lint, typecheck, CodeScene delta, coverage), the TDD guard hook on every `Edit`/`Write`, and CI (lint · typecheck · coverage · Playwright smoke) on every PR. Treat every command below as live and binding. **One caveat about what "enforcing" means:** `main` has no required status checks yet, so every gate below reports but none can block a merge — the discipline is human, not mechanical.
+> **Status:** greenfield. The toolchain is wired and enforcing — Lefthook `pre-commit` (Biome + typecheck) and `pre-push` (lint, typecheck, CodeScene delta, coverage), the TDD guard and privacy guard hooks on every `Edit`/`Write`, and CI (lint · typecheck · coverage · RLS policy tests · Playwright smoke) plus the CodeScene and Codacy bots on every PR. Treat every command below as live and binding.
+>
+> **`main` is protected, and the gates below can block a merge.** Direct pushes are rejected — including from repository admins. A change reaches `main` only through a PR with four checks green: `Lint · Typecheck · Coverage`, `RLS policy tests`, `Playwright smoke`, and `CodeScene Code Health Review`. Force pushes and branch deletion are off, history must stay linear (squash-merge), and open conversations must be resolved. Approvals are **not** required, so a solo PR can be merged by its author — the PR exists as the visible record of review discipline, not as a bottleneck.
 
 ---
 
@@ -120,6 +122,8 @@ codacy-cli analyze --tool opengrep src/   # security patterns, 80+ rules over TS
 - **Always fix Critical & High findings introduced by your change** before requesting review.
 - Review Medium findings: fix real defects/security issues; otherwise justify in the completion comment.
 - Never silence a rule to pass — remove the finding with a small code change.
+- **TSQLLint is disabled for this repository, deliberately.** Codacy runs a T-SQL (SQL Server) linter against every `.sql` file and cannot tell which dialect it is reading. On our Postgres migrations it raised *"Expected SET QUOTED_IDENTIFIER ON near top of file"* — a statement that does not exist in Postgres and would break the migration if added. There is no code change that satisfies it, so the tool is switched off in Codacy's repository settings.
+  - **This is not a silenced rule and must not be treated as precedent.** The rule was not wrong about our code; it was the wrong language. Every other Codacy finding gets fixed in the code, never suppressed (see the two rules above this one). If you find yourself reaching for this paragraph to justify turning something off, you are almost certainly not in the same situation.
 - **The local CLI is a subset of the PR bot, not a replacement.** The CLI's ESLint install ships no TypeScript parser, so ESLint is excluded from `.codacy/codacy.yaml`; the server-side `codacy-eslint` the bot runs does analyse TypeScript properly, including `security/detect-object-injection` (the **Generic Object Injection Sink** — see Code conventions). A clean local run does **not** imply a clean Codacy check. Read the bot.
 - **`trivy`'s secret scanning carries real weight here.** This repo is public and holds Supabase and MapTiler credentials. Treat any secret finding as release-blocking, and rotate the key rather than only deleting the line — git history keeps what you pushed.
 
