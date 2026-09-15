@@ -22,7 +22,14 @@ See `docs/adr/` for the "why" behind each choice.
 
 **A camp is an organization. A session is a dated offering.** The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available.
 
-**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on both `camps` and `sessions`, and a check constraint requires evidence — either a `source_url` or a `source_document_path` pointing into the private `camp-sources` bucket. Neither is not an option (ADR-0012). This is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `website_url` and `registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
+**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
+
+Everything else about evidence is a contract the verification workflow keeps, not a rule the database applies (ADR-0012):
+
+- `source_document_path` holds an **object key inside the private `camp-sources` bucket**, with no bucket prefix. The constraint does not parse it.
+- **Nothing verifies the object exists.** A path pointing at a file nobody uploaded satisfies the constraint. Keeping the two in step is the verifier's job, and a dangling path is a data-quality bug rather than something Postgres will catch.
+
+Together this is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `website_url` and `registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
 
 ## Data model
 

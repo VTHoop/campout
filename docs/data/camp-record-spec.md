@@ -76,7 +76,7 @@ This is the reference data every summer week is derived from. A wrong date here 
 
 ## What "verified" means
 
-`verified_at` means: **a human opened `source_url` on that date and confirmed every fact in the record against it.**
+`verified_at` means: **a human looked at the evidence on that date and confirmed every fact in the record against it.** The evidence is whichever of `source_url` or `source_document_path` the record carries — a live page, or a saved copy of a flyer, PDF, or post. `verified_by` records who did it, and both stay mandatory whichever form the evidence takes.
 
 It does **not** mean, and must never be presented as meaning, that Campout inspected the camp, checked its licensing or staffing, endorsed it, or judged its quality. We list camps; we do not vet them (AGENTS.md §2).
 

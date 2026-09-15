@@ -47,6 +47,15 @@ create table camps (
   -- Provenance (ADR-0012). verified_at/by are always required. The evidence is
   -- either a URL or a document kept in the camp-sources bucket — see the check
   -- constraint below.
+  --
+  -- source_document_path is an OBJECT KEY INSIDE the camp-sources bucket, with no
+  -- bucket prefix: 'parish-hall-2027-flyer.jpg', not 'camp-sources/…'.
+  --
+  -- The constraint below checks only that one of the two columns is non-null. It
+  -- does NOT parse the path or confirm the object exists, and deliberately so —
+  -- a storage lookup in a CHECK constraint would be both impossible and wrong.
+  -- A path pointing at a file nobody uploaded is a data-quality bug for the
+  -- verification workflow to prevent, not something Postgres will catch.
   source_url            text,
   source_document_path  text,
   verified_at           timestamptz not null,
@@ -153,6 +162,7 @@ create table school_calendars (
   source_url            text,
   source_document_path  text,
   verified_at           timestamptz     not null,
+  verified_by           text            not null,
 
   primary key (district, year),
   constraint school_calendars_ordered check (first_day_of_school > last_day_of_school),

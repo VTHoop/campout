@@ -15,6 +15,10 @@
 --
 -- ⛔ Do not make this bucket public to "make the source link work". Sign the URL.
 
+-- `do update` rather than `do nothing`: if a bucket with this id already exists
+-- and is public, doing nothing would leave it public and silently break the
+-- guarantee above. Only `public` is forced — any other configuration the bucket
+-- has picked up (size limits, allowed MIME types) is left alone.
 insert into storage.buckets (id, name, public)
 values ('camp-sources', 'camp-sources', false)
-on conflict (id) do nothing;
+on conflict (id) do update set public = false;
