@@ -19,6 +19,20 @@ interface LocalKeys {
 let cached: LocalKeys | null = null;
 
 /**
+ * Pull one required value out of `supabase status`, naming it if it is absent.
+ *
+ * One value at a time rather than one combined check: a single condition is
+ * easier to read, and the failure says exactly which key is missing instead of
+ * listing all three and leaving you to work it out.
+ */
+function required(value: string | undefined, name: string): string {
+  if (value) return value;
+  throw new Error(
+    `supabase status did not return ${name}. Is the local stack running? Try pnpm supabase:start`,
+  );
+}
+
+/**
  * Read the local stack's URL and keys from the Supabase CLI.
  *
  * Shelling out beats hard-coding the well-known demo keys: those change between
@@ -43,18 +57,13 @@ export function localKeys(): LocalKeys {
     );
   }
 
-  const status = JSON.parse(raw) as Record<string, string>;
-  const url = status.API_URL;
-  const anonKey = status.ANON_KEY;
-  const serviceRoleKey = status.SERVICE_ROLE_KEY;
+  const status = JSON.parse(raw) as Record<string, string | undefined>;
 
-  if (!url || !anonKey || !serviceRoleKey) {
-    throw new Error(
-      `supabase status did not return API_URL, ANON_KEY and SERVICE_ROLE_KEY. Got: ${Object.keys(status).join(', ')}`,
-    );
-  }
-
-  cached = { url, anonKey, serviceRoleKey };
+  cached = {
+    url: required(status.API_URL, 'API_URL'),
+    anonKey: required(status.ANON_KEY, 'ANON_KEY'),
+    serviceRoleKey: required(status.SERVICE_ROLE_KEY, 'SERVICE_ROLE_KEY'),
+  };
   return cached;
 }
 

@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import { anonClient, serviceClient } from './helpers';
 
@@ -39,44 +40,51 @@ describe('catalog reads', () => {
   });
 });
 
+/**
+ * Seed a camp as the service role, run an assertion against it, then remove it.
+ *
+ * The cleanup is in a `finally` so a failing assertion still leaves the table as
+ * it found it — otherwise one bad run poisons every later one.
+ */
+async function withSeededCamp(
+  assert: (campId: string, admin: SupabaseClient) => Promise<void>,
+): Promise<void> {
+  const admin = serviceClient();
+  const seeded = await admin.from('camps').insert(CAMP).select('id').single();
+  expect(seeded.error).toBeNull();
+  const campId = seeded.data?.id as string;
+
+  try {
+    await assert(campId, admin);
+  } finally {
+    await admin.from('camps').delete().eq('id', campId);
+  }
+}
+
 describe('catalog writes are closed to clients', () => {
   it('refuses an anonymous insert', async () => {
     const { error } = await anonClient().from('camps').insert(CAMP);
     expect(error).not.toBeNull();
   });
 
-  it('refuses an anonymous update', async () => {
-    const admin = serviceClient();
-    const seeded = await admin.from('camps').insert(CAMP).select('id').single();
-    expect(seeded.error).toBeNull();
-    const id = seeded.data?.id as string;
-
-    try {
-      const { error } = await anonClient().from('camps').update({ name: 'Hijacked' }).eq('id', id);
-      expect(error).toBeNull(); // no matching row, so no error — the name must be unchanged
-
-      const after = await admin.from('camps').select('name').eq('id', id).single();
-      expect(after.data?.name).toBe(CAMP.name);
-    } finally {
-      await admin.from('camps').delete().eq('id', id);
-    }
-  });
-
-  it('refuses an anonymous delete', async () => {
-    const admin = serviceClient();
-    const seeded = await admin.from('camps').insert(CAMP).select('id').single();
-    expect(seeded.error).toBeNull();
-    const id = seeded.data?.id as string;
-
-    try {
-      const { error } = await anonClient().from('camps').delete().eq('id', id);
+  // Update and delete share one assertion because they share one rule: a client
+  // write against the catalog matches no rows, so it reports no error and changes
+  // nothing. Checking the error alone would pass even if the write had landed —
+  // the record has to be read back.
+  it.each([
+    [
+      'update',
+      (campId: string) => anonClient().from('camps').update({ name: 'Hijacked' }).eq('id', campId),
+    ],
+    ['delete', (campId: string) => anonClient().from('camps').delete().eq('id', campId)],
+  ])('leaves the record untouched after an anonymous %s', async (_verb, attempt) => {
+    await withSeededCamp(async (campId, admin) => {
+      const { error } = await attempt(campId);
       expect(error).toBeNull();
 
-      const after = await admin.from('camps').select('id').eq('id', id);
-      expect(after.data).toEqual([{ id }]);
-    } finally {
-      await admin.from('camps').delete().eq('id', id);
-    }
+      const after = await admin.from('camps').select('id, name').eq('id', campId);
+      expect(after.data).toEqual([{ id: campId, name: CAMP.name }]);
+    });
   });
 });
 
