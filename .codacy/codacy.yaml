@@ -1,3 +1,17 @@
+# Codacy CLI v2 configuration (AGENTS.md §1).
+#
+# ⚠️ `codacy-cli install` REWRITES this file and drops these comments. If you run
+# it and `git diff` shows the header gone, restore it — the note below is the
+# reason ESLint is absent, and losing it invites someone to "fix" that.
+#
+# ESLint is deliberately absent. The CLI's ESLint install ships no TypeScript
+# parser, so every .ts file fails with "Parsing error: Unexpected token", and the
+# CLI cannot load plugin rules at all. The server-side codacy-eslint the PR bot
+# runs does both. Net: a clean local run does not imply a clean Codacy check.
+#
+# Also known: trivy currently fails to install locally ("failed to extract
+# archive: EOF"). opengrep works. The PR bot runs trivy server-side regardless,
+# so secret and dependency scanning is covered there, not here.
 runtimes:
     - node@24.16.0
 tools:
