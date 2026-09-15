@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  anonClient,
   createHousehold,
   createTestUser,
   deleteTestUsers,
