@@ -5,10 +5,15 @@
 --   1. A CAMP is an organization. A SESSION is a dated offering. The directory
 --      searches sessions, because a parent shops for "the week of July 12", not
 --      for an organization. Nearly every planner query starts at sessions.
---   2. Every camp and every session carries a source_url and a verified_at, both
---      NOT NULL. Campout lists camps; it does not vet or endorse them, and the
---      provenance columns are how that posture is made true in the data rather
---      than merely stated in the terms (AGENTS.md §2).
+--   2. Every camp and every session carries PROVENANCE: who verified it, when,
+--      and what they verified it against. Campout lists camps; it does not vet or
+--      endorse them, and these columns are how that posture is made true in the
+--      data rather than merely stated in the terms (AGENTS.md §2).
+--
+--      The evidence is a source_url OR a stored document, never neither — a camp
+--      whose only published information is a paper flyer or a phone call is still
+--      listable, but somebody has to have kept a copy of what it said. A written
+--      claim with nothing behind it is not evidence.
 --
 -- Catalog tables are world-readable and service-role-writable. That is deliberate:
 -- keeping the public catalog out of the policy surface keeps the policies that do
@@ -32,17 +37,26 @@ create table camps (
   -- A short summary WE wrote. ⛔ Never paste a camp's marketing copy here —
   -- that is someone else's copyrighted text in a public repo (ADR-0010).
   summary       text,
-  website_url   text        not null,
+  -- Nullable on purpose. A church, a rec league, or a neighbour running a soccer
+  -- week may have no site at all, and those are exactly the camps no existing
+  -- Richmond directory carries.
+  website_url   text,
   phone         text,
   email         text,
 
-  -- Provenance. Both required: a record missing either is not live (AGENTS.md §2).
-  source_url    text        not null,
-  verified_at   timestamptz not null,
-  verified_by   text        not null,
+  -- Provenance (ADR-0012). verified_at/by are always required. The evidence is
+  -- either a URL or a document kept in the camp-sources bucket — see the check
+  -- constraint below.
+  source_url            text,
+  source_document_path  text,
+  verified_at           timestamptz not null,
+  verified_by           text        not null,
 
   created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  updated_at    timestamptz not null default now(),
+
+  constraint camps_provenance_present
+    check (source_url is not null or source_document_path is not null)
 );
 
 -- ------------------------------------------------------------ locations
@@ -94,16 +108,27 @@ create table sessions (
   price_cents   integer,
   price_note    text,
 
-  registration_url text     not null,
-  capacity_note text,
+  -- Nullable: plenty of camps take a paper form, a phone call, or a walk-in.
+  -- registration_note carries the instructions when there is no link.
+  registration_url  text,
+  registration_note text,
+  capacity_note     text,
 
-  source_url    text        not null,
-  verified_at   timestamptz not null,
-  verified_by   text        not null,
+  -- Provenance per session, because sessions change independently of the
+  -- organization that runs them (ADR-0012).
+  source_url            text,
+  source_document_path  text,
+  verified_at           timestamptz not null,
+  verified_by           text        not null,
 
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
 
+  constraint sessions_provenance_present
+    check (source_url is not null or source_document_path is not null),
+  -- A parent must be told how to sign up, one way or the other.
+  constraint sessions_registration_reachable
+    check (registration_url is not null or registration_note is not null),
   constraint sessions_dates_ordered check (end_date >= start_date),
   constraint sessions_hours_ordered check (daily_end > daily_start),
   constraint sessions_ages_ordered  check (max_age is null or min_age is null or max_age >= min_age),
@@ -125,11 +150,14 @@ create table school_calendars (
   last_day_of_school  date            not null,
   first_day_of_school date            not null,
 
-  source_url          text            not null,
-  verified_at         timestamptz     not null,
+  source_url            text,
+  source_document_path  text,
+  verified_at           timestamptz     not null,
 
   primary key (district, year),
-  constraint school_calendars_ordered check (first_day_of_school > last_day_of_school)
+  constraint school_calendars_ordered check (first_day_of_school > last_day_of_school),
+  constraint school_calendars_provenance_present
+    check (source_url is not null or source_document_path is not null)
 );
 
 -- ------------------------------------------------------------------ RLS

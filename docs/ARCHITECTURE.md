@@ -22,7 +22,7 @@ See `docs/adr/` for the "why" behind each choice.
 
 **A camp is an organization. A session is a dated offering.** The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available.
 
-**Every catalog record carries provenance.** `source_url` and `verified_at` are `NOT NULL` on both `camps` and `sessions`. This is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms.
+**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on both `camps` and `sessions`, and a check constraint requires evidence — either a `source_url` or a `source_document_path` pointing into the private `camp-sources` bucket. Neither is not an option (ADR-0012). This is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `website_url` and `registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
 
 ## Data model
 
@@ -74,6 +74,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/adr/` | Decisions and rationale; immutable once accepted. |
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, PostGIS, catalog RLS |
+| `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Placeholder landing page; proves the planner-in-a-Server-Component seam. |

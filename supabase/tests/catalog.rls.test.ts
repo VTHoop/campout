@@ -23,6 +23,14 @@ const CAMP = {
   verified_by: 'rls-suite',
 };
 
+/** A camp with no web presence at all — the case the schema used to reject. */
+const FLYER_ONLY_CAMP = {
+  name: 'Parish Hall Soccer Week',
+  source_document_path: 'camp-sources/parish-hall-flyer.jpg',
+  verified_at: '2026-09-01T00:00:00Z',
+  verified_by: 'rls-suite',
+};
+
 describe('catalog reads', () => {
   it('lets an anonymous visitor read camps', async () => {
     const { error } = await anonClient().from('camps').select('id').limit(1);
@@ -88,15 +96,36 @@ describe('catalog writes are closed to clients', () => {
   });
 });
 
-describe('the schema refuses records that break its own rules', () => {
-  it('rejects a camp with no provenance', async () => {
+describe('provenance is required, but need not be a URL', () => {
+  it('accepts a camp with no website and no source URL, evidenced by a stored document', async () => {
     const admin = serviceClient();
-    const { error } = await admin
-      .from('camps')
-      .insert({ name: 'No Source', website_url: 'https://example.test' });
+    const seeded = await admin.from('camps').insert(FLYER_ONLY_CAMP).select('id').single();
 
-    // source_url, verified_at and verified_by are NOT NULL: a record that cannot
-    // be traced back to a page a human checked must not exist at all.
+    try {
+      expect(seeded.error).toBeNull();
+      expect(seeded.data?.id).toBeTruthy();
+    } finally {
+      if (seeded.data?.id) await admin.from('camps').delete().eq('id', seeded.data.id);
+    }
+  });
+
+  it('rejects a camp with neither a source URL nor a stored document', async () => {
+    const { error } = await serviceClient().from('camps').insert({
+      name: 'Unevidenced',
+      verified_at: '2026-09-01T00:00:00Z',
+      verified_by: 'rls-suite',
+    });
+
+    // A claim with nothing behind it is not evidence. The check constraint makes
+    // that a shape rule rather than a habit somebody has to keep.
+    expect(error).not.toBeNull();
+  });
+
+  it('rejects a camp with no verifier, however good its source', async () => {
+    const { error } = await serviceClient()
+      .from('camps')
+      .insert({ name: 'Unverified', source_url: 'https://example.test/camp' });
+
     expect(error).not.toBeNull();
   });
 });
