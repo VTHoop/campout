@@ -18,12 +18,9 @@ import { readFile } from 'node:fs/promises';
 // would flow into the request URL, which is a genuine SSRF taint path for one knob
 // nobody needs. A fork edits this line.
 //
-// ⚠️ SETUP REQUIRED: replace PROJECT_ID below with Campout's CodeScene project id
-// once the repo is added at https://codescene.io (free for public repos — ADR-0010).
-// Until then this script exits 2 (misconfigured) rather than silently passing, because
-// a code-health gate that reports success without checking anything is worse than no
-// gate at all.
-const PROJECT_ID = 'REPLACE_ME';
+// Campout on codescene.io. The id is the number in the project's URL
+// (codescene.io/projects/<id>/…); GET /v2/projects returns it too.
+const PROJECT_ID = '84686';
 const PROJECT_URL = `https://api.codescene.io/v2/projects/${PROJECT_ID}`;
 
 // A full analysis of this repo completes in well under a minute; the ceiling is here so
@@ -196,14 +193,6 @@ if (!token) {
 }
 
 // Literal path: pnpm runs scripts from the workspace root, as `pnpm emit-grid` also assumes.
-if (PROJECT_ID === 'REPLACE_ME') {
-  console.error(
-    'CodeScene project id is not set. Add this repo at https://codescene.io, then put its\n' +
-      'project id in scripts/check-code-health.ts (see the PROJECT_ID comment).',
-  );
-  process.exit(2);
-}
-
 const thresholds = parseThresholds(await readFile('.codescene-thresholds', 'utf8'));
 const project = codeSceneProject(token);
 

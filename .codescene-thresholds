@@ -1,5 +1,5 @@
 {
-  "_note": "Whole-repo code-health floor, enforced by scripts/check-code-health.ts (pnpm codescene:check) against CodeScene's analysis of main. Distinct from the PR delta gates, which judge a change relative to main; these are absolute. Ratchet upward only — raise deliberately after a sustained improvement, never lower to make a build pass (AGENTS.md §1). Seeded at 9.5/9.5 on a near-empty repo; reset to a measured baseline once CODEOWNERS-worthy code exists, and only upward after that.",
-  "average_code_health": 9.5,
-  "hotspot_code_health": 9.5
+  "_note": "Whole-repo code-health floor, enforced by scripts/check-code-health.ts (pnpm codescene:check) against CodeScene's analysis of main. Distinct from the PR delta gates, which judge a change relative to main; these are absolute. Ratchet upward only — raise deliberately after a sustained improvement, never lower to make a build pass (AGENTS.md §1). Baseline set 2026-09-14 from a measured 10.00 average / 10.00 hotspot, with headroom for normal churn.",
+  "average_code_health": 9.9,
+  "hotspot_code_health": 9.8
 }
