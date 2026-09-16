@@ -100,53 +100,49 @@ describe('mockSessions', () => {
     expect(glowWeek?.endDate).toBe('2026-07-31');
   });
 
-  it('gives every Junior Mini Tennis Camp date the beginner price, hours, and age range', () => {
-    const juniorMini = mockSessions.filter(
-      (session) => session.campId === 'camp-junior-mini-tennis',
-    );
-    expect(juniorMini).toHaveLength(9);
-    for (const session of juniorMini) {
-      expect(session.priceCents).toBe(25_500);
-      expect(session.startTime).toBe('10:30');
-      expect(session.endTime).toBe('13:30');
-      expect(session.ageRange).toEqual({ min: 5, max: 15 });
-    }
-  });
+  it.each([
+    {
+      label: 'Junior Mini Tennis Camp',
+      campId: 'camp-junior-mini-tennis',
+      expectedCount: 9,
+      priceCents: 25_500,
+      startTime: '10:30',
+      endTime: '13:30',
+      ageRange: { min: 5, max: 15 },
+    },
+    {
+      label: 'Tournament All Day Camp',
+      campId: 'camp-tournament-all-day-tennis',
+      expectedCount: 3,
+      priceCents: 43_500,
+      startTime: '10:00',
+      endTime: '16:30',
+      ageRange: { min: 9, max: 18 },
+    },
+  ])(
+    'gives every $label date the same price, hours, and age range',
+    ({ campId, expectedCount, priceCents, startTime, endTime, ageRange }) => {
+      const sessions = mockSessions.filter((session) => session.campId === campId);
+      expect(sessions).toHaveLength(expectedCount);
+      for (const session of sessions) {
+        expect(session.priceCents).toBe(priceCents);
+        expect(session.startTime).toBe(startTime);
+        expect(session.endTime).toBe(endTime);
+        expect(session.ageRange).toEqual(ageRange);
+      }
+    },
+  );
 
-  it('gives every Tournament All Day Camp date the advanced price, hours, and age range', () => {
-    const tournament = mockSessions.filter(
-      (session) => session.campId === 'camp-tournament-all-day-tennis',
-    );
-    expect(tournament).toHaveLength(3);
-    for (const session of tournament) {
-      expect(session.priceCents).toBe(43_500);
-      expect(session.startTime).toBe('10:00');
-      expect(session.endTime).toBe('16:30');
-      expect(session.ageRange).toEqual({ min: 9, max: 18 });
-    }
-  });
-
-  it('gives every VCU session the price and hours printed on its own line of the flyer', () => {
-    const byId = new Map(mockSessions.map((session) => [session.id, session]));
-    expect(byId.get('session-vcu-rfp-week-1')).toMatchObject({
-      priceCents: 41_500,
-      startTime: '09:00',
-      endTime: '14:00',
-    });
-    expect(byId.get('session-vcu-robious')).toMatchObject({
-      priceCents: 41_500,
-      startTime: '09:00',
-      endTime: '14:00',
-    });
-    expect(byId.get('session-vcu-ironbridge')).toMatchObject({
-      priceCents: 29_900,
-      startTime: '09:00',
-      endTime: '12:00',
-    });
-    expect(byId.get('session-vcu-rfp-week-2')).toMatchObject({
-      priceCents: 41_500,
-      startTime: '09:00',
-      endTime: '14:00',
-    });
-  });
+  it.each([
+    { id: 'session-vcu-rfp-week-1', priceCents: 41_500, startTime: '09:00', endTime: '14:00' },
+    { id: 'session-vcu-robious', priceCents: 41_500, startTime: '09:00', endTime: '14:00' },
+    { id: 'session-vcu-ironbridge', priceCents: 29_900, startTime: '09:00', endTime: '12:00' },
+    { id: 'session-vcu-rfp-week-2', priceCents: 41_500, startTime: '09:00', endTime: '14:00' },
+  ])(
+    'gives $id the price and hours printed on its own line of the flyer',
+    ({ id, ...expected }) => {
+      const byId = new Map(mockSessions.map((session) => [session.id, session]));
+      expect(byId.get(id)).toMatchObject(expected);
+    },
+  );
 });
