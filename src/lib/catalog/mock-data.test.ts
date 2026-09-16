@@ -84,7 +84,9 @@ describe('mockSessions', () => {
   });
 
   it('leaves ageRange and gradeRange null where the source states no restriction', () => {
-    const vcuSessions = mockSessions.filter((session) => session.campId === 'camp-vcu-summer-youth');
+    const vcuSessions = mockSessions.filter(
+      (session) => session.campId === 'camp-vcu-summer-youth',
+    );
     expect(vcuSessions).toHaveLength(4);
     for (const session of vcuSessions) {
       expect(session.ageRange).toBeUndefined();
@@ -99,7 +101,9 @@ describe('mockSessions', () => {
   });
 
   it('gives every Junior Mini Tennis Camp date the beginner price, hours, and age range', () => {
-    const juniorMini = mockSessions.filter((session) => session.campId === 'camp-junior-mini-tennis');
+    const juniorMini = mockSessions.filter(
+      (session) => session.campId === 'camp-junior-mini-tennis',
+    );
     expect(juniorMini).toHaveLength(9);
     for (const session of juniorMini) {
       expect(session.priceCents).toBe(25_500);
@@ -110,7 +114,9 @@ describe('mockSessions', () => {
   });
 
   it('gives every Tournament All Day Camp date the advanced price, hours, and age range', () => {
-    const tournament = mockSessions.filter((session) => session.campId === 'camp-tournament-all-day-tennis');
+    const tournament = mockSessions.filter(
+      (session) => session.campId === 'camp-tournament-all-day-tennis',
+    );
     expect(tournament).toHaveLength(3);
     for (const session of tournament) {
       expect(session.priceCents).toBe(43_500);
@@ -122,9 +128,25 @@ describe('mockSessions', () => {
 
   it('gives every VCU session the price and hours printed on its own line of the flyer', () => {
     const byId = new Map(mockSessions.map((session) => [session.id, session]));
-    expect(byId.get('session-vcu-rfp-week-1')).toMatchObject({ priceCents: 41_500, startTime: '09:00', endTime: '14:00' });
-    expect(byId.get('session-vcu-robious')).toMatchObject({ priceCents: 41_500, startTime: '09:00', endTime: '14:00' });
-    expect(byId.get('session-vcu-ironbridge')).toMatchObject({ priceCents: 29_900, startTime: '09:00', endTime: '12:00' });
-    expect(byId.get('session-vcu-rfp-week-2')).toMatchObject({ priceCents: 41_500, startTime: '09:00', endTime: '14:00' });
+    expect(byId.get('session-vcu-rfp-week-1')).toMatchObject({
+      priceCents: 41_500,
+      startTime: '09:00',
+      endTime: '14:00',
+    });
+    expect(byId.get('session-vcu-robious')).toMatchObject({
+      priceCents: 41_500,
+      startTime: '09:00',
+      endTime: '14:00',
+    });
+    expect(byId.get('session-vcu-ironbridge')).toMatchObject({
+      priceCents: 29_900,
+      startTime: '09:00',
+      endTime: '12:00',
+    });
+    expect(byId.get('session-vcu-rfp-week-2')).toMatchObject({
+      priceCents: 41_500,
+      startTime: '09:00',
+      endTime: '14:00',
+    });
   });
 });
