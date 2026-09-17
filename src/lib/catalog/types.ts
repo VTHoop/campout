@@ -69,17 +69,24 @@ export interface GradeRange {
   readonly max?: number;
 }
 
-/** A dated offering of a `Camp`. This is what a parent actually shops for. */
+/**
+ * A dated offering of a `Camp`. This is what a parent actually shops for.
+ *
+ * `startTime`/`endTime`/`priceCents` are optional: a source can state dates
+ * without stating hours or a price (a themed week announced before the
+ * schedule is set, for instance), and leaving the field out is how "not
+ * stated" stays distinguishable from a real, verified value.
+ */
 export interface Session {
   readonly id: string;
   readonly campId: string;
   readonly locationId: string;
   readonly startDate: CalendarDate;
   readonly endDate: CalendarDate;
-  readonly startTime: WallClockTime;
-  readonly endTime: WallClockTime;
+  readonly startTime?: WallClockTime;
+  readonly endTime?: WallClockTime;
   /** Single non-member price, integer cents. Member/non-member tiering is out of scope for v1. */
-  readonly priceCents: number;
+  readonly priceCents?: number;
   readonly ageRange?: AgeRange;
   readonly gradeRange?: GradeRange;
 }

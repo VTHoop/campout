@@ -1,18 +1,6 @@
 import type { Camp, Location, Provider, Session } from './types';
 import { Category } from './types';
 
-/**
- * `docs/data/ML_Summer_Camp_2026_Brochure.pdf` states no daily hours or price
- * for the 12 general-theme camp weeks (only the tennis section does). Filled
- * with an invented standard day-camp placeholder rather than left blank,
- * since `Session.startTime`/`endTime`/`priceCents` are required fields — this
- * is NOT a verified fact and must not be treated as one when this catalog
- * gets real provenance in a later ticket.
- */
-const PLACEHOLDER_GENERAL_CAMP_START_TIME = '09:00';
-const PLACEHOLDER_GENERAL_CAMP_END_TIME = '16:00';
-const PLACEHOLDER_GENERAL_CAMP_PRICE_CENTS = 27_500;
-
 export const mockProviders: readonly Provider[] = [
   { id: 'provider-acac', name: 'acac' },
   { id: 'provider-vcu-baseball', name: 'VCU Baseball', website: 'https://ramsbaseballcamps.com' },
@@ -191,15 +179,15 @@ const generalCampSessions: readonly Session[] = [
   { campId: 'camp-game-on', startDate: '2026-08-03', endDate: '2026-08-07' },
   { campId: 'camp-surfs-up', startDate: '2026-08-10', endDate: '2026-08-14' },
   { campId: 'camp-sayonara-summer', startDate: '2026-08-17', endDate: '2026-08-21' },
+  // No startTime/endTime/priceCents: the brochure states dates and a theme for
+  // these 12 weeks but no hours or price (only the tennis section states
+  // those). Left unset rather than guessed — see Session's doc comment.
 ].map((session) => ({
   id: `session-${session.campId.replace('camp-', '')}`,
   campId: session.campId,
   locationId: 'location-acac-midlothian',
   startDate: session.startDate,
   endDate: session.endDate,
-  startTime: PLACEHOLDER_GENERAL_CAMP_START_TIME,
-  endTime: PLACEHOLDER_GENERAL_CAMP_END_TIME,
-  priceCents: PLACEHOLDER_GENERAL_CAMP_PRICE_CENTS,
 }));
 
 const juniorMiniTennisDateRanges: ReadonlyArray<readonly [string, string]> = [
