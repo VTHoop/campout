@@ -101,6 +101,17 @@ describe('findCatalogInconsistencies', () => {
     ]);
   });
 
+  it('flags both dates when start and end are both malformed, not just the first', () => {
+    const snapshot: CatalogSnapshot = {
+      ...validSnapshot,
+      sessions: [{ ...session, startDate: '2027-02-30', endDate: '2027-13-01' }],
+    };
+    expect(findCatalogInconsistencies(snapshot)).toEqual([
+      'session session-1: session-1.startDate is not a real date: "2027-02-30"',
+      'session session-1: session-1.endDate is not a real date: "2027-13-01"',
+    ]);
+  });
+
   it('flags a session whose end date precedes its start date', () => {
     const snapshot: CatalogSnapshot = {
       ...validSnapshot,
