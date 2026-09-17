@@ -4,6 +4,14 @@ The field-by-field definition of a catalog record, what counts as verified, and 
 
 The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it.
 
+> **This spec describes the real catalog schema** — the one in `supabase/migrations/20260914000100_catalog.sql`, not yet applied to a live Supabase project. It does **not** describe `src/lib/catalog/` (CAM-1), a separate, provisional TypeScript mock model built before this schema existed. Three concrete differences to know about until a schema-design ticket reconciles them:
+>
+> - This spec says **a camp is an organization**. CAM-1 splits that into `Provider` (the organization) and `Camp` (a named program the provider runs, like "Junior Mini Tennis Camp") — the ticket's own AC asked for that shape.
+> - This spec's `sessions.category` uses the schema's nine-value `camp_category` enum. CAM-1's `Category` is a different, six-value enum (`sports`, `stem`, `arts`, `outdoors`, `academic`, `faith-based`), per its own AC.
+> - This spec requires `sessions.name`. CAM-1's `Session` has no `name` — a session's identity comes from its `Camp` instead.
+>
+> CAM-1 also carries none of this spec's provenance fields (`source_url`, `verified_at`, …) — out of scope for that ticket by design. Read this spec as the target for the real schema, not as documentation of what's in `src/lib/catalog/` today.
+
 ---
 
 ## The shape
