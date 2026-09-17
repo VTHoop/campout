@@ -66,13 +66,17 @@ function findSessionIssues(
     );
   }
   issues.push(...findDateIssues(session));
-  if (
-    session.priceCents !== undefined &&
-    (!Number.isInteger(session.priceCents) || session.priceCents < 0)
-  ) {
+  if (hasInvalidPrice(session)) {
     issues.push(`session ${session.id} has an invalid priceCents: ${session.priceCents}`);
   }
   return issues;
+}
+
+function hasInvalidPrice(session: Session): boolean {
+  if (session.priceCents === undefined) {
+    return false;
+  }
+  return !Number.isInteger(session.priceCents) || session.priceCents < 0;
 }
 
 function findDateIssues(session: Session): string[] {
