@@ -31,7 +31,7 @@ It does mean one thing about technical choices: **boring beats clever.** When tw
 ### Branches & PRs (light PR flow)
 - One short-lived branch per task: `feat/…`, `fix/…`, `refactor/…`. Branch off `main`.
 - Open a **PR** for every change, even solo. Keep PRs small and single-purpose — the PR is the visible record of review discipline.
-- The PR must show: passing check suite, `/code-review` agent pass, and green Codacy + CodeScene checks.
+- The PR must show: passing check suite, a Challenger pass (the Automatic Code Review Protocol below — **not** the `/code-review` skill; that one's a heavier, optional tool, never a required gate), and green Codacy + CodeScene checks.
 - Squash-merge to `main`. Delete the branch.
 - **A task is not done until the PR is merged and the issue's completion comment is posted.**
 - **⛔ NEVER `--no-verify`.** If a hook blocks you, read the error and fix the code — never bypass, never lower a gate.
@@ -166,9 +166,11 @@ Before marking the issue done, post a comment covering:
 - After any new table, migration, RLS policy, component/hook, or integration: update `docs/ARCHITECTURE.md` / `docs/ABSTRACTIONS.md` in the same commit.
 
 ### Working with multiple agents
-This workflow is multi-agent-ready: the writer agent and an independent reviewer/QA agent must not be the same context. Use `/code-review` (fresh subagent) for adversarial review against the issue spec — the author never grades its own work. Background loops are assistants, **not** a substitute for fixing your own regressions before merge.
+This workflow is multi-agent-ready: the writer agent and an independent reviewer/QA agent must not be the same context. Use the Challenger (Automatic Code Review Protocol, below) for adversarial review against the issue spec — the author never grades its own work. Background loops are assistants, **not** a substitute for fixing your own regressions before merge.
 
 ### Automatic Code Review Protocol
+
+**This is the required review gate — the only one.** Nothing else in this file requires the `/code-review` skill, `/self-review`, or any other review tool. Those are heavier, optional passes to reach for on a large or risky change; they are never what "PR must show a review pass" means, and running one does not replace this protocol.
 
 After completing code edits in a turn, you MUST run the following review cycle before presenting results to the user. This is not optional.
 
