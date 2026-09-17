@@ -84,10 +84,17 @@ function findDateIssues(session: Session): string[] {
   const start = parseCalendarDate(session.id, session.startDate, 'startDate', issues);
   const end = parseCalendarDate(session.id, session.endDate, 'endDate', issues);
 
-  if (start !== undefined && end !== undefined && compareDates(end, start) < 0) {
+  if (endsBeforeItStarts(start, end)) {
     issues.push(`session ${session.id} ends (${end}) before it starts (${start})`);
   }
   return issues;
+}
+
+function endsBeforeItStarts(start: string | undefined, end: string | undefined): boolean {
+  if (start === undefined || end === undefined) {
+    return false;
+  }
+  return compareDates(end, start) < 0;
 }
 
 function parseCalendarDate(
