@@ -87,6 +87,14 @@ export interface Session {
   readonly endTime?: WallClockTime;
   /** Single non-member price, integer cents. Member/non-member tiering is out of scope for v1. */
   readonly priceCents?: number;
+  /**
+   * Everything the number can't carry: member pricing, sibling discounts,
+   * sliding scale, deposit terms. Mirrors camp-record-spec.md's
+   * `sessions.price_note` — a second price field is a schema decision the
+   * real catalog already made against, so this stays prose rather than a
+   * structured tier.
+   */
+  readonly priceNote?: string;
   readonly ageRange?: AgeRange;
   readonly gradeRange?: GradeRange;
 }

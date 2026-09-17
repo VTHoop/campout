@@ -212,6 +212,7 @@ const juniorMiniTennisSessions: readonly Session[] = juniorMiniTennisDateRanges.
     startTime: '10:30',
     endTime: '13:30',
     priceCents: 25_500,
+    priceNote: 'acac member price: $225',
     ageRange: { min: 5, max: 15 },
   }),
 );
@@ -232,6 +233,7 @@ const tournamentAllDaySessions: readonly Session[] = tournamentAllDayDateRanges.
     startTime: '10:00',
     endTime: '16:30',
     priceCents: 43_500,
+    priceNote: 'acac member price: $395',
     ageRange: { min: 9, max: 18 },
   }),
 );
