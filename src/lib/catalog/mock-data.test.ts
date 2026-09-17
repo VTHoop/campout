@@ -78,8 +78,33 @@ describe('mockSessions', () => {
 
   it('never prices a session with a negative or fractional cent amount', () => {
     for (const session of mockSessions) {
+      if (session.priceCents === undefined) continue;
       expect(Number.isInteger(session.priceCents)).toBe(true);
       expect(session.priceCents).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('leaves startTime, endTime, and priceCents undefined for the general-camp weeks, since the brochure states none', () => {
+    const generalCampIds = new Set([
+      'camp-wacky-water-welcome',
+      'camp-magical-mess',
+      'camp-animal-planet',
+      'camp-blast-from-the-past',
+      'camp-america-the-beautiful',
+      'camp-hollywood',
+      'camp-global-games',
+      'camp-space-explorers',
+      'camp-glow-week',
+      'camp-game-on',
+      'camp-surfs-up',
+      'camp-sayonara-summer',
+    ]);
+    const generalSessions = mockSessions.filter((session) => generalCampIds.has(session.campId));
+    expect(generalSessions).toHaveLength(12);
+    for (const session of generalSessions) {
+      expect(session.startTime).toBeUndefined();
+      expect(session.endTime).toBeUndefined();
+      expect(session.priceCents).toBeUndefined();
     }
   });
 
