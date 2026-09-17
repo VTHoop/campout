@@ -80,14 +80,26 @@ function hasInvalidPrice(session: Session): boolean {
 }
 
 function findDateIssues(session: Session): string[] {
+  const issues: string[] = [];
+  const start = parseCalendarDate(session.id, session.startDate, 'startDate', issues);
+  const end = parseCalendarDate(session.id, session.endDate, 'endDate', issues);
+
+  if (start !== undefined && end !== undefined && compareDates(end, start) < 0) {
+    issues.push(`session ${session.id} ends (${end}) before it starts (${start})`);
+  }
+  return issues;
+}
+
+function parseCalendarDate(
+  sessionId: string,
+  value: string,
+  field: string,
+  issues: string[],
+): string | undefined {
   try {
-    const start = assertCalendarDate(session.startDate, `${session.id}.startDate`);
-    const end = assertCalendarDate(session.endDate, `${session.id}.endDate`);
-    if (compareDates(end, start) < 0) {
-      return [`session ${session.id} ends (${end}) before it starts (${start})`];
-    }
-    return [];
+    return assertCalendarDate(value, `${sessionId}.${field}`);
   } catch (error) {
-    return [`session ${session.id}: ${(error as Error).message}`];
+    issues.push(`session ${sessionId}: ${(error as Error).message}`);
+    return undefined;
   }
 }
