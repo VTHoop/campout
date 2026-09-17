@@ -1,7 +1,33 @@
-import { assertCalendarDate, compareDates } from '@campout/planner';
 import { describe, expect, it } from 'vitest';
 import { mockCamps, mockLocations, mockProviders, mockSessions } from './mock-data';
 import { Category } from './types';
+import { findCatalogInconsistencies } from './validateCatalog';
+
+/**
+ * Two different things are checked in this file, and they scale on
+ * different axes:
+ *
+ * - "Is this catalog snapshot internally consistent" is a structural
+ *   invariant that applies to any Camp/Session/Location/Provider data, real
+ *   or a test fixture. That check lives once, in validateCatalog.ts, and is
+ *   just invoked here — see the first test below.
+ * - Everything else here is transcription QA: does the mock data still say
+ *   what the two source brochures in docs/data/ said. Those checks are
+ *   specific to this seed data and will grow only when that data changes,
+ *   not when new behavior is added elsewhere in src/lib/catalog.
+ */
+describe('mock catalog data', () => {
+  it('has no structural inconsistencies across providers, locations, camps, and sessions', () => {
+    expect(
+      findCatalogInconsistencies({
+        providers: mockProviders,
+        locations: mockLocations,
+        camps: mockCamps,
+        sessions: mockSessions,
+      }),
+    ).toEqual([]);
+  });
+});
 
 describe('Category', () => {
   it('is the closed six-value enum from the AC', () => {
@@ -34,22 +60,6 @@ describe('mockCamps', () => {
     // 12 acac weekly themes + 2 acac tennis variants + 1 VCU Baseball program.
     expect(mockCamps).toHaveLength(15);
   });
-
-  it('only references providers that exist', () => {
-    const providerIds = new Set(mockProviders.map((provider) => provider.id));
-    for (const camp of mockCamps) {
-      expect(providerIds.has(camp.providerId)).toBe(true);
-    }
-  });
-
-  it('gives every camp at least one category from the closed enum', () => {
-    for (const camp of mockCamps) {
-      expect(camp.categories.length).toBeGreaterThan(0);
-      for (const category of camp.categories) {
-        expect(Object.values(Category)).toContain(category);
-      }
-    }
-  });
 });
 
 describe('mockSessions', () => {
@@ -57,31 +67,6 @@ describe('mockSessions', () => {
     // acac: 12 general weeks + 9 Junior Mini Tennis dates + 3 Tournament All Day
     // dates = 24. VCU Baseball: 4 sessions. 28 total, not a representative sample.
     expect(mockSessions).toHaveLength(28);
-  });
-
-  it('only references camps and locations that exist', () => {
-    const campIds = new Set(mockCamps.map((camp) => camp.id));
-    const locationIds = new Set(mockLocations.map((location) => location.id));
-    for (const session of mockSessions) {
-      expect(campIds.has(session.campId)).toBe(true);
-      expect(locationIds.has(session.locationId)).toBe(true);
-    }
-  });
-
-  it('carries only real calendar dates, with the end on or after the start', () => {
-    for (const session of mockSessions) {
-      const start = assertCalendarDate(session.startDate, `${session.id}.startDate`);
-      const end = assertCalendarDate(session.endDate, `${session.id}.endDate`);
-      expect(compareDates(end, start)).toBeGreaterThanOrEqual(0);
-    }
-  });
-
-  it('never prices a session with a negative or fractional cent amount', () => {
-    for (const session of mockSessions) {
-      if (session.priceCents === undefined) continue;
-      expect(Number.isInteger(session.priceCents)).toBe(true);
-      expect(session.priceCents).toBeGreaterThanOrEqual(0);
-    }
   });
 
   it('leaves startTime, endTime, and priceCents undefined for the general-camp weeks, since the brochure states none', () => {
