@@ -131,6 +131,7 @@ describe('mockSessions', () => {
       campId: 'camp-junior-mini-tennis',
       expectedCount: 9,
       priceCents: 25_500,
+      priceNote: 'acac member price: $225',
       startTime: '10:30',
       endTime: '13:30',
       ageRange: { min: 5, max: 15 },
@@ -140,17 +141,19 @@ describe('mockSessions', () => {
       campId: 'camp-tournament-all-day-tennis',
       expectedCount: 3,
       priceCents: 43_500,
+      priceNote: 'acac member price: $395',
       startTime: '10:00',
       endTime: '16:30',
       ageRange: { min: 9, max: 18 },
     },
   ])(
-    'gives every $label date the same price, hours, and age range',
-    ({ campId, expectedCount, priceCents, startTime, endTime, ageRange }) => {
+    'gives every $label date the same price, member price note, hours, and age range',
+    ({ campId, expectedCount, priceCents, priceNote, startTime, endTime, ageRange }) => {
       const sessions = mockSessions.filter((session) => session.campId === campId);
       expect(sessions).toHaveLength(expectedCount);
       for (const session of sessions) {
         expect(session.priceCents).toBe(priceCents);
+        expect(session.priceNote).toBe(priceNote);
         expect(session.startTime).toBe(startTime);
         expect(session.endTime).toBe(endTime);
         expect(session.ageRange).toEqual(ageRange);
