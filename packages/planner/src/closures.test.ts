@@ -67,6 +67,12 @@ const year2027: SchoolYearCalendar = {
 
 const bothYears = [year2026, year2027];
 
+/** The natural way to enter a year: the window stops where school does. */
+const naturalWindows = [
+  { ...year2026, coversTo: year2026.lastInstructionalDay },
+  { ...year2027, coversFrom: year2027.firstInstructionalDay },
+];
+
 const startDates = (periods: ReturnType<typeof coveragePeriods>) =>
   periods.map((period) => period.closure.startDate);
 
@@ -121,6 +127,15 @@ describe('coveragePeriods', () => {
     expect(summer.weeks).toHaveLength(12);
     expect(summer.weeks.at(0)?.isPartial).toBe(true);
     expect(summer.weeks.at(-1)?.isPartial).toBe(true);
+  });
+
+  // Neighbours are found by label, not by their windows touching, so nobody has to
+  // pad a window past the last day of school to make summer known.
+  it('derives the summer even when each window stops at the edge of its school year', () => {
+    const summer = periodOn(naturalWindows, '2027-07-15');
+
+    expect(summer.closure.startDate).toBe('2027-06-10');
+    expect(summer.closure.endDate).toBe('2027-08-24');
   });
 
   it('returns the whole closure when the range covers only part of it', () => {
@@ -238,6 +253,33 @@ describe('longestPeriod', () => {
     expect(summer?.weeks.map((week) => week.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
+  it('finds the summer when each window stops at the edge of its school year', () => {
+    expect(longestPeriod(naturalWindows, '2026-27')?.closure.startDate).toBe('2027-06-10');
+  });
+
+  it('pairs a year with the next across a century rollover', () => {
+    const y2099: SchoolYearCalendar = {
+      ...year2026,
+      label: '2099-00',
+      firstInstructionalDay: '2099-08-24',
+      lastInstructionalDay: '2100-06-11',
+      coversFrom: '2099-07-01',
+      coversTo: '2100-06-11',
+      closures: [],
+    };
+    const y2100: SchoolYearCalendar = {
+      ...year2027,
+      label: '2100-01',
+      firstInstructionalDay: '2100-08-23',
+      lastInstructionalDay: '2101-06-10',
+      coversFrom: '2100-08-23',
+      coversTo: '2101-06-30',
+      closures: [],
+    };
+
+    expect(longestPeriod([y2099, y2100], '2099-00')?.closure.startDate).toBe('2100-06-12');
+  });
+
   it('finds the year whatever order the calendars arrive in', () => {
     expect(longestPeriod([year2027, year2026], '2026-27')?.closure.startDate).toBe('2027-06-10');
   });
@@ -302,6 +344,10 @@ describe('coveragePeriodOf', () => {
 
   it('finds the summer for a weekend inside it', () => {
     expect(coveragePeriodOf(bothYears, '2027-06-12')?.closure.startDate).toBe('2027-06-10');
+  });
+
+  it('finds the summer when each window stops at the edge of its school year', () => {
+    expect(coveragePeriodOf(naturalWindows, '2027-07-15')?.closure.startDate).toBe('2027-06-10');
   });
 
   it('finds the first and last day of the summer', () => {
@@ -425,6 +471,8 @@ describe('refusing inconsistent calendars', () => {
       [year2026, { ...year2027, school: 'Bellwood Elementary' }],
     ],
     ['two calendars with the same label', [year2026, { ...year2027, label: '2026-27' }]],
+    ['a label that is not written YYYY-YY', [{ ...year2026, label: '2026-2027' }]],
+    ['a label whose second year does not follow the first', [{ ...year2026, label: '2026-28' }]],
     [
       'two school years that overlap',
       [year2026, { ...year2027, firstInstructionalDay: '2027-05-01', coversFrom: '2027-04-01' }],
