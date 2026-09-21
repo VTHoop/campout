@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coveragePeriodOf, coveragePeriods, longestPeriod } from './coverage';
+import { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
 import type { Closure, SchoolYearCalendar } from './types';
 import { CalendarType, ClosureTag, SchoolDistrict } from './types';
 
