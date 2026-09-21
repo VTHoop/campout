@@ -30,8 +30,8 @@ const MS_PER_DAY = 86_400_000;
  * Validate a calendar date, throwing on anything malformed or impossible.
  *
  * "Refuse rather than guess" (AGENTS.md §1). A bad date silently coerced to
- * something plausible produces a summer week that is off by one, and a parent
- * plans around it.
+ * something plausible produces a week that is off by one, and a parent plans
+ * around it.
  */
 export function assertCalendarDate(value: string, label: string): CalendarDate {
   if (!ISO_DATE.test(value)) {
@@ -43,7 +43,7 @@ export function assertCalendarDate(value: string, label: string): CalendarDate {
   }
   // Date.parse does NOT reject an impossible day-of-month — it rolls it over, so
   // "2027-02-30" silently becomes March 2nd. Round-tripping is the only way to
-  // catch that, and a summer week built on a rolled-over date is off by days.
+  // catch that, and a week built on a rolled-over date is off by days.
   if (fromEpochMs(ms) !== value) {
     throw new RangeError(`${label} is not a real date: "${value}"`);
   }

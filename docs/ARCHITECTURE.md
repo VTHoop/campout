@@ -44,7 +44,7 @@ erDiagram
     children ||--o{ plan_entries : "scheduled into"
     sessions ||--o{ plan_entries : "booked by"
     school_calendars ||--o{ school_closures : "lists"
-    school_calendars ||--o{ households : "district drives summer for"
+    school_calendars ||--o{ households : "shares a district with"
 ```
 
 **Two halves with different rules:**
@@ -64,7 +64,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 
 **The coverage primitive is a closure, not a summer (ADR-0013).** A closure is a contiguous run of days school is shut, carrying the district’s own words and a set of tags. **Summer is never stored:** no district publishes it, so it is derived from one year’s `lastInstructionalDay` and the next year’s `firstInstructionalDay`, and it is the same `CoveragePeriod` shape as a Tuesday off. What is stored is a `SchoolYearCalendar` (`school_calendars`) and its `Closure`s (`school_closures`). A calendar’s `type` (`traditional` or `year_round`) tells the UI what it may promise; it never changes the algorithm.
 
-**The planner refuses rather than guesses.** A date outside every calendar’s window throws, and so does a date in a summer whose neighbouring year is not held — that is not the same as “school is in session”. `longestPeriod` returns `undefined` when the following year is absent, so the app can say summer is not published yet instead of inventing an end date. A calendar that contradicts itself (a closure outside its instructional days, two closures sharing a day, overlapping years) throws. Early release days and grade-staggered start dates are deliberately out of scope (ADR-0013).
+**The planner refuses rather than guesses.** A date we hold no calendar for throws, and so does a date in a summer whose neighbouring year is not held — that is not the same as “school is in session”. Neighbouring years are paired by **label** (`2026-27`, then `2027-28`), so a summer between two held years is known even when each coverage window stops at the last day of school. A label that is not `YYYY-YY` throws. `longestPeriod` returns `undefined` when the following year is absent, so the app can say summer is not published yet instead of inventing an end date. A calendar that contradicts itself (a closure outside its instructional days, two closures sharing a day, overlapping years) throws. Early release days and grade-staggered start dates are deliberately out of scope (ADR-0013).
 
 **The database does not enforce that a closure sits inside its calendar’s window** — a check constraint cannot read the parent row. The planner does, and a violation is a data-quality bug for the verification workflow to catch. On the catalog side there is nothing else to do for one-day camps: a one-day camp is already a `sessions` row with `start_date == end_date`.
 
@@ -73,7 +73,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | Module | Status | Responsibility |
 |---|---|---|
 | `calendarDate.ts` | **shipped** | Date primitives: parse/validate, `addDays`, `mondayOf`, `nextWeekday`, `previousWeekday`, `firstWeekdayOnOrAfter`, `lastWeekdayOnOrBefore`. Rejects `2027-02-30`, which `Date.parse` silently rolls to March 2. |
-| `weeks.ts` | **shipped** | `weeksBetween(start, end)` — a run of closed days in, the ordered Monday-anchored weeks out, with partial boundary weeks flagged. The subtlest code in the repo; carried over from `summerWeeks()` unchanged. |
+| `weeks.ts` | **shipped** | `weeksBetween(start, end)` — a run of closed days in, the ordered Monday-anchored weeks out, with partial boundary weeks flagged. The subtlest code in the repo. The week-building loop is carried over from `summerWeeks()` unchanged; only its inputs changed. |
 | `types.ts` | **shipped** | `SchoolDistrict`, `CalendarType`, `ClosureTag`, `Closure`, `SchoolYearCalendar`, `CoveragePeriod`, `CoverageWeek`. |
 | `calendars.ts` | **shipped** | Validates a list of `SchoolYearCalendar`s and puts them in date order. Throws on anything that contradicts itself. |
 | `closures.ts` | **shipped** | `coveragePeriods()`, `longestPeriod()`, `coveragePeriodOf()` — every run of closed weekdays, summer included. The module everything else indexes off. ADR-0013 |

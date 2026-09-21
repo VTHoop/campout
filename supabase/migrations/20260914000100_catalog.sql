@@ -174,7 +174,9 @@ create table school_calendars (
   district school_district not null,
   type     calendar_type   not null,
   school   text,                                  -- null = the district-wide calendar
-  label    text not null,                         -- '2026-27'
+  -- '2026-27'. Written YYYY-YY: the planner pairs neighbouring years by label, and
+  -- refuses any other format. The database does not enforce the format (ADR-0013).
+  label    text not null,
   first_instructional_day date not null,
   last_instructional_day  date not null,
   -- The window this record speaks for. Outside it we do not know, and say so.
@@ -188,7 +190,7 @@ create table school_calendars (
 
   -- Null-safe: a district-wide calendar has no school, and Postgres would
   -- otherwise treat two null schools as distinct and allow the year twice.
-  unique nulls not distinct (district, school, label),
+  constraint school_calendars_label_unique unique nulls not distinct (district, school, label),
   constraint school_calendars_instruction_ordered
     check (last_instructional_day > first_instructional_day),
   constraint school_calendars_window check (covers_to > covers_from),
@@ -210,13 +212,13 @@ create table school_closures (
   constraint school_closures_ordered check (end_date >= start_date),
   -- Two rows both claiming December 21st starts winter break is a data-entry
   -- mistake we would otherwise make, and it would double-count a gap.
-  exclude using gist (
+  constraint school_closures_no_overlap exclude using gist (
     calendar_id with =,
     daterange(start_date, end_date, '[]') with &&
   )
 );
 
-create index on school_closures (calendar_id, start_date);
+create index school_closures_calendar_start_idx on school_closures (calendar_id, start_date);
 
 -- What the database does NOT enforce: that a closure falls inside its calendar's
 -- window. A check constraint cannot read the parent row, and a trigger would hide

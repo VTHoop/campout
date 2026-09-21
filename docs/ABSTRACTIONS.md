@@ -31,14 +31,14 @@ Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to th
 **Three answers, and the difference between them matters:**
 
 - `coveragePeriodOf` returns `undefined` when school is in session that day.
-- It **throws** when we cannot say — the date is outside every calendar's `coversFrom`/`coversTo`, or it falls in a summer whose neighbouring year is not held. A date we hold no calendar for is not "school is in session".
+- It **throws** when we cannot say — the date is before the first calendar or after the last, or it falls in a summer whose neighbouring year is not held. A date we hold no calendar for is not "school is in session".
 - `longestPeriod` returns `undefined` when the following year's calendar is absent, so the app can say summer is not published yet. **It never invents an end date.**
 
 A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: tagged `break`, with a `sourceLabel` that says so. The district never said it, so never show that label as the district's words.
 
 The planner also **throws** on a calendar that contradicts itself — a closure outside its instructional days, two closures sharing a day, overlapping school years, a coverage window that does not contain its own school year. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
 
-Pass calendars for **one district or school**. `coveragePeriods` sorts them for you, but it refuses a list that mixes owners, because a gap between Chesterfield's year and Bellwood's is not a summer.
+Years are neighbours when their **labels** follow each other (`2026-27`, then `2027-28`); a label that is not `YYYY-YY` throws. Pass calendars for **one district or school**. `coveragePeriods` sorts them for you, but it refuses a list that mixes owners, because a gap between Chesterfield's year and Bellwood's is not a summer.
 
 ## Purity in `@campout/planner`
 

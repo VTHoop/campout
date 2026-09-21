@@ -46,11 +46,17 @@ export interface SchoolYearCalendar {
   readonly type: CalendarType;
   /** Absent for the district-wide calendar; set for a school on its own, e.g. Bellwood. */
   readonly school?: string;
-  /** The district's name for the year, e.g. "2026-27". */
+  /**
+   * The district's name for the year, written YYYY-YY: "2026-27". The planner pairs
+   * neighbouring years by it ("2026-27" then "2027-28") and refuses any other form.
+   */
   readonly label: string;
   readonly firstInstructionalDay: CalendarDate;
   readonly lastInstructionalDay: CalendarDate;
-  /** The window this record speaks for. Outside it we do not know, and say so. */
+  /**
+   * The window this record speaks for. It must contain the school year itself. It
+   * need not reach across summer: that is derived from the neighbouring year.
+   */
   readonly coversFrom: CalendarDate;
   readonly coversTo: CalendarDate;
   readonly closures: readonly Closure[];

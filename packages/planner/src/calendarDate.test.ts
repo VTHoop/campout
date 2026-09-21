@@ -29,7 +29,7 @@ describe('assertCalendarDate', () => {
     ['a timestamp rather than a calendar date', '2027-06-14T09:00:00Z'],
     ['a two-digit year', '27-06-14'],
   ])('rejects %s', (_label, value) => {
-    expect(() => assertCalendarDate(value, 'lastDayOfSchool')).toThrow(RangeError);
+    expect(() => assertCalendarDate(value, 'lastInstructionalDay')).toThrow(RangeError);
   });
 
   it('rejects an impossible month', () => {
@@ -44,7 +44,9 @@ describe('assertCalendarDate', () => {
   });
 
   it('names the offending field in the error, so the caller knows which date was bad', () => {
-    expect(() => assertCalendarDate('nope', 'firstDayOfSchool')).toThrow(/firstDayOfSchool/);
+    expect(() => assertCalendarDate('nope', 'firstInstructionalDay')).toThrow(
+      /firstInstructionalDay/,
+    );
   });
 });
 

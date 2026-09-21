@@ -80,11 +80,11 @@ One `school_calendars` row per school year per district — or per school, when 
 
 | Field | Required | Notes |
 |---|---|---|
-| `district`, `label` | yes | `label` is the district's name for the year: `2026-27`. |
+| `district`, `label` | yes | `label` is the district's name for the year, **written `YYYY-YY`**: `2026-27`. The planner pairs a year with the next one by label and refuses any other format. The database does not check it, so check it by eye. |
 | `type` | yes | `traditional` or `year_round`. Tells the UI what it may promise; it does not change how days are counted. |
 | `school` | no | Set only for a school on its own calendar. |
 | `first_instructional_day`, `last_instructional_day` | yes | Copied from the published calendar. The earlier date when grades start on different days. |
-| `covers_from`, `covers_to` | yes | The window this record speaks for. Outside it we do not know, and the app says so. Windows of consecutive years must touch, or the summer between them is treated as unknown. |
+| `covers_from`, `covers_to` | yes | The window this record speaks for. It must contain the school year (first to last instructional day). It does **not** need to reach across summer: the summer is derived from the next year's calendar. |
 | `verified_at`, `verified_by` | yes | Same rule as a camp. |
 | `source_url` / `source_document_path` | **one of these two** | Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes. |
 
