@@ -1,32 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import type { SchoolCalendar } from './types';
-import { SchoolDistrict } from './types';
-import { summerWeekIndexOf, summerWeeks } from './weeks';
+import { weeksBetween } from './weeks';
 
 /**
- * Fixture calendars. Invented, not scraped — real district calendars are
- * reference data that belongs in the database, and these exist to pin the
- * boundary arithmetic rather than to be accurate.
+ * Fixture ranges. Invented, not scraped — real district calendars are reference
+ * data that belongs in the database, and these exist to pin the boundary
+ * arithmetic rather than to be accurate.
+ *
+ * A range is the first and last day school is shut, inclusive: the day after the
+ * last day of school through the day before school returns.
  */
 
-/** School ends Friday, returns Monday: both boundary weeks are full. */
-const cleanBoundaries: SchoolCalendar = {
-  district: SchoolDistrict.Chesterfield,
-  year: 2027,
-  lastDayOfSchool: '2027-06-11',
-  firstDayOfSchool: '2027-08-23',
-};
+/** School ends Friday June 11, returns Monday Aug 23: both boundary weeks are full. */
+const cleanBoundaries = { start: '2027-06-12', end: '2027-08-22' };
 
-/** School ends Wednesday, returns Wednesday: both boundary weeks are partial. */
-const midweekBoundaries: SchoolCalendar = {
-  district: SchoolDistrict.Henrico,
-  year: 2027,
-  lastDayOfSchool: '2027-06-09',
-  firstDayOfSchool: '2027-08-25',
-};
+/** School ends Wednesday June 9, returns Wednesday Aug 25: both boundary weeks are partial. */
+const midweekBoundaries = { start: '2027-06-10', end: '2027-08-24' };
 
-describe('summerWeeks — clean Friday-to-Monday boundaries', () => {
-  const weeks = summerWeeks(cleanBoundaries);
+describe('weeksBetween — clean Friday-to-Monday boundaries', () => {
+  const weeks = weeksBetween(cleanBoundaries.start, cleanBoundaries.end);
 
   it('produces the ten weeks the product is built around', () => {
     expect(weeks).toHaveLength(10);
@@ -74,8 +65,8 @@ describe('summerWeeks — clean Friday-to-Monday boundaries', () => {
   });
 });
 
-describe('summerWeeks — midweek boundaries', () => {
-  const weeks = summerWeeks(midweekBoundaries);
+describe('weeksBetween — midweek boundaries', () => {
+  const weeks = weeksBetween(midweekBoundaries.start, midweekBoundaries.end);
 
   it('includes the stub week at each end', () => {
     expect(weeks).toHaveLength(12);
@@ -106,69 +97,67 @@ describe('summerWeeks — midweek boundaries', () => {
   });
 });
 
-describe('summerWeeks — refusing bad input', () => {
-  it('throws when school returns before it lets out', () => {
-    expect(() => summerWeeks({ ...cleanBoundaries, firstDayOfSchool: '2027-05-01' })).toThrow(
-      RangeError,
-    );
+// The same arithmetic has to hold when the run is one day or one week, because a
+// scattered day off is the same shape as summer, only shorter (ADR-0013).
+describe('weeksBetween — short runs', () => {
+  it('turns a single Tuesday into one partial week covering only that day', () => {
+    const weeks = weeksBetween('2027-11-02', '2027-11-02');
+
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0]?.monday).toBe('2027-11-01');
+    expect(weeks[0]?.friday).toBe('2027-11-05');
+    expect(weeks[0]?.isPartial).toBe(true);
+    expect(weeks[0]?.firstDayNeedingCover).toBe('2027-11-02');
+    expect(weeks[0]?.lastDayNeedingCover).toBe('2027-11-02');
   });
 
-  it('throws when school returns on the same day it lets out', () => {
-    expect(() => summerWeeks({ ...cleanBoundaries, firstDayOfSchool: '2027-06-11' })).toThrow(
-      RangeError,
-    );
+  it('treats a Monday-to-Friday run as one full week', () => {
+    const weeks = weeksBetween('2027-03-29', '2027-04-02');
+
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0]?.isPartial).toBe(false);
   });
 
-  it('throws when the gap contains no summer weekdays at all', () => {
-    expect(() =>
-      summerWeeks({
-        ...cleanBoundaries,
-        lastDayOfSchool: '2027-06-11',
-        firstDayOfSchool: '2027-06-14',
-      }),
-    ).toThrow(/No summer weekdays/);
+  it('starts a run that opens on a Saturday at the following Monday', () => {
+    const weeks = weeksBetween('2027-06-12', '2027-06-16');
+
+    expect(weeks[0]?.monday).toBe('2027-06-14');
+    expect(weeks[0]?.firstDayNeedingCover).toBe('2027-06-14');
+    expect(weeks[0]?.lastDayNeedingCover).toBe('2027-06-16');
+    expect(weeks[0]?.isPartial).toBe(true);
   });
 
-  it('throws on a malformed date rather than producing an empty grid', () => {
-    expect(() => summerWeeks({ ...cleanBoundaries, lastDayOfSchool: 'June 11' })).toThrow(
-      RangeError,
-    );
-  });
+  it('ends a run that closes on a Sunday at the Friday before', () => {
+    const weeks = weeksBetween('2027-06-09', '2027-06-13');
 
-  it('names the district and year in the error', () => {
-    expect(() => summerWeeks({ ...cleanBoundaries, firstDayOfSchool: '2027-05-01' })).toThrow(
-      /chesterfield 2027/,
-    );
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0]?.firstDayNeedingCover).toBe('2027-06-09');
+    expect(weeks[0]?.lastDayNeedingCover).toBe('2027-06-11');
   });
 });
 
-describe('summerWeekIndexOf', () => {
-  const weeks = summerWeeks(cleanBoundaries);
-
-  it('finds the week containing a midweek date', () => {
-    expect(summerWeekIndexOf(weeks, '2027-06-30')).toBe(2);
+describe('weeksBetween — refusing bad input', () => {
+  it('throws when the range ends before it starts', () => {
+    expect(() => weeksBetween('2027-06-12', '2027-05-01')).toThrow(RangeError);
   });
 
-  it('finds the week when the date is the Monday itself', () => {
-    expect(summerWeekIndexOf(weeks, '2027-07-05')).toBe(3);
+  it('throws when the range ends the day before it starts', () => {
+    expect(() => weeksBetween('2027-06-12', '2027-06-11')).toThrow(RangeError);
   });
 
-  // A Saturday session belongs to the week it starts in, so the lookup window
-  // closes on Sunday rather than Friday.
-  it('includes the weekend that closes a week', () => {
-    expect(summerWeekIndexOf(weeks, '2027-08-21')).toBe(9);
-    expect(summerWeekIndexOf(weeks, '2027-08-22')).toBe(9);
+  it('throws when the range holds no weekdays at all', () => {
+    expect(() => weeksBetween('2027-06-12', '2027-06-13')).toThrow(/No weekdays/);
   });
 
-  it('returns null before summer starts', () => {
-    expect(summerWeekIndexOf(weeks, '2027-06-13')).toBeNull();
+  it('throws on a malformed start rather than producing an empty grid', () => {
+    expect(() => weeksBetween('June 12', '2027-08-22')).toThrow(RangeError);
   });
 
-  it('returns null after summer ends', () => {
-    expect(summerWeekIndexOf(weeks, '2027-08-23')).toBeNull();
+  it('throws on a malformed end rather than producing an empty grid', () => {
+    expect(() => weeksBetween('2027-06-12', 'August 22')).toThrow(RangeError);
   });
 
-  it('throws on a malformed date', () => {
-    expect(() => summerWeekIndexOf(weeks, 'whenever')).toThrow(RangeError);
+  it('names both dates in the error', () => {
+    expect(() => weeksBetween('2027-06-12', '2027-05-01')).toThrow(/2027-06-12.*2027-05-01/);
   });
 });

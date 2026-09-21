@@ -8,10 +8,14 @@ import {
   nextWeekday,
   previousWeekday,
 } from './calendarDate';
-import type { SchoolCalendar, SummerWeek } from './types';
+import type { CoverageWeek, SchoolCalendar, SummerWeek } from './types';
 
 const DAYS_PER_WEEK = 7;
 const MONDAY_TO_FRIDAY = 4;
+
+export function weeksBetween(_start: CalendarDate, _end: CalendarDate): readonly CoverageWeek[] {
+  throw new Error('not implemented');
+}
 
 /**
  * Turn a district's school calendar into the ordered weeks of summer a parent
