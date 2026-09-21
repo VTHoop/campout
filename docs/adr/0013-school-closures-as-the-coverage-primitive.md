@@ -12,141 +12,173 @@ That is the wrong shape for what we actually sell. School closes on roughly eigh
 
 Two dates cannot express eighteen scattered days. The question is what replaces them.
 
+This ADR was drafted from reasoning, then tested against Chesterfield’s published calendar (<https://www.oneccps.org/page/calendars>, and the Google Calendar iCal feed it links). Real data confirmed the central idea and killed three of the specifics. Both are recorded below, because the next district will break something too.
+
 We are one PR into this project. No migration has been applied to any Supabase project, `@campout/planner` has one shipped module that depends on this shape, and the directory UI has not been built. The cost of changing the model now is a day. The cost of changing it after the grid ships is most of the grid.
 
 ## Decision
 
-**The primitive is a closure: a contiguous run of days school is shut, with a reason. Summer is a closure like any other, distinguished only by its `kind` and its length.**
+**The primitive is a closure: a contiguous run of days school is shut. Summer is the longest one, not a separate type.** That much survived contact with real data. The rest of this section is what the data forced.
 
-### The planner types
+**Store what the district publishes. Derive what the planner needs.** Districts do not publish summer. They publish a first day, a last day, and a list of dated exceptions. Storing a shape the source does not have means a verifier cannot check a row against the document in front of them, which is the whole point of hand verification.
+
+### Stored: the school year and its entries
 
 ```ts
-export enum ClosureKind {
-  Summer = 'summer',
-  Break = 'break',                  // winter, spring, fall
-  Holiday = 'holiday',              // Labor Day, MLK, Yom Kippur
+/** What a dated entry does to a school day. */
+export enum DayShape {
+  Closed = 'closed',
+  EarlyRelease = 'early_release',
+}
+
+/** Facts a district attaches to a day. A day carries a set, never one. */
+export enum EntryTag {
+  Holiday = 'holiday',
   TeacherWorkday = 'teacher_workday',
-  Other = 'other',
+  ConferenceDay = 'conference_day',
+  Break = 'break',
+  FirstDay = 'first_day',
+  LastDay = 'last_day',
+  GradingPeriodEnd = 'grading_period_end',
 }
 
-/** A run of days school is closed. Inclusive on both ends; a single day has startDate === endDate. */
-export interface Closure {
+export interface CalendarEntry {
   readonly startDate: CalendarDate;
-  readonly endDate: CalendarDate;
-  /** The district's own words: "Yom Kippur", "Teacher workday". Shown to the parent verbatim. */
-  readonly reason: string;
-  readonly kind: ClosureKind;
+  readonly endDate: CalendarDate;          // inclusive; a single day repeats startDate
+  readonly shape: DayShape;
+  readonly tags: readonly EntryTag[];
+  /** The district's exact words. Often useless on its own: CCPS says "Holiday" nine times. */
+  readonly sourceLabel: string;
+  /** What a parent would call it. Ours, not the district's, and separately sourced. */
+  readonly commonName?: string;
+  /** Wall-clock dismissal, only when shape is EarlyRelease. */
+  readonly dismissalTime?: WallClockTime;
+  /**
+   * Set only when the entry applies to some grades and not others. An explicit
+   * list, not a range: CCPS starts grades 1-5, 6 and 9 a day before 7-8 and
+   * 10-12, which no single min/max can express. -1 is pre-K, 0 is kindergarten,
+   * matching camp-record-spec.md.
+   */
+  readonly grades?: readonly number[];
 }
 
-/** Everything one district says about one school year. */
 export interface SchoolYearCalendar {
   readonly district: SchoolDistrict;
-  /** "2026-27", as the district labels it. */
-  readonly label: string;
-  /** The window this record makes claims about. Outside it we do not know, and say so. */
+  /** Null for the district calendar; set for a school on its own, e.g. Bellwood year-round. */
+  readonly school?: string;
+  readonly label: string;                  // "2026-27"
+  readonly firstInstructionalDay: CalendarDate;
+  readonly lastInstructionalDay: CalendarDate;
+  /** The window this record speaks for. Outside it we do not know, and say so. */
   readonly coversFrom: CalendarDate;
   readonly coversTo: CalendarDate;
-  readonly closures: readonly Closure[];
+  readonly entries: readonly CalendarEntry[];
 }
 ```
 
-Derived, never stored:
+### Derived: what the planner and the UI consume
 
-```ts
-/** One column. Shape is unchanged from SummerWeek — only the name and the source widened. */
-export interface CoverageWeek {
-  readonly index: number;
-  readonly monday: CalendarDate;
-  readonly friday: CalendarDate;
-  readonly isPartial: boolean;
-  readonly firstDayNeedingCover: CalendarDate;
-  readonly lastDayNeedingCover: CalendarDate;
-}
-
-/** A closure resolved into the days and columns a parent has to fill. */
-export interface CoveragePeriod {
-  readonly closure: Closure;
-  readonly weekdays: readonly CalendarDate[];
-  readonly weeks: readonly CoverageWeek[];
-}
-```
+`CoveragePeriod` and `CoverageWeek` are unchanged from the first draft, and `weeksBetween(start, end)` still carries the partial-boundary-week logic out of `weeks.ts`. What changes is where periods come from:
 
 | Function | Responsibility |
 |---|---|
-| `coveragePeriods(calendar)` | Every closure resolved, in date order. Summer is one entry among about sixteen. |
-| `summerOf(calendar)` | The `kind: Summer` period, or `undefined` when the district has not published it yet. |
-| `weeksBetween(start, end)` | Monday-anchored columns for any span. This is the surviving core of `weeks.ts`. |
-| `weekIndexOf(period, date)` | Maps a date to a column within its period. Replaces `summerWeekIndexOf`. |
-| `coveragePeriodOf(calendar, date)` | The closure covering a date. **Throws** outside `coversFrom`/`coversTo`. |
-
-**One period type means one set of analyzers.** `coverage.ts`, `overlap.ts`, `hours.ts` and `logistics.ts` take a `CoveragePeriod` and never learn what summer is. A single day off is a period with one weekday and one partial week, which is why the same card renders a Tuesday in November and the week of July 13.
-
-### The window, and refusing to guess
-
-A date inside no closure could mean school is in session, or it could mean nobody has entered that year yet. Those must not be the same answer. `coversFrom`/`coversTo` state the span the record speaks for; a query outside it throws, per AGENTS.md §1 — *refuse rather than guess*. A silently in-session answer is how a parent gets told a day is fine when we have never looked.
+| `coveragePeriods(calendars, from, to)` | Every run of closed weekdays in the range, summer included. Takes **a list** of calendars, because summer sits between two school years. |
+| `summerOf(calendars, year)` | The period between one year’s `lastInstructionalDay` and the next year’s `firstInstructionalDay`. Derived, never stored. |
+| `earlyReleases(calendar)` | The partial days. Modelled now, not surfaced in v1. |
+| `coveragePeriodOf(calendars, date, grade?)` | Throws outside every `coversFrom`/`coversTo`. Refuse rather than guess (AGENTS.md §1). |
 
 ### Schema
 
 ```sql
 create extension if not exists btree_gist;
 
-create type closure_kind as enum ('summer', 'break', 'holiday', 'teacher_workday', 'other');
+create type day_shape as enum ('closed', 'early_release');
+create type entry_tag as enum (
+  'holiday', 'teacher_workday', 'conference_day', 'break',
+  'first_day', 'last_day', 'grading_period_end'
+);
 
 create table school_calendars (
-  id           uuid primary key default gen_random_uuid(),
-  district     school_district not null,
-  label        text not null,                    -- '2026-27'
-  covers_from  date not null,
-  covers_to    date not null,
+  id       uuid primary key default gen_random_uuid(),
+  district school_district not null,
+  school   text,                                  -- null = the district-wide calendar
+  label    text not null,                         -- '2026-27'
+  first_instructional_day date not null,
+  last_instructional_day  date not null,
+  covers_from date not null,
+  covers_to   date not null,
   source_url            text,
   source_document_path  text,
   verified_at           timestamptz not null,
   verified_by           text        not null,
-  unique (district, label),
+  unique nulls not distinct (district, school, label),
+  constraint school_calendars_instruction_ordered
+    check (last_instructional_day > first_instructional_day),
   constraint school_calendars_window check (covers_to > covers_from),
   constraint school_calendars_provenance_present
     check (source_url is not null or source_document_path is not null)
 );
 
-create table school_closures (
+create table school_calendar_entries (
   id          uuid primary key default gen_random_uuid(),
   calendar_id uuid not null references school_calendars (id) on delete cascade,
   start_date  date not null,
   end_date    date not null,
-  reason      text not null,
-  kind        closure_kind not null,
-  constraint school_closures_ordered check (end_date >= start_date),
-  exclude using gist (
-    calendar_id with =,
-    daterange(start_date, end_date, '[]') with &&
-  )
+  shape       day_shape not null,
+  tags        entry_tag[] not null default '{}',
+  source_label text not null,                     -- the district's exact words
+  common_name  text,                              -- ours, and only with its own source
+  dismissal_time time,
+  grades       smallint[],                        -- null = every grade
+  constraint entries_ordered check (end_date >= start_date),
+  constraint entries_dismissal_matches_shape
+    check ((shape = 'early_release') = (dismissal_time is not null))
 );
+
+create index on school_calendar_entries (calendar_id, start_date);
 ```
 
-The exclusion constraint makes overlapping closures within one calendar impossible. Two rows both claiming December 21st is the start of winter break is a data-entry mistake we will otherwise make, and it would double-count a gap.
+Both tables are catalog-side: world-readable, `service_role` writes only, RLS enabled with a select policy, per ADR-0004.
 
-**What the database does not enforce:** that a closure falls inside its calendar's window. A check constraint cannot read the parent row, and a trigger would hide the rule somewhere nobody reads. Following [ADR-0012](./0012-provenance-url-or-stored-document.md), we state the limit rather than half-enforce it: containment is the verification workflow's job, and a closure outside its window is a data-quality bug.
-
-Both tables are catalog-side — world-readable, `service_role` writes only, RLS enabled with a select policy, exactly as ADR-0004 requires.
+**What the database does not enforce.** That an entry falls inside its calendar's window, and that two entries do not cover the same date for the same grade. A check constraint cannot read the parent row, and grade-scoped entries legitimately share a date — Aug 24 2026 is closed for grades 7-8 and for 10-12, two rows, one day. Following [ADR-0012](./0012-provenance-url-or-stored-document.md), we state the limit rather than half-enforce it with a trigger nobody reads. Both are verification-workflow concerns and a violation is a data-quality bug.
 
 ### Replacing rather than migrating
 
 No migration has been applied to any Supabase project, so `20260914000100_catalog.sql` is **edited in place** and `pnpm supabase:reset` reapplies from scratch. The decision rule if that changes: the moment any shared environment has run it, this becomes an additive migration instead.
 
+## Validated against real data
+
+Chesterfield’s 2026-27 calendar, 29 events in the iCal feed plus the HTML page.
+
+**What held.** Multi-day closures arrive as one dated range and map onto `CalendarEntry` exactly: winter break is `20261221–20270101`, spring break `20270329–20270402`, Thanksgiving `20261125–20261127`. One row each, as published. The range primitive was right.
+
+**What broke, and the fix:**
+
+1. **`reason` as "the district’s own words" is worthless.** CCPS labels Yom Kippur, Labor Day, MLK Day and six others identically: *"Holiday, schools and offices closed."* A days-off list built from that shows nine indistinguishable rows. Hence `sourceLabel` (verbatim, what we can cite) **and** `commonName` (ours, separately sourced). We do not get to put "Yom Kippur" in a field and imply the district said it.
+2. **A single `kind` cannot hold a real day.** `"End of Q4; 3-hour early release; final day of school"` is one event with three facts. `"Holiday; parent-teacher conferences"` is two. Hence a tag set.
+3. **Early release is not an edge case.** Seven in 2026-27, eight in 2027-28 — as many as full holidays, and a three-hour dismissal wrecks a workday as thoroughly as a closure. Excluding it from the product was a scope call; excluding it from the *model* would have been a mistake we paid for with a migration. `DayShape.EarlyRelease` exists now and v1 does not render it.
+4. **Summer is never published as an event.** It has to be derived from `lastInstructionalDay` of one year and `firstInstructionalDay` of the next. This is the opposite of the first draft, which stored summer as a closure.
+5. **Start dates stagger by grade.** Grades 1-5, 6 and 9 start Aug 24; grades 7-8 and 10-12 start Aug 25. For a seventh-grader, Aug 24 is an unnoticed day off — exactly the case this product exists for. Hence optional `grades` on an entry.
+6. **A district is not always one calendar.** Bellwood Elementary runs year-round on its own calendar, so a Bellwood family’s summer is not Chesterfield’s. Hence nullable `school`.
+
+**What we still cannot answer.** Prekindergarten and kindergarten stagger across the first week per child, and the district says so without saying which child. That is unknowable from any published source, and the honest response is to say so rather than assume.
+
 ## Alternatives considered
 
-**Keep `SchoolCalendar` and add a `days_off` table.** The cheapest change and the one we rejected hardest. It creates two models of one fact. "Is this day covered?" gets answered down two code paths, summer through the grid and days off through a list, and every analyzer gets written twice and drifts. This is the pigeonholing the model change exists to avoid.
+**Keep `SchoolCalendar` and add a `days_off` table.** Two models of one fact, two code paths, every analyzer written twice and drifting. This is the pigeonholing the change exists to avoid.
 
-**Store instructional days, derive closures from the gaps.** Closest to how districts publish, and genuinely tempting. It fails on summer: summer 2027 sits between the 2026-27 and 2027-28 calendars, so deriving it needs two rows, and districts publish the following year's start date late. The primary use case would be blocked on a PDF we do not control. Storing closures directly keeps summer in one row.
+**Store closures directly, including summer as a closure.** This ADR’s own first draft. Rejected on contact with the source: no district publishes a summer event, so every summer row would be a verifier’s arithmetic rather than a transcription. The first draft justified it by claiming next year’s start date is published too late to derive summer. **That claim was wrong** — CCPS published 2027-28 before September 2026, roughly two years ahead.
 
-**One row per closed date.** Simplest to query, worst to enter and to read. Summer alone is about sixty rows, a human verifies every one of them by eye in Supabase's table editor, and "Jun 12 through Aug 21" becomes sixty facts to get right instead of two.
+**One row per closed date.** Summer alone is about sixty rows, each hand-verified. "Jun 7 through Aug 20" becomes sixty facts to get right instead of two.
 
 ## Consequences
 
-- **+** One primitive, one set of analyzers, one card component. The Tuesday in November and the week of July 13 are the same shape all the way down.
-- **+** `weeks.ts` is re-seated, not rewritten. The partial-boundary-week logic — the subtlest code in the repo — survives intact behind `weeksBetween(start, end)`; its tests move with it.
-- **+** Data entry matches the source document. A verifier reads a published calendar and enters about sixteen rows, one of which is summer.
-- **+** A one-day camp needs no catalog change. It is already a `sessions` row with `start_date == end_date`.
-- **−** `SummerWeek`, `SchoolCalendar` and `summerWeeks()` are renamed and re-sourced. `src/app/page.tsx` and its tests move with them. Contained, but not free.
-- **−** Reference data grows from 2 fields to roughly 16 rows per district per year. Four districts is about 64 closure rows a year, hand-verified. That is the real recurring cost of this decision, and it is a people problem rather than a code one.
-- **−** Summer only appears once the district publishes the following year's first day. Until then `summerOf()` returns `undefined` and the app says summer is not published yet. We prefer that to inventing an end date.
+- **+** One primitive, one set of analyzers, one card component. A Tuesday in November and the week of July 13 are the same shape all the way down.
+- **+** Stored rows are a transcription of the published calendar, so a human can check a row against the document without doing date arithmetic.
+- **+** `weeks.ts` is re-seated, not rewritten. The partial-boundary-week logic — the subtlest code in the repo — survives behind `weeksBetween(start, end)` with its tests.
+- **+** The iCal feed makes ingestion cheap. A calendar skill parses it into entries for review; per AGENTS.md §2 a human clears the queue, and nothing automated publishes.
+- **−** The feed is a rolling window of roughly thirteen months, while the HTML page carries two full years. **The HTML is the authoritative source; the feed is a convenience.** A skill that reads only the feed will silently miss next year.
+- **−** Summer needs two adjacent school-year records. Missing the later one means `summerOf()` returns nothing and the app says summer is not published yet, rather than inventing an end date.
+- **−** Reference data grows from 2 fields to roughly 25 entries per district-year. Parsing makes that cheap to draft and no cheaper to verify.
+- **−** Early release is modelled and unused. Dead weight until the product wants it, which is the cheaper of the two mistakes available.
+- **−** Calendars change. CCPS states the board may modify them and the superintendent sets snow makeup days, so `verified_at` staleness is real and re-checking has to be a scheduled job, not a one-off.
