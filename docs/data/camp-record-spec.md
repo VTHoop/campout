@@ -78,7 +78,7 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 
 Keyed by `(district, year)`. `last_day_of_school`, `first_day_of_school`, `verified_at`, plus evidence — `source_url` or `source_document_path`, same rule as a camp. Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes.
 
-This is the reference data every summer week is derived from. A wrong date here shifts every coverage gap for every family in that district, so it gets the same verification discipline as a camp record — from the district's published calendar, not from a news article about it.
+This is the reference data every summer week is derived from, and it will grow to carry every other day the district is closed. A wrong date here shifts every coverage gap for every family in that district, so it gets the same verification discipline as a camp record — from the district's published calendar, not from a news article about it.
 
 ---
 

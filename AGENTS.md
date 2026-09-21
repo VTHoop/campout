@@ -1,6 +1,6 @@
 # AGENTS.md — Campout
 
-A summer-planning web app for working parents: a verified local camp directory plus a week-by-week planner grid that shows which weeks of summer are still uncovered. Launch market is the Richmond, Virginia metro (Richmond city, Chesterfield, Henrico, Hanover). Built largely with AI coding agents — this file is the contract every agent (and human) follows.
+A planning app for working parents covering every day school is closed: a verified local camp directory plus a planner grid that shows which weeks of summer — and which scattered days off through the rest of the year — are still uncovered. Summer leads; the year-round view is the second surface. Launch market is the Richmond, Virginia metro (Richmond city, Chesterfield, Henrico, Hanover). Built largely with AI coding agents — this file is the contract every agent (and human) follows.
 
 > **Status:** greenfield. The toolchain is wired and enforcing — Lefthook `pre-commit` (Biome + typecheck) and `pre-push` (lint, typecheck, CodeScene delta, coverage), the TDD guard and privacy guard hooks on every `Edit`/`Write`, and CI (lint · typecheck · coverage · RLS policy tests · Playwright smoke) plus the CodeScene and Codacy bots on every PR. Treat every command below as live and binding.
 >
@@ -241,7 +241,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 
 ### UI
 - **Use shadcn/ui components.** No raw HTML form controls for user-facing UI (`<input>`, `<select>`, `<button>`, native date pickers). Search `src/components/` for an existing component before building a new one. New UI must feel native to the app — if it looks like a browser default, it's wrong.
-- **Mobile-first.** A parent plans summer on a phone at 9pm. The planner grid must work at ~400px, which is the hardest layout problem in this app — solve it first, not last.
+- **Mobile-first.** A parent plans this on a phone at 9pm. The planner grid must work at ~400px, which is the hardest layout problem in this app — solve it first, not last.
 - **Accessibility is not optional on the grid.** It is a table of real data; it gets real table semantics, keyboard navigation, and a non-color signal for every state. Coverage gaps must never be communicated by color alone.
 
 ---
@@ -258,7 +258,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 | Auth | **Supabase Auth** (magic link) | No passwords to manage for a family beta. The JWT drives RLS. ADR-0004 |
 | Authorization | **Row Level Security** | The only boundary between households. Tested, not assumed. ADR-0004 |
 | Files | **Supabase Storage** | Source PDFs captured at verification time, so we can prove what a camp said. |
-| Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O. The summer-week model and the coverage analyzers. Runs in a route handler **and** in the browser. ADR-0008 |
+| Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O. The school-closure and summer-week models, and the coverage analyzers. Runs in a route handler **and** in the browser. ADR-0008 |
 | Maps | **MapLibre GL** + MapTiler tiles | Open-source renderer; the tile provider is swappable. ADR-0007 |
 | Styling | **Tailwind v4** + **shadcn/ui** | Design tokens land with the first real UI. |
 | Package manager | **pnpm 11**, Node 24 | `pnpm-workspace.yaml` for the planner package. |
