@@ -3,7 +3,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Campout',
-  description: 'Plan your kids’ summer, week by week.',
+  description:
+    'Plan the days school is out, from twelve weeks of summer to a single teacher workday.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

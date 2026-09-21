@@ -27,6 +27,8 @@ Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to th
 
 `summerWeeks` **throws** rather than returning an empty list when the calendar is inconsistent. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
 
+This module is being re-seated rather than rewritten. Campout covers scattered days off as well as summer, so the general unit is a **closure** — a run of days school is shut — and summer is the longest one. The partial-boundary-week logic below is the subtlest code in the repo and it survives intact behind `weeksBetween(start, end)`; only its caller and its type names change. **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision.** What is documented here is what ships today.
+
 ## Purity in `@campout/planner`
 
 No database client, no `fetch`, no React, no `process.env`, **no `new Date()` with no argument**. Every function that reasons about time takes the date it needs as a parameter.

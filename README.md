@@ -1,10 +1,12 @@
 # Campout
 
-A summer-planning web app for working parents. Two halves:
+A planning app for working parents, for every day school is closed. Two halves:
 
-**A camp directory** — search and filter verified local camps by child age, week of summer, distance from home, category, and price. List beside a map. Each camp page shows its sessions, daily hours, before- and after-care, and links out to the camp's own registration page.
+**A camp directory** — search and filter verified local camps by child age, the week of summer or a single day off, distance from home, category, and price. List beside a map. Each camp page shows its sessions, daily hours, before- and after-care, and links out to the camp's own registration page.
 
 **A planner grid** — children as rows, weeks of summer as columns. Drop sessions into cells and immediately see weeks with no coverage, two sessions overlapping for one child, camp hours ending before the workday does, and two children at camps too far apart for one drop-off run.
+
+**Summer leads. The rest of the year still counts.** Summer is twelve contiguous weeks with several children and real conflicts to resolve, so it gets the grid. The other nine months hold roughly eighteen scattered closures per district — holidays, teacher workdays, conference days, breaks — and those are the ones that go unnoticed until the week before. Both ask the same question: is this day covered, and by whom?
 
 Launch market is the Richmond, Virginia metro: Richmond city, Chesterfield, Henrico, and Hanover counties.
 
@@ -21,6 +23,7 @@ Campout lists camps. It does not vet, endorse, inspect, or rank them, and it nev
 | Looking for the "why" | [`docs/adr/`](./docs/adr/) |
 | Touching camp data | [`docs/data/camp-record-spec.md`](./docs/data/camp-record-spec.md) |
 | Writing code | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and [`docs/ABSTRACTIONS.md`](./docs/ABSTRACTIONS.md) |
+| Building UI | [`docs/DESIGN.md`](./docs/DESIGN.md) |
 
 ## Stack
 

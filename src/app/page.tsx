@@ -24,7 +24,7 @@ export default function HomePage() {
   return (
     <main>
       <h1>Campout</h1>
-      <p>Plan your kids’ summer, week by week.</p>
+      <p>Plan the days school is out.</p>
       <p data-testid="week-count">{weeks.length} weeks of summer to cover in 2027.</p>
       <ol>
         {weeks.map((week) => (

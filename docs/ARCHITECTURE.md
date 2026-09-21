@@ -61,6 +61,8 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 
 **Enforced structurally, not by convention.** `packages/planner/tsconfig.json` compiles under `lib: ["ES2022"]` with **no DOM lib**, so a browser API inside the package is a compile error rather than a runtime failure on the server.
 
+**The coverage primitive is a closure, not a summer (ADR-0013).** A closure is a contiguous run of days school is shut, carrying the district’s own reason. Summer is one of them, distinguished by `kind` and length — not by having its own type. `SchoolCalendar` and `SummerWeek` are replaced by `SchoolYearCalendar`, `Closure` and `CoveragePeriod`; `weeks.ts` keeps its partial-boundary-week logic behind `weeksBetween(start, end)`. `school_calendars` splits into a calendar row plus a `school_closures` child table. **The shipped code still carries the old shape** — ADR-0013 landed ahead of the implementation. On the catalog side there is nothing to do: a one-day camp is already a `sessions` row with `start_date == end_date`.
+
 **Dates are calendar dates.** `YYYY-MM-DD` strings, anchored to UTC midnight internally — not to make the values UTC, but to make the arithmetic immune to the reader's timezone. A camp running June 15–19 runs those days in Richmond no matter who is looking. Daily hours are wall-clock `time` values. Money is integer cents.
 
 | Module | Status | Responsibility |
@@ -68,6 +70,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `calendarDate.ts` | **shipped** | Date primitives: parse/validate, `addDays`, `mondayOf`, `nextWeekday`, `previousWeekday`. Rejects `2027-02-30`, which `Date.parse` silently rolls to March 2. |
 | `weeks.ts` | **shipped** | `summerWeeks()` — a district calendar in, the ordered weeks of summer out, with partial boundary weeks flagged. `summerWeekIndexOf()` maps a date to a grid column. |
 | `types.ts` | **shipped** | `SchoolDistrict`, `SchoolCalendar`, `SummerWeek`. |
+| `closures.ts` | not yet written | Resolves a district calendar into `CoveragePeriod`s — every run of days school is closed, summer included. Becomes the module everything else indexes off. ADR-0013 |
 | `coverage.ts` | not yet written | Uncovered weeks. |
 | `overlap.ts` | not yet written | Two sessions for one child on the same day. |
 | `hours.ts` | not yet written | A session ending before the household workday does. |
@@ -80,6 +83,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `AGENTS.md` | The working contract. Read before anything else. |
 | `docs/adr/` | Decisions and rationale; immutable once accepted. |
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
+| `docs/DESIGN.md` | Visual language — tokens, card anatomy, state signals, copy. Proposed, not locked. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, PostGIS, catalog RLS |
 | `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |

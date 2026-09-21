@@ -4,12 +4,22 @@ Orientation for any human or agent opening this repo. **`AGENTS.md` is the worki
 
 ## What this is
 
-**Campout** — a summer-planning web app for working parents. Two halves:
+**Campout** — a planning app for working parents, for every day school is closed. Two halves:
 
-1. **A camp directory.** Search and filter verified local camps by child age, week of summer, distance from home, category, and price. List beside a map. Each camp page shows its sessions, daily hours, before- and after-care, and links out to the camp's own registration page. **Campout never handles registration or payment.**
+1. **A camp directory.** Search and filter verified local camps by child age, the week of summer or a single day off, distance from home, category, and price. List beside a map. Each camp page shows its sessions, daily hours, before- and after-care, and links out to the camp's own registration page. **Campout never handles registration or payment.**
 2. **A planner grid.** Children as rows, weeks of summer as columns. A parent drops camp sessions into cells and immediately sees four things: weeks with no coverage, two sessions overlapping for one child, camp hours ending before the workday does, and two children at camps too far apart for one drop-off run.
 
 **The grid is the differentiator. The directory is table stakes.** Existing Richmond camp directories are paid-listing ad pages — no map, no filters, no dates, no way to plan across multiple children.
+
+## Two horizons, one question
+
+Summer is the primary case and it earns the grid: twelve contiguous weeks, several children, real conflicts to resolve. But school also closes on roughly **eighteen other days a year** — holidays, teacher workdays, conference days, winter and spring break — and those are the ones that go unnoticed until the week before. A parent who does not observe Yom Kippur has no reason to expect their district to close for it.
+
+Both horizons ask the same question: **is this day covered, and by whom?** They differ only in shape. Summer is dense and contiguous, so it is a grid. The scattered days are sparse, so they are a dated list — about eighteen rows, not a year-long calendar that is empty nearly everywhere.
+
+**Summer leads the product.** The year-round view is the second surface, not the front door.
+
+> **The model follows from this, and it changed.** The primitive is a **closure** — a contiguous run of days school is shut, with a reason — and summer is simply the longest one. Two dates could not express eighteen scattered days, so `SchoolCalendar` and `summerWeeks()` are replaced rather than extended. **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision and the reasoning; read it before touching `packages/planner/` or `school_calendars`.** The code still carries the old shape — the ADR landed first, on purpose.
 
 Launch market is the Richmond, Virginia metro: Richmond city, Chesterfield, Henrico, and Hanover counties.
 
@@ -20,7 +30,8 @@ Two people, part-time, building largely through AI coding agents. **Scope for an
 ## Where the reasoning lives
 
 - **`AGENTS.md`** / `CLAUDE.md` — the engineering contract: TDD, PR flow, quality gates, product rules. **Read first.**
-- **`docs/adr/`** — every significant decision and its rationale. Start with ADR-0002 (Supabase), ADR-0004 (RLS), and ADR-0006 (child data).
+- **`docs/adr/`** — every significant decision and its rationale. Start with ADR-0002 (Supabase), ADR-0004 (RLS), ADR-0006 (child data), and ADR-0013 (the closure model).
+- **`docs/DESIGN.md`** — the visual language: tokens, card anatomy, state signals, copy rules. Proposed throughout, and the only design reference an agent can actually open.
 - **`docs/ARCHITECTURE.md`** — the stack and where each file lives.
 - **`docs/ABSTRACTIONS.md`** — the patterns you are expected to reuse rather than reinvent.
 - **`docs/data/camp-record-spec.md`** — every camp field, what counts as verified, and what must never be stored. Read before touching catalog data.
