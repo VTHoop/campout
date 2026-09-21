@@ -4,7 +4,9 @@ import {
   assertCalendarDate,
   compareDates,
   daysBetween,
+  firstWeekdayOnOrAfter,
   isWeekend,
+  lastWeekdayOnOrBefore,
   mondayOf,
   nextWeekday,
   previousWeekday,
@@ -161,5 +163,33 @@ describe('previousWeekday', () => {
 
   it('returns Friday from a Sunday', () => {
     expect(previousWeekday('2027-08-22')).toBe('2027-08-20');
+  });
+});
+
+describe('firstWeekdayOnOrAfter', () => {
+  it('returns a weekday unchanged', () => {
+    expect(firstWeekdayOnOrAfter('2027-06-11')).toBe('2027-06-11');
+  });
+
+  it('moves a Saturday to the following Monday', () => {
+    expect(firstWeekdayOnOrAfter('2027-06-12')).toBe('2027-06-14');
+  });
+
+  it('moves a Sunday to the following Monday', () => {
+    expect(firstWeekdayOnOrAfter('2027-06-13')).toBe('2027-06-14');
+  });
+});
+
+describe('lastWeekdayOnOrBefore', () => {
+  it('returns a weekday unchanged', () => {
+    expect(lastWeekdayOnOrBefore('2027-06-14')).toBe('2027-06-14');
+  });
+
+  it('moves a Sunday to the preceding Friday', () => {
+    expect(lastWeekdayOnOrBefore('2027-06-13')).toBe('2027-06-11');
+  });
+
+  it('moves a Saturday to the preceding Friday', () => {
+    expect(lastWeekdayOnOrBefore('2027-06-12')).toBe('2027-06-11');
   });
 });
