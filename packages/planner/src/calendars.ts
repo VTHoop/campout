@@ -44,9 +44,10 @@ export function byStartDate(a: Closure, b: Closure): number {
 }
 
 function startYearOf(label: string): number {
-  const [, start, end] = SCHOOL_YEAR_LABEL.exec(label) ?? [];
-  const startYear = Number(start);
-  if (start === undefined || Number(end) !== (startYear + 1) % 100) {
+  const match = SCHOOL_YEAR_LABEL.exec(label);
+  const startYear = Number(match?.[1]);
+  const endYear = Number(match?.[2]);
+  if (!match || endYear !== (startYear + 1) % 100) {
     throw new RangeError(
       `School year label "${label}" must be written YYYY-YY with the second year following the first, like 2026-27`,
     );
