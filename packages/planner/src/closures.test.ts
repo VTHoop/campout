@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
-import type { Closure, SchoolYearCalendar } from './types';
+import type { Closure, CoveragePeriod, SchoolYearCalendar } from './types';
 import { CalendarType, ClosureTag, SchoolDistrict } from './types';
 
 /**
@@ -70,6 +70,13 @@ const bothYears = [year2026, year2027];
 const startDates = (periods: ReturnType<typeof coveragePeriods>) =>
   periods.map((period) => period.closure.startDate);
 
+/** The one period a single-day range touches. Fails the test if there is not exactly one. */
+function periodOn(calendars: readonly SchoolYearCalendar[], day: string): CoveragePeriod {
+  const [period, ...others] = coveragePeriods(calendars, day, day);
+  if (!period || others.length > 0) throw new Error(`Expected exactly one period on ${day}`);
+  return period;
+}
+
 describe('coveragePeriods', () => {
   it('returns every closure and the summer between the years, in date order', () => {
     const periods = coveragePeriods(bothYears, '2026-08-24', '2027-09-30');
@@ -103,16 +110,16 @@ describe('coveragePeriods', () => {
   // Summer is derived from the gap between two calendars. It is a break, but the
   // district never said so, and the source label must not pretend it did.
   it('derives the summer between two adjacent years as a break', () => {
-    const summer = coveragePeriods(bothYears, '2027-07-15', '2027-07-15')[0];
+    const summer = periodOn(bothYears, '2027-07-15');
 
-    expect(summer?.closure.startDate).toBe('2027-06-10');
-    expect(summer?.closure.endDate).toBe('2027-08-24');
-    expect(summer?.closure.tags).toEqual([ClosureTag.Break]);
-    expect(summer?.closure.sourceLabel).toMatch(/derived/);
-    expect(summer?.weekdays).toBe(54);
-    expect(summer?.weeks).toHaveLength(12);
-    expect(summer?.weeks[0]?.isPartial).toBe(true);
-    expect(summer?.weeks.at(-1)?.isPartial).toBe(true);
+    expect(summer.closure.startDate).toBe('2027-06-10');
+    expect(summer.closure.endDate).toBe('2027-08-24');
+    expect(summer.closure.tags).toEqual([ClosureTag.Break]);
+    expect(summer.closure.sourceLabel).toMatch(/derived/);
+    expect(summer.weekdays).toBe(54);
+    expect(summer.weeks).toHaveLength(12);
+    expect(summer.weeks.at(0)?.isPartial).toBe(true);
+    expect(summer.weeks.at(-1)?.isPartial).toBe(true);
   });
 
   it('returns the whole closure when the range covers only part of it', () => {
