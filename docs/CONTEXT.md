@@ -31,6 +31,7 @@ Two people, part-time, building largely through AI coding agents. **Scope for an
 
 - **`AGENTS.md`** / `CLAUDE.md` — the engineering contract: TDD, PR flow, quality gates, product rules. **Read first.**
 - **`docs/adr/`** — every significant decision and its rationale. Start with ADR-0002 (Supabase), ADR-0004 (RLS), ADR-0006 (child data), and ADR-0013 (the closure model).
+- **`docs/DESIGN.md`** — the visual language: tokens, card anatomy, state signals, copy rules. Proposed throughout, and the only design reference an agent can actually open.
 - **`docs/ARCHITECTURE.md`** — the stack and where each file lives.
 - **`docs/ABSTRACTIONS.md`** — the patterns you are expected to reuse rather than reinvent.
 - **`docs/data/camp-record-spec.md`** — every camp field, what counts as verified, and what must never be stored. Read before touching catalog data.

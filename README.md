@@ -23,6 +23,7 @@ Campout lists camps. It does not vet, endorse, inspect, or rank them, and it nev
 | Looking for the "why" | [`docs/adr/`](./docs/adr/) |
 | Touching camp data | [`docs/data/camp-record-spec.md`](./docs/data/camp-record-spec.md) |
 | Writing code | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and [`docs/ABSTRACTIONS.md`](./docs/ABSTRACTIONS.md) |
+| Building UI | [`docs/DESIGN.md`](./docs/DESIGN.md) |
 
 ## Stack
 
