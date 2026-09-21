@@ -72,8 +72,9 @@ const startDates = (periods: ReturnType<typeof coveragePeriods>) =>
 
 /** The one period a single-day range touches. Fails the test if there is not exactly one. */
 function periodOn(calendars: readonly SchoolYearCalendar[], day: string): CoveragePeriod {
-  const [period, ...others] = coveragePeriods(calendars, day, day);
-  if (!period || others.length > 0) throw new Error(`Expected exactly one period on ${day}`);
+  const periods = coveragePeriods(calendars, day, day);
+  const period = periods.at(0);
+  if (!period || periods.length !== 1) throw new Error(`Expected exactly one period on ${day}`);
   return period;
 }
 
@@ -100,11 +101,11 @@ describe('coveragePeriods', () => {
   });
 
   it('counts the weekdays and weeks of a stored closure', () => {
-    const winter = coveragePeriods(bothYears, '2026-12-24', '2026-12-24')[0];
+    const winter = periodOn(bothYears, '2026-12-24');
 
-    expect(winter?.closure).toEqual(winterBreak);
-    expect(winter?.weekdays).toBe(10);
-    expect(winter?.weeks.map((week) => week.monday)).toEqual(['2026-12-21', '2026-12-28']);
+    expect(winter.closure).toEqual(winterBreak);
+    expect(winter.weekdays).toBe(10);
+    expect(winter.weeks.map((week) => week.monday)).toEqual(['2026-12-21', '2026-12-28']);
   });
 
   // Summer is derived from the gap between two calendars. It is a break, but the

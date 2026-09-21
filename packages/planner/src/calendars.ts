@@ -104,10 +104,10 @@ function isOutside(start: CalendarDate, end: CalendarDate, calendar: SchoolYearC
 }
 
 function assertOneOwner(calendars: readonly SchoolYearCalendar[]): void {
-  const [first, ...rest] = calendars;
+  const first = calendars.at(0);
   if (!first) return;
 
-  for (const calendar of rest) {
+  for (const calendar of calendars) {
     const sameSchool = (calendar.school ?? null) === (first.school ?? null);
     if (calendar.district !== first.district || !sameSchool) {
       throw new RangeError(
