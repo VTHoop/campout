@@ -267,6 +267,17 @@ describe('longestPeriod', () => {
     expect(longestPeriod([endsFriday, startsMonday], '2026-27')).toBeUndefined();
   });
 
+  it('returns undefined when the next year starts the day after this one ends', () => {
+    const startsNextDay: SchoolYearCalendar = {
+      ...year2027,
+      firstInstructionalDay: '2027-06-10',
+      coversFrom: '2027-06-01',
+    };
+
+    expect(longestPeriod([year2026, startsNextDay], '2026-27')).toBeUndefined();
+    expect(coveragePeriodOf([year2026, startsNextDay], '2027-06-10')).toBeUndefined();
+  });
+
   it('throws when no calendar carries the label', () => {
     expect(() => longestPeriod(bothYears, '2031-32')).toThrow(RangeError);
   });

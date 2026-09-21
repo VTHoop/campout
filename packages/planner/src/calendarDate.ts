@@ -110,11 +110,11 @@ export function previousWeekday(date: CalendarDate): CalendarDate {
 }
 
 /** `date` itself when it is a weekday, otherwise the following Monday. */
-export function firstWeekdayOnOrAfter(_date: CalendarDate): CalendarDate {
-  throw new Error('not implemented');
+export function firstWeekdayOnOrAfter(date: CalendarDate): CalendarDate {
+  return isWeekend(date) ? nextWeekday(date) : date;
 }
 
 /** `date` itself when it is a weekday, otherwise the preceding Friday. */
-export function lastWeekdayOnOrBefore(_date: CalendarDate): CalendarDate {
-  throw new Error('not implemented');
+export function lastWeekdayOnOrBefore(date: CalendarDate): CalendarDate {
+  return isWeekend(date) ? previousWeekday(date) : date;
 }
