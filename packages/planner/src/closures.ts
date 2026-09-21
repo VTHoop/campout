@@ -7,7 +7,7 @@ import {
   firstWeekdayOnOrAfter,
   lastWeekdayOnOrBefore,
 } from './calendarDate';
-import { orderedCalendars } from './calendars';
+import { byStartDate, followingLabel, orderedCalendars } from './calendars';
 import type { Closure, CoveragePeriod, SchoolYearCalendar } from './types';
 import { ClosureTag } from './types';
 import { weeksBetween } from './weeks';
@@ -52,8 +52,8 @@ export function coveragePeriods(
  * The gap between the labelled year and the one after it: summer, on a
  * traditional calendar. Derived from the two calendars, never stored.
  *
- * Returns `undefined` when the following year is not held, when its coverage
- * window does not touch this one's, or when school runs straight through with no
+ * The following year is the one labelled next: "2027-28" after "2026-27". Returns
+ * `undefined` when it is not held, or when school runs straight through with no
  * weekday between. It never invents an end date (ADR-0013).
  *
  * @throws RangeError if no calendar carries the label, or if a calendar
@@ -93,15 +93,14 @@ export function coveragePeriodOf(
 }
 
 function periodsOf(years: readonly SchoolYearCalendar[]): readonly CoveragePeriod[] {
-  return closuresOf(years).flatMap((closure) => {
-    const period = periodFor(closure);
-    return period ? [period] : [];
-  });
+  return closuresOf(years)
+    .map(periodFor)
+    .filter((period) => period !== undefined);
 }
 
 function closuresOf(years: readonly SchoolYearCalendar[]): readonly Closure[] {
   const stored = years.flatMap((year) => year.closures);
-  return [...stored, ...gapsOf(years)].sort((a, b) => compareDates(a.startDate, b.startDate));
+  return [...stored, ...gapsOf(years)].sort(byStartDate);
 }
 
 /** A closure's weekdays and weeks, or `undefined` when it falls entirely on a weekend. */
@@ -121,27 +120,25 @@ function periodFor(closure: Closure): CoveragePeriod | undefined {
 type YearPair = readonly [SchoolYearCalendar, SchoolYearCalendar];
 
 /**
- * Consecutive years whose coverage windows touch. A hole between the windows
- * means we hold nothing about the time in between, so it is not a summer we can
- * name — it is a year we are missing.
+ * Each held year paired with the held year labelled next. A missing year breaks
+ * the chain, so it is never bridged into a two-year "summer". Coverage windows
+ * are not consulted: a window that stops at the last day of school is natural,
+ * and must not make a summer we can derive look unknown.
  */
 function adjacentYears(years: readonly SchoolYearCalendar[]): readonly YearPair[] {
+  const byLabel = new Map(years.map((year) => [year.label, year] as const));
   const pairs: YearPair[] = [];
-  let previous: SchoolYearCalendar | undefined;
   for (const year of years) {
-    if (previous && compareDates(year.coversFrom, addDays(previous.coversTo, 1)) <= 0) {
-      pairs.push([previous, year]);
-    }
-    previous = year;
+    const next = byLabel.get(followingLabel(year.label));
+    if (next) pairs.push([year, next]);
   }
   return pairs;
 }
 
 function gapsOf(years: readonly SchoolYearCalendar[]): readonly Closure[] {
-  return adjacentYears(years).flatMap((pair) => {
-    const gap = gapBetween(...pair);
-    return gap ? [gap] : [];
-  });
+  return adjacentYears(years)
+    .map((pair) => gapBetween(...pair))
+    .filter((gap) => gap !== undefined);
 }
 
 /** The days between one year's last instructional day and the next year's first. */

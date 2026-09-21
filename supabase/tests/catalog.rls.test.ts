@@ -327,20 +327,64 @@ async function withSeededCalendar(
   }
 }
 
-function closureRow(calendarId: string, start: string, end: string, extra = {}) {
+/** An inclusive run of days. A single day repeats itself. */
+interface Days {
+  start: string;
+  end: string;
+}
+
+const LABOR_DAY: Days = { start: '2099-09-07', end: '2099-09-07' };
+const ELECTION_DAY: Days = { start: '2099-11-05', end: '2099-11-05' };
+const WINTER_BREAK: Days = { start: '2099-12-21', end: '2100-01-01' };
+const WINTER_BREAK_OVERLAP: Days = { start: '2099-12-31', end: '2100-01-04' };
+const BEFORE_NEW_YEAR: Days = { start: '2099-12-21', end: '2099-12-31' };
+const NEW_YEARS_DAY: Days = { start: '2100-01-01', end: '2100-01-01' };
+const ENDS_BEFORE_IT_STARTS: Days = { start: '2099-09-08', end: '2099-09-07' };
+
+function closureRow(calendarId: string, days: Days, extra = {}) {
   return {
     calendar_id: calendarId,
-    start_date: start,
-    end_date: end,
+    start_date: days.start,
+    end_date: days.end,
     source_label: 'Holiday, schools and offices closed',
     ...extra,
   };
 }
 
-describe('school calendars and closures are closed to clients', () => {
-  it('refuses an anonymous insert of a calendar', async () => {
+/** Insert a closure as the service role and return the result, so a test can assert on it. */
+function addClosure(admin: SupabaseClient, calendarId: string, days: Days, extra = {}) {
+  return admin.from('school_closures').insert(closureRow(calendarId, days, extra));
+}
+
+/** Insert a closure that must succeed, so a test cannot pass on a failed setup. */
+async function seedClosure(admin: SupabaseClient, calendarId: string, days: Days): Promise<string> {
+  const seeded = await addClosure(admin, calendarId, days).select('id').single();
+  expect(seeded.error).toBeNull();
+  return seeded.data?.id as string;
+}
+
+/**
+ * The catalog has no write policy for any role, so a signed-in parent — the
+ * realistic threat — must fare exactly like an anonymous visitor. The table runs
+ * both, so a policy written for one and forgotten for the other shows up here.
+ */
+let parent: TestUser;
+
+beforeAll(async () => {
+  parent = await createTestUser('catalog-parent');
+});
+
+afterAll(async () => {
+  await deleteTestUsers([parent]);
+});
+
+describe.each([
+  ['an anonymous visitor', () => anonClient()],
+  ['a signed-in user', () => parent.client],
+])('school calendars and closures are closed to %s', (_who, clientFor) => {
+  it('refuses an insert of a calendar', async () => {
     try {
-      const { error } = await anonClient()
+      const { error } = await clientFor()
         .from('school_calendars')
         .insert({ ...CALENDAR, ...CALENDAR_SOURCE });
       expect(error).not.toBeNull();
@@ -353,11 +397,9 @@ describe('school calendars and closures are closed to clients', () => {
     }
   });
 
-  it('refuses an anonymous insert of a closure', async () => {
+  it('refuses an insert of a closure', async () => {
     await withSeededCalendar(async (calendarId) => {
-      const { error } = await anonClient()
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'));
+      const { error } = await addClosure(clientFor(), calendarId, LABOR_DAY);
       expect(error).not.toBeNull();
     });
   });
@@ -367,16 +409,17 @@ describe('school calendars and closures are closed to clients', () => {
   it.each([
     [
       'update',
-      (calendarId: string) =>
-        anonClient().from('school_calendars').update({ label: 'Hijacked' }).eq('id', calendarId),
+      (client: SupabaseClient, calendarId: string) =>
+        client.from('school_calendars').update({ label: 'Hijacked' }).eq('id', calendarId),
     ],
     [
       'delete',
-      (calendarId: string) => anonClient().from('school_calendars').delete().eq('id', calendarId),
+      (client: SupabaseClient, calendarId: string) =>
+        client.from('school_calendars').delete().eq('id', calendarId),
     ],
-  ])('leaves a calendar untouched after an anonymous %s', async (_verb, attempt) => {
+  ])('leaves a calendar untouched after an %s', async (_verb, attempt) => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const { error } = await attempt(calendarId);
+      const { error } = await attempt(clientFor(), calendarId);
       expect(error).toBeNull();
 
       const after = await admin.from('school_calendars').select('id, label').eq('id', calendarId);
@@ -387,27 +430,19 @@ describe('school calendars and closures are closed to clients', () => {
   it.each([
     [
       'update',
-      (closureId: string) =>
-        anonClient()
-          .from('school_closures')
-          .update({ source_label: 'Hijacked' })
-          .eq('id', closureId),
+      (client: SupabaseClient, closureId: string) =>
+        client.from('school_closures').update({ source_label: 'Hijacked' }).eq('id', closureId),
     ],
     [
       'delete',
-      (closureId: string) => anonClient().from('school_closures').delete().eq('id', closureId),
+      (client: SupabaseClient, closureId: string) =>
+        client.from('school_closures').delete().eq('id', closureId),
     ],
-  ])('leaves a closure untouched after an anonymous %s', async (_verb, attempt) => {
+  ])('leaves a closure untouched after an %s', async (_verb, attempt) => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const seeded = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'))
-        .select('id')
-        .single();
-      expect(seeded.error).toBeNull();
-      const closureId = seeded.data?.id as string;
+      const closureId = await seedClosure(admin, calendarId, LABOR_DAY);
 
-      const { error } = await attempt(closureId);
+      const { error } = await attempt(clientFor(), closureId);
       expect(error).toBeNull();
 
       const after = await admin
@@ -424,22 +459,16 @@ describe('school calendars and closures are closed to clients', () => {
 describe('school closures', () => {
   it('accepts a single day, which repeats its start date', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const { error } = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'));
+      const { error } = await addClosure(admin, calendarId, LABOR_DAY);
       expect(error).toBeNull();
     });
   });
 
   it('keeps a set of tags, since one closure can carry several facts', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const seeded = await admin
-        .from('school_closures')
-        .insert(
-          closureRow(calendarId, '2099-11-05', '2099-11-05', {
-            tags: ['holiday', 'conference_day'],
-          }),
-        )
+      const seeded = await addClosure(admin, calendarId, ELECTION_DAY, {
+        tags: ['holiday', 'conference_day'],
+      })
         .select('tags')
         .single();
       expect(seeded.error).toBeNull();
@@ -449,29 +478,23 @@ describe('school closures', () => {
 
   it('defaults to no tags rather than a guessed one', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const seeded = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'))
-        .select('tags')
-        .single();
+      const seeded = await addClosure(admin, calendarId, LABOR_DAY).select('tags').single();
       expect(seeded.data?.tags).toEqual([]);
     });
   });
 
   it('rejects a tag outside the closure_tag enum', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const { error } = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07', { tags: ['snow_day'] }));
+      const { error } = await addClosure(admin, calendarId, LABOR_DAY, {
+        tags: ['snow_day'],
+      });
       expect(error).not.toBeNull();
     });
   });
 
   it('rejects a closure that ends before it starts', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const { error } = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-08', '2099-09-07'));
+      const { error } = await addClosure(admin, calendarId, ENDS_BEFORE_IT_STARTS);
       expect(error).not.toBeNull();
     });
   });
@@ -489,42 +512,27 @@ describe('school closures', () => {
   // mistake, and it would double-count a gap. 23P01 is exclusion_violation.
   it('rejects two closures that cover the same day in one calendar', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const first = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-12-21', '2100-01-01'));
-      expect(first.error).toBeNull();
+      await seedClosure(admin, calendarId, WINTER_BREAK);
 
-      const overlapping = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-12-31', '2100-01-04'));
-      expect(overlapping.error?.code).toBe('23P01');
+      const { error } = await addClosure(admin, calendarId, WINTER_BREAK_OVERLAP);
+      expect(error?.code).toBe('23P01');
     });
   });
 
   it('counts the end date as covered, so sharing only a last day still collides', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const setup = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-12-21', '2100-01-01'));
-      expect(setup.error).toBeNull();
+      await seedClosure(admin, calendarId, WINTER_BREAK);
 
-      const { error } = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2100-01-01', '2100-01-01'));
+      const { error } = await addClosure(admin, calendarId, NEW_YEARS_DAY);
       expect(error?.code).toBe('23P01');
     });
   });
 
   it('accepts closures that sit back to back without sharing a day', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const setup = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-12-21', '2099-12-31'));
-      expect(setup.error).toBeNull();
+      await seedClosure(admin, calendarId, BEFORE_NEW_YEAR);
 
-      const { error } = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2100-01-01', '2100-01-01'));
+      const { error } = await addClosure(admin, calendarId, NEW_YEARS_DAY);
       expect(error).toBeNull();
     });
   });
@@ -533,17 +541,12 @@ describe('school closures', () => {
   // all the time, and that is not a collision.
   it('accepts the same dates in a different calendar', async () => {
     await withSeededCalendar(async (calendarId, admin) => {
-      const setup = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'));
-      expect(setup.error).toBeNull();
+      await seedClosure(admin, calendarId, LABOR_DAY);
 
       const other = await insertCalendar({ label: '2099-00-other', school: 'Fixture Elementary' });
       try {
         expect(other.error).toBeNull();
-        const { error } = await admin
-          .from('school_closures')
-          .insert(closureRow(other.id as string, '2099-09-07', '2099-09-07'));
+        const { error } = await addClosure(admin, other.id as string, LABOR_DAY);
         expect(error).toBeNull();
       } finally {
         await removeCalendar(other.id);
@@ -556,9 +559,7 @@ describe('school closures', () => {
     expect(seeded.error).toBeNull();
     const admin = serviceClient();
 
-    await admin
-      .from('school_closures')
-      .insert(closureRow(seeded.id as string, '2099-09-07', '2099-09-07'));
+    await seedClosure(admin, seeded.id as string, LABOR_DAY);
     await removeCalendar(seeded.id);
 
     const after = await admin
@@ -607,79 +608,6 @@ describe('school calendar shape', () => {
       });
       await removeCalendar(bellwood.id);
       expect(bellwood.error).toBeNull();
-    });
-  });
-});
-
-/**
- * The realistic threat to the catalog is a signed-in parent, not an anonymous
- * visitor. No write policy exists for either role, so the outcome should match —
- * but a policy written for `anon` and forgotten for `authenticated` would only
- * show up here.
- */
-describe('school calendars and closures are closed to signed-in users too', () => {
-  let parent: TestUser;
-
-  beforeAll(async () => {
-    parent = await createTestUser('catalog-parent');
-  });
-
-  afterAll(async () => {
-    await deleteTestUsers([parent]);
-  });
-
-  it('refuses a signed-in insert of a calendar', async () => {
-    try {
-      const { error } = await parent.client
-        .from('school_calendars')
-        .insert({ ...CALENDAR, ...CALENDAR_SOURCE });
-      expect(error).not.toBeNull();
-    } finally {
-      await serviceClient()
-        .from('school_calendars')
-        .delete()
-        .eq('district', CALENDAR.district)
-        .eq('label', CALENDAR.label);
-    }
-  });
-
-  it('refuses a signed-in insert of a closure', async () => {
-    await withSeededCalendar(async (calendarId) => {
-      const { error } = await parent.client
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'));
-      expect(error).not.toBeNull();
-    });
-  });
-
-  it('leaves a calendar untouched after a signed-in update', async () => {
-    await withSeededCalendar(async (calendarId, admin) => {
-      const { error } = await parent.client
-        .from('school_calendars')
-        .update({ label: 'Hijacked' })
-        .eq('id', calendarId);
-      expect(error).toBeNull();
-
-      const after = await admin.from('school_calendars').select('id, label').eq('id', calendarId);
-      expect(after.data).toEqual([{ id: calendarId, label: CALENDAR.label }]);
-    });
-  });
-
-  it('leaves a closure untouched after a signed-in delete', async () => {
-    await withSeededCalendar(async (calendarId, admin) => {
-      const seeded = await admin
-        .from('school_closures')
-        .insert(closureRow(calendarId, '2099-09-07', '2099-09-07'))
-        .select('id')
-        .single();
-      expect(seeded.error).toBeNull();
-      const closureId = seeded.data?.id as string;
-
-      const { error } = await parent.client.from('school_closures').delete().eq('id', closureId);
-      expect(error).toBeNull();
-
-      const after = await admin.from('school_closures').select('id').eq('id', closureId);
-      expect(after.data).toEqual([{ id: closureId }]);
     });
   });
 });

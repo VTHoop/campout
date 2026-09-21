@@ -22,6 +22,38 @@ export function orderedCalendars(
   return ordered;
 }
 
+const SCHOOL_YEAR_LABEL = /^(\d{4})-(\d{2})$/;
+
+/**
+ * The label of the school year after `label`: "2026-27" then "2027-28".
+ *
+ * Neighbouring years are paired by label, not by their coverage windows, so a
+ * window that stops at the last day of school still yields a known summer.
+ *
+ * @throws RangeError if `label` is not written YYYY-YY with the second year
+ *   following the first.
+ */
+export function followingLabel(label: string): string {
+  const next = startYearOf(label) + 1;
+  return `${next}-${String((next + 1) % 100).padStart(2, '0')}`;
+}
+
+/** Sort key for closures: earliest first. */
+export function byStartDate(a: Closure, b: Closure): number {
+  return compareDates(a.startDate, b.startDate);
+}
+
+function startYearOf(label: string): number {
+  const [, start, end] = SCHOOL_YEAR_LABEL.exec(label) ?? [];
+  const startYear = Number(start);
+  if (start === undefined || Number(end) !== (startYear + 1) % 100) {
+    throw new RangeError(
+      `School year label "${label}" must be written YYYY-YY with the second year following the first, like 2026-27`,
+    );
+  }
+  return startYear;
+}
+
 function byFirstDay(a: SchoolYearCalendar, b: SchoolYearCalendar): number {
   return compareDates(a.firstInstructionalDay, b.firstInstructionalDay);
 }
@@ -33,6 +65,7 @@ function describe(calendar: SchoolYearCalendar): string {
 }
 
 function assertConsistent(calendar: SchoolYearCalendar): SchoolYearCalendar {
+  startYearOf(calendar.label);
   assertSpan(calendar);
   assertClosures(calendar);
   return calendar;
@@ -71,10 +104,6 @@ function assertClosures(calendar: SchoolYearCalendar): void {
     }
     previous = closure;
   }
-}
-
-function byStartDate(a: Closure, b: Closure): number {
-  return compareDates(a.startDate, b.startDate);
 }
 
 function assertClosure(calendar: SchoolYearCalendar, closure: Closure): void {
