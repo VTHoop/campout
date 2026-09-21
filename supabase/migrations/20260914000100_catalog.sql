@@ -20,6 +20,9 @@
 -- matter — the household ones — small enough to reason about.
 
 create extension if not exists postgis;
+-- Lets the exclusion constraint on school_closures compare a uuid with `=` inside
+-- a GiST index. Without it that constraint cannot be created (ADR-0013).
+create extension if not exists btree_gist;
 
 create type camp_category as enum (
   'sports', 'arts', 'academic', 'stem', 'nature_outdoors',
@@ -29,6 +32,13 @@ create type camp_category as enum (
 create type school_district as enum (
   'richmond_city', 'chesterfield', 'henrico', 'hanover'
 );
+
+-- How a school year is shaped (ADR-0013). An expectation signal for the UI, not a
+-- second algorithm: a year-round calendar is promised intersessions, not a summer.
+create type calendar_type as enum ('traditional', 'year_round');
+
+-- Facts a district attaches to a closed day. A closure carries a set of them.
+create type closure_tag as enum ('holiday', 'teacher_workday', 'conference_day', 'break');
 
 -- ---------------------------------------------------------------- camps
 create table camps (
@@ -152,23 +162,66 @@ create index sessions_category_idx   on sessions (category);
 
 -- ------------------------------------------------- school_calendars
 -- Reference data. The entire coverage model is meaningless without it: every
--- summer week, and therefore every coverage gap, is derived from these two dates.
+-- closed day, and therefore every coverage gap, is derived from these rows.
+--
+-- The rows are a transcription of what a district publishes: a first day, a last
+-- day, and dated closures. Summer is NEVER stored — no district publishes it. It
+-- is derived from one year's last_instructional_day and the next year's
+-- first_instructional_day, so a verifier checks a row against the document in
+-- front of them without doing date arithmetic (ADR-0013).
 create table school_calendars (
-  district            school_district not null,
-  year                smallint        not null,
-  last_day_of_school  date            not null,
-  first_day_of_school date            not null,
+  id       uuid primary key default gen_random_uuid(),
+  district school_district not null,
+  type     calendar_type   not null,
+  school   text,                                  -- null = the district-wide calendar
+  label    text not null,                         -- '2026-27'
+  first_instructional_day date not null,
+  last_instructional_day  date not null,
+  -- The window this record speaks for. Outside it we do not know, and say so.
+  covers_from date not null,
+  covers_to   date not null,
 
   source_url            text,
   source_document_path  text,
-  verified_at           timestamptz     not null,
-  verified_by           text            not null,
+  verified_at           timestamptz not null,
+  verified_by           text        not null,
 
-  primary key (district, year),
-  constraint school_calendars_ordered check (first_day_of_school > last_day_of_school),
+  -- Null-safe: a district-wide calendar has no school, and Postgres would
+  -- otherwise treat two null schools as distinct and allow the year twice.
+  unique nulls not distinct (district, school, label),
+  constraint school_calendars_instruction_ordered
+    check (last_instructional_day > first_instructional_day),
+  constraint school_calendars_window check (covers_to > covers_from),
   constraint school_calendars_provenance_present
     check (source_url is not null or source_document_path is not null)
 );
+
+-- -------------------------------------------------- school_closures
+-- A contiguous run of days school is shut, inclusive at both ends. A single day
+-- repeats start_date as end_date.
+create table school_closures (
+  id          uuid primary key default gen_random_uuid(),
+  calendar_id uuid not null references school_calendars (id) on delete cascade,
+  start_date  date not null,
+  end_date    date not null,
+  tags        closure_tag[] not null default '{}',
+  source_label text not null,                     -- the district's exact words
+  common_name  text,                              -- ours, and only with its own source
+  constraint school_closures_ordered check (end_date >= start_date),
+  -- Two rows both claiming December 21st starts winter break is a data-entry
+  -- mistake we would otherwise make, and it would double-count a gap.
+  exclude using gist (
+    calendar_id with =,
+    daterange(start_date, end_date, '[]') with &&
+  )
+);
+
+create index on school_closures (calendar_id, start_date);
+
+-- What the database does NOT enforce: that a closure falls inside its calendar's
+-- window. A check constraint cannot read the parent row, and a trigger would hide
+-- the rule where nobody reads it. Containment is the verification workflow's job,
+-- and the planner refuses a calendar that breaks it (ADR-0013, following ADR-0012).
 
 -- ------------------------------------------------------------------ RLS
 -- Enabled on every table, including the public ones. A world-readable table with
@@ -179,11 +232,13 @@ alter table camps            enable row level security;
 alter table locations        enable row level security;
 alter table sessions         enable row level security;
 alter table school_calendars enable row level security;
+alter table school_closures  enable row level security;
 
 create policy "catalog is world readable" on camps            for select using (true);
 create policy "catalog is world readable" on locations        for select using (true);
 create policy "catalog is world readable" on sessions         for select using (true);
 create policy "catalog is world readable" on school_calendars for select using (true);
+create policy "catalog is world readable" on school_closures  for select using (true);
 
 -- No insert/update/delete policy is defined, so writes are impossible for every
 -- role except service_role, which bypasses RLS entirely. Every catalog record is
