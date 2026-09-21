@@ -19,7 +19,7 @@ Both horizons ask the same question: **is this day covered, and by whom?** They 
 
 **Summer leads the product.** The year-round view is the second surface, not the front door.
 
-> **The model follows from this, and it changed.** The primitive is a **closure** — a contiguous run of days school is shut, with a reason — and summer is simply the longest one. Two dates could not express eighteen scattered days, so `SchoolCalendar` and `summerWeeks()` are replaced rather than extended. **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision and the reasoning; read it before touching `packages/planner/` or `school_calendars`.** The code still carries the old shape — the ADR landed first, on purpose.
+> **The model follows from this, and it changed.** The primitive is a **closure** — a contiguous run of days school is shut, with a reason — and summer is simply the longest one. Two dates could not express eighteen scattered days, so `SchoolCalendar` and `summerWeeks()` were replaced rather than extended (CAM-22). **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision and the reasoning; read it before touching `packages/planner/`, `school_calendars` or `school_closures`.**
 
 Launch market is the Richmond, Virginia metro: Richmond city, Chesterfield, Henrico, and Hanover counties.
 
@@ -65,8 +65,8 @@ If one fires, **fix the code — do not work around the hook.** Both were tested
 | Toolchain — Biome · tsc · Vitest · Playwright · Lefthook · CI | wired and passing |
 | Agent guards — TDD guard, privacy guard | installed, and tested against their own failure cases |
 | Schema — catalog and household migrations, RLS on every table | written, **not yet applied to a Supabase project** |
-| `@campout/planner` — the summer-week model | shipped, covered at 100% |
-| RLS policy tests | in place — 24 tests, two households, two JWTs, real Postgres in CI |
+| `@campout/planner` — the closure model | shipped, covered at 100% |
+| RLS policy tests | in place — two households, two JWTs, real Postgres in CI |
 | CodeScene ratchet | wired to project 84686; floor at 9.90 / 9.80 against a measured 10.00 |
 
 `packages/planner/src/weeks.ts` and its tests are the reference example of the loop this repo expects: pure, dates passed in as arguments, bad input refused loudly, fully covered. Read them before writing your first module here.
