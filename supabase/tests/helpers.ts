@@ -33,14 +33,36 @@ function required(value: string | undefined, name: string): string {
 }
 
 /**
- * Read the local stack's URL and keys from the Supabase CLI.
+ * Read SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY, so the
+ * same suite can be pointed at a live project (CAM-25) instead of only local
+ * Docker. All three or none: a half-set override would silently mix a remote
+ * URL with local keys, which fails as a confusing auth error rather than
+ * pointing at the real mistake.
+ */
+function envKeys(): LocalKeys | null {
+  const url = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && anonKey && serviceRoleKey) return { url, anonKey, serviceRoleKey };
+  return null;
+}
+
+/**
+ * Read the stack's URL and keys — from the environment when pointed at a live
+ * project, otherwise from the Supabase CLI's local status.
  *
- * Shelling out beats hard-coding the well-known demo keys: those change between
- * CLI versions, and a stale constant fails as "invalid JWT" rather than as
- * anything that points at the real problem.
+ * Shelling out beats hard-coding the well-known local demo keys: those change
+ * between CLI versions, and a stale constant fails as "invalid JWT" rather than
+ * as anything that points at the real problem.
  */
 export function localKeys(): LocalKeys {
   if (cached) return cached;
+
+  const fromEnv = envKeys();
+  if (fromEnv) {
+    cached = fromEnv;
+    return cached;
+  }
 
   let raw: string;
   try {
