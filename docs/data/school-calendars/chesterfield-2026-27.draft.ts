@@ -53,6 +53,7 @@ export const chesterfield202627Draft: CalendarDraft = {
         endDate: '2026-11-03',
         tags: [ClosureTag.Holiday],
         sourceLabel: 'holiday',
+        commonName: 'Election Day',
       },
       {
         startDate: '2026-11-25',
@@ -80,6 +81,7 @@ export const chesterfield202627Draft: CalendarDraft = {
         endDate: '2027-02-15',
         tags: [ClosureTag.Holiday],
         sourceLabel: 'holiday',
+        commonName: 'Presidents Day',
       },
       {
         startDate: '2027-03-09',
@@ -112,7 +114,7 @@ export const chesterfield202627Draft: CalendarDraft = {
   sourceUrl: 'https://www.oneccps.org/page/calendars',
   flags: [
     'The HTML page\'s per-line closure text is just "holiday" (no fuller phrase like the iCal feed\'s "Holiday, schools and offices closed") — sourceLabel reflects that verbatim, which makes the label-collision problem worse from the primary source itself, not only from the feed.',
-    'March 9 and March 26, 2027 are listed only as "holiday" with no way to confirm what they mark from this source alone; left commonName unset rather than guess.',
+    'Sept. 4, March 9, and March 26, 2026-27 are listed only as "holiday" with no way to confirm what they mark from this source alone; left commonName unset rather than guess.',
     'Nov. 2 ("holiday; parent-teacher conference day") is tagged ConferenceDay only — treated the word "holiday" here as describing "no school that day" rather than a second, independent closure reason. Worth a second opinion.',
   ],
 };

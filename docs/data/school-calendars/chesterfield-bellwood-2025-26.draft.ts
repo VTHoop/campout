@@ -54,6 +54,7 @@ export const chesterfieldBellwood202526Draft: CalendarDraft = {
         endDate: '2025-11-04',
         tags: [ClosureTag.Holiday],
         sourceLabel: 'holiday',
+        commonName: 'Election Day',
       },
       {
         startDate: '2025-11-26',
@@ -93,6 +94,7 @@ export const chesterfieldBellwood202526Draft: CalendarDraft = {
         endDate: '2026-04-03',
         tags: [ClosureTag.Break],
         sourceLabel: 'spring break',
+        commonName: 'Spring break',
       },
       {
         startDate: '2026-04-21',
@@ -111,6 +113,7 @@ export const chesterfieldBellwood202526Draft: CalendarDraft = {
   },
   sourceUrl: 'https://www.oneccps.org/page/calendars',
   flags: [
+    'Aug. 29, 2025 is listed only as "holiday" with no way to confirm what it marks from this source alone; left commonName unset rather than guess.',
     'Oct. 2, 2025 is separately labelled "holiday" but falls inside the already-recorded Sept. 29 – Oct. 10 intersession break; represented as one closure (the broader span) rather than an invalid overlapping pair — reviewer should confirm this is the right call, or whether Oct. 2 deserves its own commonName within the break.',
     'March 20, 2026 is separately labelled "holiday" but falls inside the already-recorded March 16–27 intersession break; same treatment as Oct. 2 above.',
     'April 21, 2026 ("special election; students will not come to school") does not fit any ClosureTag value (holiday/teacher_workday/conference_day/break) — tagged Holiday as the closest existing fit. Worth deciding whether ClosureTag needs a fifth value for civic closures, or whether Holiday is intentionally the catch-all.',
