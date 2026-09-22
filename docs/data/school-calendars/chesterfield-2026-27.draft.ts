@@ -60,14 +60,14 @@ export const chesterfield202627Draft: CalendarDraft = {
         endDate: '2026-11-27',
         tags: [ClosureTag.Holiday],
         sourceLabel: 'holiday',
-        commonName: 'Thanksgiving break',
+        commonName: 'Thanksgiving Break',
       },
       {
         startDate: '2026-12-21',
         endDate: '2027-01-01',
         tags: [ClosureTag.Break],
         sourceLabel: 'winter break',
-        commonName: 'Winter break',
+        commonName: 'Winter Break',
       },
       {
         startDate: '2027-01-18',
@@ -100,7 +100,7 @@ export const chesterfield202627Draft: CalendarDraft = {
         endDate: '2027-04-02',
         tags: [ClosureTag.Break],
         sourceLabel: 'spring break',
-        commonName: 'Spring break',
+        commonName: 'Spring Break',
       },
       {
         startDate: '2027-05-31',

@@ -73,7 +73,7 @@ export const henrico202627Draft: CalendarDraft = {
         endDate: '2027-01-01',
         tags: [ClosureTag.Break],
         sourceLabel: 'Schools closed - Winter Break',
-        commonName: 'Winter break',
+        commonName: 'Winter Break',
       },
       {
         startDate: '2027-01-18',
@@ -110,7 +110,7 @@ export const henrico202627Draft: CalendarDraft = {
         endDate: '2027-04-02',
         tags: [ClosureTag.Break],
         sourceLabel: 'Schools closed - Spring Break',
-        commonName: 'Spring break',
+        commonName: 'Spring Break',
       },
       {
         startDate: '2027-05-31',
@@ -124,8 +124,8 @@ export const henrico202627Draft: CalendarDraft = {
   sourceDocumentPath: 'docs/data/school-calendars/henrico-2026-27.source.pdf',
   flags: [
     'lastInstructionalDay (June 4, 2027) is sourced from the PDF, not the HTML page — the HTML page\'s rendered text has no "last day of school" line at all for this year. Reviewer should double-check this against a second source before treating it as settled.',
-    '"Wellness Day" (Nov. 2, Feb. 15) does not fit any ClosureTag value — tagged Holiday as the closest existing fit, same open question as Bellwood\'s "special election" case.',
-    "No evidence found of a Henrico year-round elementary calendar (checked the page directly); this draft validates the single-calendar-per-district path, not Chesterfield's multi-calendar one.",
+    '"Wellness Day" (Nov. 2, Feb. 15) does not fit any ClosureTag value — tagged Holiday as the closest existing fit.',
+    'No evidence found of a Henrico year-round elementary calendar (checked the page directly); no year-round calendar is included in this PR for any district for 2026-27 — see the school-calendar-parser skill for why a page section existing is not by itself evidence a program is currently operating.',
     "The public ICS feed (calendar.google.com/.../hcpswebdev%40henrico.k12.va.us/public/basic.ics) was not used as a source: it is not a rolling closures-only window like Chesterfield's, it is Henrico's entire public events calendar — 2,300+ events back to 2012, real closures mixed in among awareness days and open houses.",
     'sourceDocumentPath points into this repo, not the private camp-sources bucket ADR-0012 specifies — no Supabase project is deployed yet to hold it. Move the PDF into the real bucket and update this path when CAM-4 promotes this draft.',
   ],
