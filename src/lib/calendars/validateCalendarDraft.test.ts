@@ -1,5 +1,5 @@
-import { CalendarType, ClosureTag, SchoolDistrict } from '@campout/planner';
 import type { SchoolYearCalendar } from '@campout/planner';
+import { CalendarType, ClosureTag, SchoolDistrict } from '@campout/planner';
 import { describe, expect, it } from 'vitest';
 import type { CalendarDraft } from './validateCalendarDraft';
 import { findDraftIssues } from './validateCalendarDraft';
@@ -60,6 +60,21 @@ describe('findDraftIssues', () => {
     };
     expect(findDraftIssues(draft)).toEqual([
       'chesterfield 2026-27 ends instruction (2026-08-24) on or before it starts (2026-08-24)',
+    ]);
+  });
+
+  it('names the school in a structural issue for a school-scoped calendar', () => {
+    const draft: CalendarDraft = {
+      calendar: {
+        ...calendar,
+        school: 'Bellwood Elementary',
+        lastInstructionalDay: calendar.firstInstructionalDay,
+      },
+      sourceUrl: draftWithUrl.sourceUrl,
+      flags: [],
+    };
+    expect(findDraftIssues(draft)).toEqual([
+      'chesterfield Bellwood Elementary 2026-27 ends instruction (2026-08-24) on or before it starts (2026-08-24)',
     ]);
   });
 
