@@ -59,7 +59,7 @@ function byFirstDay(a: SchoolYearCalendar, b: SchoolYearCalendar): number {
   return compareDates(a.firstInstructionalDay, b.firstInstructionalDay);
 }
 
-function describe(calendar: SchoolYearCalendar): string {
+export function describe(calendar: SchoolYearCalendar): string {
   return calendar.school
     ? `${calendar.district} ${calendar.school} ${calendar.label}`
     : `${calendar.district} ${calendar.label}`;
