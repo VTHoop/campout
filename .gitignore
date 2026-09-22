@@ -22,6 +22,9 @@ blob-report/
 supabase/.temp/
 supabase/.branches/
 
+# Codacy CLI runtime output
+.codacy/logs/
+
 # Editor / OS
 .DS_Store
 .idea/

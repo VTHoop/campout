@@ -24,7 +24,7 @@ export {
   Weekday,
   weekdayOf,
 } from './calendarDate';
-export { orderedCalendars } from './calendars';
+export { describe, orderedCalendars } from './calendars';
 export { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
 export type {
   Closure,

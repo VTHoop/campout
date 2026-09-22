@@ -1,5 +1,5 @@
 import type { SchoolYearCalendar } from '@campout/planner';
-import { orderedCalendars } from '@campout/planner';
+import { describe, orderedCalendars } from '@campout/planner';
 
 /**
  * A school-year calendar a skill has drafted for human review — not yet a
@@ -41,10 +41,4 @@ function findProvenanceIssues(draft: CalendarDraft): string[] {
   return [
     `${describe(draft.calendar)} has neither sourceUrl nor sourceDocumentPath; ADR-0012 requires at least one`,
   ];
-}
-
-function describe(calendar: SchoolYearCalendar): string {
-  return calendar.school
-    ? `${calendar.district} ${calendar.school} ${calendar.label}`
-    : `${calendar.district} ${calendar.label}`;
 }
