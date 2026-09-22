@@ -35,6 +35,7 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "docs/data/**/*.ts",
     "supabase/tests/**/*.ts",
     "vitest.setup.ts",
     "next-env.d.ts",

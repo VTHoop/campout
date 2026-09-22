@@ -60,7 +60,7 @@ interface CalendarDraft {
 Run `findDraftIssues(draft)`. **Do not write the draft file until this returns an empty array.** Its issues are structural defects (per `orderedCalendars`) or missing provenance — both are bugs in the draft, not judgment calls, and belong in `flags` only if they're genuinely unresolvable from the source, never as a way to skip validation.
 
 ## 6. Capture provenance
-If the source is a durable, stable URL, set `sourceUrl` and leave `sourceDocumentPath` unset. If it's not durable — a redirector, a page that's known to change without an archived history, a PDF behind a short link — save a copy alongside the draft (`docs/data/school-calendars/<district>-<label>.source.pdf` or `.html`) and set `sourceDocumentPath` to that relative path.
+If the source is a durable, stable URL, set `sourceUrl` and leave `sourceDocumentPath` unset. If it's not durable — a redirector, a page that's known to change without an archived history, a PDF behind a short link — save a copy alongside the draft (`docs/data/school-calendars/<district>-<label>.source.pdf` or `.html`) and set `sourceDocumentPath` to that relative path. **This is a stopgap, not ADR-0012's real destination** — the private `camp-sources` Supabase bucket doesn't exist yet (no project is deployed). Add a flag noting the path will need to move into the bucket when the draft is promoted.
 
 ## 7. Write the draft
 One file per district per school year: `docs/data/school-calendars/<district>-<label>.draft.ts`, e.g. `chesterfield-2026-27.draft.ts`, `chesterfield-bellwood-2026-27.draft.ts`, `henrico-2026-27.draft.ts`. Export the validated `CalendarDraft`.
