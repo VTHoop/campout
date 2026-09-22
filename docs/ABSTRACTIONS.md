@@ -14,20 +14,31 @@ A camp running June 15–19 runs those days in Richmond regardless of where the 
 
 **Validate at the boundary.** `assertCalendarDate(value, label)` throws on anything malformed. It also catches the case `Date.parse` misses: `2027-02-30` parses fine and silently becomes March 2nd. A summer week built on a rolled-over date is off by days, and a parent plans around it.
 
-## The summer-week model
+## The closure model
 
 ```ts
-const weeks = summerWeeks(calendar); // readonly SummerWeek[]
-const column = summerWeekIndexOf(weeks, '2027-06-30'); // number | null
+const periods = coveragePeriods(calendars, '2026-08-24', '2027-09-30'); // readonly CoveragePeriod[]
+const summer = longestPeriod(calendars, '2026-27'); // CoveragePeriod | undefined
+const period = coveragePeriodOf(calendars, '2027-07-15'); // CoveragePeriod | undefined
 ```
 
-**Every screen in the app indexes off this list.** Grid columns, coverage gaps, the directory's "which week?" filter — all of them.
+**Every screen in the app indexes off these.** Grid columns, coverage gaps, the directory's "which week?" filter — all of them.
 
-Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to the week it starts in. The boundary weeks are the interesting part: when school ends on a Wednesday, that week still needs Thursday and Friday covered, so it appears as a **partial** week. Dropping it would hide a real gap; treating it as full would report a gap on days the child was in school. `SummerWeek.isPartial`, `firstDayNeedingCover`, and `lastDayNeedingCover` carry that distinction — use them rather than assuming Monday-to-Friday.
+A **closure** is a run of days school is shut, and a `CoveragePeriod` is a closure plus its `weekdays` count and its `weeks`. **Summer is not a separate type and is never stored**: it is the gap between one `SchoolYearCalendar`'s `lastInstructionalDay` and the next one's `firstInstructionalDay`, so `coveragePeriods` takes a *list* of calendars. A Tuesday in November and the week of July 13 are the same shape. **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision and the reasoning.**
 
-`summerWeeks` **throws** rather than returning an empty list when the calendar is inconsistent. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
+Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to the week it starts in. The boundary weeks are the interesting part: when school ends on a Wednesday, that week still needs Thursday and Friday covered, so it appears as a **partial** week. Dropping it would hide a real gap; treating it as full would report a gap on days the child was in school. `CoverageWeek.isPartial`, `firstDayNeedingCover`, and `lastDayNeedingCover` carry that distinction — use them rather than assuming Monday-to-Friday. `weeksBetween(start, end)` in `weeks.ts` owns that logic; call it rather than re-deriving it.
 
-This module is being re-seated rather than rewritten. Campout covers scattered days off as well as summer, so the general unit is a **closure** — a run of days school is shut — and summer is the longest one. The partial-boundary-week logic below is the subtlest code in the repo and it survives intact behind `weeksBetween(start, end)`; only its caller and its type names change. **[ADR-0013](./adr/0013-school-closures-as-the-coverage-primitive.md) is the decision.** What is documented here is what ships today.
+**Three answers, and the difference between them matters:**
+
+- `coveragePeriodOf` returns `undefined` when school is in session that day.
+- It **throws** when we cannot say — the date is before the first calendar or after the last, or it falls in a summer whose neighbouring year is not held. A date we hold no calendar for is not "school is in session".
+- `longestPeriod` returns `undefined` when the following year's calendar is absent, so the app can say summer is not published yet. **It never invents an end date.**
+
+A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: tagged `break`, with a `sourceLabel` that says so. The district never said it, so never show that label as the district's words.
+
+The planner also **throws** on a calendar that contradicts itself — a closure outside its instructional days, two closures sharing a day, overlapping school years, a coverage window that does not contain its own school year. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
+
+Years are neighbours when their **labels** follow each other (`2026-27`, then `2027-28`); a label that is not `YYYY-YY` throws. Pass calendars for **one district or school**. `coveragePeriods` sorts them for you, but it refuses a list that mixes owners, because a gap between Chesterfield's year and Bellwood's is not a summer.
 
 ## Purity in `@campout/planner`
 

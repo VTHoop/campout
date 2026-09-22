@@ -43,12 +43,13 @@ erDiagram
     households ||--o{ plan_entries : owns
     children ||--o{ plan_entries : "scheduled into"
     sessions ||--o{ plan_entries : "booked by"
-    school_calendars ||--o{ households : "district drives summer for"
+    school_calendars ||--o{ school_closures : "lists"
+    school_calendars ||--o{ households : "shares a district with"
 ```
 
 **Two halves with different rules:**
 
-- **Catalog** (`camps`, `locations`, `sessions`, `school_calendars`) — world-readable, writable only by the service role. Keeping the public half out of the policy surface keeps the policies that matter small enough to reason about.
+- **Catalog** (`camps`, `locations`, `sessions`, `school_calendars`, `school_closures`) — world-readable, writable only by the service role. Keeping the public half out of the policy surface keeps the policies that matter small enough to reason about.
 - **Household** (`households`, `household_members`, `children`, `plan_entries`) — RLS-protected, resolved through `is_household_member()`. ADR-0004.
 
 `children` holds a display name, an integer age, and a grade. **Nothing else, by design and by schema** — read ADR-0006 before altering that table.
@@ -61,16 +62,21 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 
 **Enforced structurally, not by convention.** `packages/planner/tsconfig.json` compiles under `lib: ["ES2022"]` with **no DOM lib**, so a browser API inside the package is a compile error rather than a runtime failure on the server.
 
-**The coverage primitive is a closure, not a summer (ADR-0013).** A closure is a contiguous run of days school is shut, carrying the district’s own reason. Summer is one of them, distinguished by `kind` and length — not by having its own type. `SchoolCalendar` and `SummerWeek` are replaced by `SchoolYearCalendar`, `Closure` and `CoveragePeriod`; `weeks.ts` keeps its partial-boundary-week logic behind `weeksBetween(start, end)`. `school_calendars` splits into a calendar row plus a `school_closures` child table. **The shipped code still carries the old shape** — ADR-0013 landed ahead of the implementation. On the catalog side there is nothing to do: a one-day camp is already a `sessions` row with `start_date == end_date`.
+**The coverage primitive is a closure, not a summer (ADR-0013).** A closure is a contiguous run of days school is shut, carrying the district’s own words and a set of tags. **Summer is never stored:** no district publishes it, so it is derived from one year’s `lastInstructionalDay` and the next year’s `firstInstructionalDay`, and it is the same `CoveragePeriod` shape as a Tuesday off. What is stored is a `SchoolYearCalendar` (`school_calendars`) and its `Closure`s (`school_closures`). A calendar’s `type` (`traditional` or `year_round`) tells the UI what it may promise; it never changes the algorithm.
+
+**The planner refuses rather than guesses.** A date we hold no calendar for throws, and so does a date in a summer whose neighbouring year is not held — that is not the same as “school is in session”. Neighbouring years are paired by **label** (`2026-27`, then `2027-28`), so a summer between two held years is known even when each coverage window stops at the last day of school. A label that is not `YYYY-YY` throws. `longestPeriod` returns `undefined` when the following year is absent, so the app can say summer is not published yet instead of inventing an end date. A calendar that contradicts itself (a closure outside its instructional days, two closures sharing a day, overlapping years) throws. Early release days and grade-staggered start dates are deliberately out of scope (ADR-0013).
+
+**The database does not enforce that a closure sits inside its calendar’s window** — a check constraint cannot read the parent row. The planner does, and a violation is a data-quality bug for the verification workflow to catch. On the catalog side there is nothing else to do for one-day camps: a one-day camp is already a `sessions` row with `start_date == end_date`.
 
 **Dates are calendar dates.** `YYYY-MM-DD` strings, anchored to UTC midnight internally — not to make the values UTC, but to make the arithmetic immune to the reader's timezone. A camp running June 15–19 runs those days in Richmond no matter who is looking. Daily hours are wall-clock `time` values. Money is integer cents.
 
 | Module | Status | Responsibility |
 |---|---|---|
-| `calendarDate.ts` | **shipped** | Date primitives: parse/validate, `addDays`, `mondayOf`, `nextWeekday`, `previousWeekday`. Rejects `2027-02-30`, which `Date.parse` silently rolls to March 2. |
-| `weeks.ts` | **shipped** | `summerWeeks()` — a district calendar in, the ordered weeks of summer out, with partial boundary weeks flagged. `summerWeekIndexOf()` maps a date to a grid column. |
-| `types.ts` | **shipped** | `SchoolDistrict`, `SchoolCalendar`, `SummerWeek`. |
-| `closures.ts` | not yet written | Resolves a district calendar into `CoveragePeriod`s — every run of days school is closed, summer included. Becomes the module everything else indexes off. ADR-0013 |
+| `calendarDate.ts` | **shipped** | Date primitives: parse/validate, `addDays`, `mondayOf`, `nextWeekday`, `previousWeekday`, `firstWeekdayOnOrAfter`, `lastWeekdayOnOrBefore`. Rejects `2027-02-30`, which `Date.parse` silently rolls to March 2. |
+| `weeks.ts` | **shipped** | `weeksBetween(start, end)` — a run of closed days in, the ordered Monday-anchored weeks out, with partial boundary weeks flagged. The subtlest code in the repo. The week-building loop is carried over from `summerWeeks()` unchanged; only its inputs changed. |
+| `types.ts` | **shipped** | `SchoolDistrict`, `CalendarType`, `ClosureTag`, `Closure`, `SchoolYearCalendar`, `CoveragePeriod`, `CoverageWeek`. |
+| `calendars.ts` | **shipped** | Validates a list of `SchoolYearCalendar`s and puts them in date order. Throws on anything that contradicts itself. |
+| `closures.ts` | **shipped** | `coveragePeriods()`, `longestPeriod()`, `coveragePeriodOf()` — every run of closed weekdays, summer included. The module everything else indexes off. ADR-0013 |
 | `coverage.ts` | not yet written | Uncovered weeks. |
 | `overlap.ts` | not yet written | Two sessions for one child on the same day. |
 | `hours.ts` | not yet written | A session ending before the household workday does. |
@@ -84,7 +90,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/adr/` | Decisions and rationale; immutable once accepted. |
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `docs/DESIGN.md` | Visual language — tokens, card anatomy, state signals, copy. Proposed, not locked. |
-| `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, PostGIS, catalog RLS |
+| `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, `school_closures`, PostGIS, `btree_gist`, catalog RLS |
 | `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |

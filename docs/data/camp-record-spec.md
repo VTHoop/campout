@@ -74,11 +74,38 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 
 **Constraints the database enforces**, so you will hit them rather than silently storing something wrong: `end_date >= start_date`, `daily_end > daily_start`, `max_age >= min_age`, `price_cents >= 0`.
 
-## `school_calendars`
+## `school_calendars` and `school_closures`
 
-Keyed by `(district, year)`. `last_day_of_school`, `first_day_of_school`, `verified_at`, plus evidence — `source_url` or `source_document_path`, same rule as a camp. Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes.
+One `school_calendars` row per school year per district — or per school, when a school runs its own calendar (Chesterfield's Bellwood Elementary is year-round). Unique on `(district, school, label)`, and `school` is null for the district-wide calendar.
 
-This is the reference data every summer week is derived from, and it will grow to carry every other day the district is closed. A wrong date here shifts every coverage gap for every family in that district, so it gets the same verification discipline as a camp record — from the district's published calendar, not from a news article about it.
+| Field | Required | Notes |
+|---|---|---|
+| `district`, `label` | yes | `label` is the district's name for the year, **written `YYYY-YY`**: `2026-27`. The planner pairs a year with the next one by label and refuses any other format. The database does not check it, so check it by eye. |
+| `type` | yes | `traditional` or `year_round`. Tells the UI what it may promise; it does not change how days are counted. |
+| `school` | no | Set only for a school on its own calendar. |
+| `first_instructional_day`, `last_instructional_day` | yes | Copied from the published calendar. The earlier date when grades start on different days. |
+| `covers_from`, `covers_to` | yes | The window this record speaks for. It must contain the school year (first to last instructional day). It does **not** need to reach across summer: the summer is derived from the next year's calendar. |
+| `verified_at`, `verified_by` | yes | Same rule as a camp. |
+| `source_url` / `source_document_path` | **one of these two** | Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes. |
+
+Each `school_closures` row is a run of days school is shut, inclusive at both ends. A single day repeats `start_date` as `end_date`.
+
+| Field | Required | Notes |
+|---|---|---|
+| `start_date`, `end_date` | yes | `end_date >= start_date`. |
+| `source_label` | yes | **The district's exact words, verbatim.** CCPS labels nine different closures "Holiday, schools and offices closed", so this is often useless alone. That is why it is a quote and never rewritten. |
+| `tags` | no | Any of `holiday`, `teacher_workday`, `conference_day`, `break`. One closure can carry several. |
+| `common_name` | no | What a parent would call it ("Yom Kippur"). Ours, not the district's — only fill it with its own source. |
+
+**Never store summer.** No district publishes it. It is derived from one year's `last_instructional_day` and the next year's `first_instructional_day`, so a verifier copies dates off the document and does no arithmetic. Adding the next year's calendar is what makes this year's summer known.
+
+**Constraints the database enforces:** `last_instructional_day > first_instructional_day`, `covers_to > covers_from`, `end_date >= start_date`, and **no two closures in one calendar may cover the same day**.
+
+**What it does not enforce**, so the verification workflow must: every closure sits inside its calendar's instructional days, and the calendar's window contains its school year. The planner refuses a calendar that breaks either, so a mistake here shows up as an error, not a wrong day on a grid. A closure before the first day of school or after the last — CCPS teacher workdays before opening day, for instance — is not stored; that time is already part of the derived summer.
+
+**Out of scope, deliberately** (ADR-0013): early-release days and grade-staggered first days. Record `first_instructional_day` as the earliest date any grade starts.
+
+This is the reference data every closed day is derived from. A wrong date here shifts every coverage gap for every family in that district, so it gets the same verification discipline as a camp record — from the district's published calendar, not from a news article about it. The HTML calendar page is authoritative; a district's iCal feed is a convenience and can miss next year.
 
 ---
 

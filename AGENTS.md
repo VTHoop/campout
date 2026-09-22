@@ -259,7 +259,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 | Auth | **Supabase Auth** (magic link) | No passwords to manage for a family beta. The JWT drives RLS. ADR-0004 |
 | Authorization | **Row Level Security** | The only boundary between households. Tested, not assumed. ADR-0004 |
 | Files | **Supabase Storage** | Source PDFs captured at verification time, so we can prove what a camp said. |
-| Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O. The school-closure and summer-week models, and the coverage analyzers. Runs in a route handler **and** in the browser. ADR-0008 |
+| Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O. The school-closure model (summer is derived, never stored), and the coverage analyzers. Runs in a route handler **and** in the browser. ADR-0008 |
 | Maps | **MapLibre GL** + MapTiler tiles | Open-source renderer; the tile provider is swappable. ADR-0007 |
 | Styling | **Tailwind v4** + **shadcn/ui** | Design tokens land with the first real UI. |
 | Package manager | **pnpm 11**, Node 24 | `pnpm-workspace.yaml` for the planner package. |
@@ -269,7 +269,7 @@ Normalized relational, because the domain is relational and a human has to verif
 
 **A `camp` is an organization. A `session` is a dated offering.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
 
-`camps → locations → sessions` with provenance (`source_url`, `verified_at`, `verified_by`) on camps and sessions. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data keyed by district and year, and it drives the entire coverage model.
+`camps → locations → sessions` with provenance (`source_url`, `verified_at`, `verified_by`) on camps and sessions. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
 
 ### Diagrams
 Prefer Mermaid (`flowchart`, `sequenceDiagram`, `erDiagram`, `stateDiagram-v2`). ASCII only for spatial wireframes.
