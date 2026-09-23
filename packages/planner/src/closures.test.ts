@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
 import type { Closure, CoveragePeriod, SchoolYearCalendar } from './types';
-import { CalendarType, ClosureTag, SchoolDistrict } from './types';
+import { CalendarType, ClosureTag, EstimateRule, PeriodBasis, SchoolDistrict } from './types';
 
 /**
  * Fixture calendars. Invented, not scraped — real district calendars are
@@ -460,6 +460,76 @@ describe('coveragePeriodOf', () => {
 
 // A record that contradicts itself is a bug, not an input. Rendering it would put
 // a wrong day on a parent's grid, so the planner refuses (AGENTS.md §1).
+// CAM-26: every period says whether its dates are published or estimated.
+describe('published or estimated', () => {
+  it('marks a stored closure as published', () => {
+    expect(periodOn(bothYears, '2026-12-24').basis).toBe(PeriodBasis.Published);
+  });
+
+  // No regression: the held 2027-28 starts Aug 25, not the Aug 23 an estimate
+  // would say, and the published date wins.
+  it('uses the published first day back, unmarked, when the following year is held', () => {
+    const summer = longestPeriod(bothYears, '2026-27');
+
+    expect(summer?.closure.endDate).toBe('2027-08-24');
+    expect(summer?.basis).toBe(PeriodBasis.Published);
+  });
+
+  it('marks an estimated summer with the rule that produced it', () => {
+    const summer = longestPeriod([year2026], '2026-27');
+
+    expect(summer).toMatchObject({
+      basis: PeriodBasis.Estimated,
+      estimatedBy: EstimateRule.WeekdayFromMonthEnd,
+    });
+    expect(summer?.closure.sourceLabel).toMatch(/estimated/);
+  });
+
+  it('marks the estimated summer the same way whichever function finds it', () => {
+    const viaRange = coveragePeriods([year2026], '2027-07-01', '2027-07-01');
+    const viaDate = coveragePeriodOf([year2026], '2027-07-01');
+
+    expect(viaRange).toEqual([longestPeriod([year2026], '2026-27')]);
+    expect(viaDate).toEqual(longestPeriod([year2026], '2026-27'));
+  });
+
+  it('estimates a year-round calendar by the same rules', () => {
+    const yearRound = { ...year2026, type: CalendarType.YearRound };
+
+    expect(longestPeriod([yearRound], '2026-27')).toEqual(longestPeriod([year2026], '2026-27'));
+  });
+
+  // Stored data is untouched: the estimate lives only in what is returned.
+  it('does not change the calendars it was given', () => {
+    const calendars = [year2026];
+    const before = structuredClone(calendars);
+
+    longestPeriod(calendars, '2026-27');
+
+    expect(calendars).toEqual(before);
+  });
+
+  describe('when the estimate fails the range check', () => {
+    // A June start estimates a June first day back, outside Jul 1 - Sep 15.
+    const juneStart: SchoolYearCalendar = {
+      ...year2026,
+      firstInstructionalDay: '2026-06-22',
+      lastInstructionalDay: '2027-05-28',
+      coversFrom: '2026-06-01',
+      coversTo: '2027-05-31',
+      closures: [],
+    };
+
+    it('leaves summer unresolved', () => {
+      expect(longestPeriod([juneStart], '2026-27')).toBeUndefined();
+    });
+
+    it('still throws for a date after the last day of school', () => {
+      expect(() => coveragePeriodOf([juneStart], '2027-06-01')).toThrow(RangeError);
+    });
+  });
+});
+
 describe('refusing inconsistent calendars', () => {
   const askAbout = (calendars: readonly SchoolYearCalendar[]) =>
     coveragePeriodOf(calendars, '2026-10-14');

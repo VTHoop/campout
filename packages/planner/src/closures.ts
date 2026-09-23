@@ -9,7 +9,7 @@ import {
 } from './calendarDate';
 import { byStartDate, followingLabel, orderedCalendars } from './calendars';
 import type { Closure, CoveragePeriod, SchoolYearCalendar } from './types';
-import { ClosureTag } from './types';
+import { ClosureTag, PeriodBasis } from './types';
 import { weeksBetween } from './weeks';
 
 /** No district publishes summer, so this closure has no district words to quote. */
@@ -114,7 +114,7 @@ function periodFor(closure: Closure): CoveragePeriod | undefined {
     (total, week) => total + daysBetween(week.firstDayNeedingCover, week.lastDayNeedingCover) + 1,
     0,
   );
-  return { closure, weekdays, weeks };
+  return { closure, weekdays, weeks, basis: PeriodBasis.Published };
 }
 
 type YearPair = readonly [SchoolYearCalendar, SchoolYearCalendar];

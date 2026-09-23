@@ -80,13 +80,44 @@ export interface CoverageWeek {
   readonly lastDayNeedingCover: CalendarDate;
 }
 
-/**
- * A run of closed weekdays a parent has to cover: a stored closure, or the
- * derived gap between two school years.
- */
-export interface CoveragePeriod {
+/** Whether a period's dates all come from published calendars, or one end is our estimate. */
+export enum PeriodBasis {
+  Published = 'published',
+  Estimated = 'estimated',
+}
+
+/** Which rule estimated an unpublished first day back (ADR-0014). */
+export enum EstimateRule {
+  /** This year's first day is within a week of Labor Day: keep the same offset from it. */
+  LaborDayAnchor = 'labor_day_anchor',
+  /** Otherwise: the same weekday, the same number of weeks before the end of the same month. */
+  WeekdayFromMonthEnd = 'weekday_from_month_end',
+}
+
+interface CoveragePeriodShape {
   readonly closure: Closure;
   /** How many weekdays in the closure need cover. Weekends never count. */
   readonly weekdays: number;
   readonly weeks: readonly CoverageWeek[];
 }
+
+/** Every date comes from a calendar a district published. */
+export interface PublishedPeriod extends CoveragePeriodShape {
+  readonly basis: PeriodBasis.Published;
+}
+
+/**
+ * A summer whose following year is not published: it ends the day before a
+ * first day back we estimated. A union rather than an optional rule, so an
+ * estimated period without its rule cannot be built.
+ */
+export interface EstimatedPeriod extends CoveragePeriodShape {
+  readonly basis: PeriodBasis.Estimated;
+  readonly estimatedBy: EstimateRule;
+}
+
+/**
+ * A run of closed weekdays a parent has to cover: a stored closure, or the
+ * derived gap between two school years.
+ */
+export type CoveragePeriod = PublishedPeriod | EstimatedPeriod;
