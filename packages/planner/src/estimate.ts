@@ -62,14 +62,20 @@ function byLaborDay(day: CalendarDate): FirstDayEstimate | undefined {
  * The same weekday, the same number of whole weeks before the end of the same
  * month. Counted back from the end because districts plan toward September:
  * counting forward drifts a week whenever the month gains a fifth weekday.
+ *
+ * It never leaves the month: when next year's month has one fewer of that
+ * weekday, the estimate is its first one (the first Monday of August stays the
+ * first Monday of August rather than becoming the last Monday of July).
  */
 function byMonthEnd(day: CalendarDate): FirstDayEstimate {
   const weeksBeforeEnd = Math.floor(daysBetween(day, lastDayOfMonth(day)) / DAYS_PER_WEEK);
   const sameMonthNextYear = monthStart(yearOf(day) + 1, monthOf(day));
   const lastSameWeekday = lastWeekdayOfMonth(sameMonthNextYear, weekdayOf(day));
+  const counted = addDays(lastSameWeekday, -DAYS_PER_WEEK * weeksBeforeEnd);
+  const inMonth = monthOf(counted) === monthOf(day);
 
   return {
-    firstDay: addDays(lastSameWeekday, -DAYS_PER_WEEK * weeksBeforeEnd),
+    firstDay: inMonth ? counted : addDays(counted, DAYS_PER_WEEK),
     rule: EstimateRule.WeekdayFromMonthEnd,
   };
 }

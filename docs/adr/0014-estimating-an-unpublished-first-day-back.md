@@ -20,7 +20,7 @@ Most summer camps open registration in the **first week of January**. Under ADR-
 **When the year labelled next is not held, the planner estimates its first instructional day, and summer ends the day before it.** The first rule that applies wins:
 
 1. **Labor Day anchor.** If this year's first day falls within **one week** of Labor Day, before or after, the estimate keeps the same offset from next year's Labor Day. This is the "Tuesday after Labor Day" pattern Virginia once required and some states still do.
-2. **Weekday from the end of the month.** Otherwise, the estimate is the same weekday, the same number of whole weeks before the end of the same month. The second-to-last Monday of August stays the second-to-last Monday of August.
+2. **Weekday from the end of the month.** Otherwise, the estimate is the same weekday, the same number of whole weeks before the end of the same month. The second-to-last Monday of August stays the second-to-last Monday of August. **It never leaves the month:** when next year's month has one fewer of that weekday, the estimate is its first one. A Mon Aug 2, 2027 start estimates Mon Aug 7, 2028, not Jul 31.
 
 **Range check.** An estimate before **Jul 1** or after **Sep 15** is discarded, and summer stays unresolved exactly as ADR-0013 had it. The window is wide on purpose: RPS's 200-day schools start in late July, and no Richmond-metro district returns after mid-September.
 
