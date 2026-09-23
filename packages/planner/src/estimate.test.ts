@@ -3,7 +3,7 @@ import { estimateNextFirstDay } from './estimate';
 import { EstimateRule } from './types';
 
 /**
- * The rules come from CAM-26 and ADR-0014. The dates in the first block are the
+ * The rules come from ADR-0014. The dates in the first block are the
  * real first days of the four Richmond-metro districts, checked during
  * refinement: every one started the second-to-last Monday of August.
  */
@@ -29,7 +29,7 @@ describe('estimateNextFirstDay — weekday from the end of the month', () => {
     });
   });
 
-  // A year-round calendar is estimated by the same rules (CAM-26).
+  // A year-round calendar is estimated by the same rules (ADR-0014).
   it('estimates a late-July start the same way', () => {
     expect(estimateNextFirstDay('2026-07-27')).toEqual({
       firstDay: '2027-07-26',
@@ -52,6 +52,15 @@ describe('estimateNextFirstDay — Labor Day anchor', () => {
     expect(estimateNextFirstDay('2026-09-08')).toEqual({
       firstDay: '2027-09-07',
       rule: EstimateRule.LaborDayAnchor,
+    });
+  });
+
+  // Eight days before a Monday Labor Day is always a Sunday. Unrealistic as a
+  // first day, but it is the tightest miss on that side of the window.
+  it('uses the month-end rule a day before the Labor Day window', () => {
+    expect(estimateNextFirstDay('2026-08-30')).toEqual({
+      firstDay: '2027-08-29',
+      rule: EstimateRule.WeekdayFromMonthEnd,
     });
   });
 

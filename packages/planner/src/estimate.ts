@@ -1,10 +1,21 @@
 import type { CalendarDate } from './calendarDate';
-import { addDays, assertCalendarDate, daysBetween, Weekday, weekdayOf } from './calendarDate';
+import {
+  addDays,
+  assertCalendarDate,
+  compareDates,
+  daysBetween,
+  lastDayOfMonth,
+  monthOf,
+  monthStart,
+  Weekday,
+  weekdayOf,
+  yearOf,
+} from './calendarDate';
 import { EstimateRule } from './types';
 
 /**
  * Estimating the first day of a school year no district has published yet
- * (ADR-0014, CAM-26).
+ * (ADR-0014).
  *
  * Richmond City and Hanover publish one year at a time, after camp registration
  * opens. Without an estimate their families see "summer not published yet" exactly
@@ -22,9 +33,9 @@ export interface FirstDayEstimate {
 const LABOR_DAY_REACH_DAYS = 7;
 const DAYS_PER_WEEK = 7;
 
-/** Month-day bounds, inclusive. An estimate outside them is more likely wrong than useful. */
-const EARLIEST_FIRST_DAY = '07-01';
-const LATEST_FIRST_DAY = '09-15';
+/** Month and day bounds, inclusive. An estimate outside them is more likely wrong than useful. */
+const EARLIEST_FIRST_DAY = { month: 7, day: 1 };
+const LATEST_FIRST_DAY = { month: 9, day: 15 };
 
 /**
  * The likely first day of the year after the one starting `firstDay`, by the
@@ -64,8 +75,10 @@ function byMonthEnd(day: CalendarDate): FirstDayEstimate {
 }
 
 function isPlausible(date: CalendarDate): boolean {
-  const monthDay = date.slice(5);
-  return monthDay >= EARLIEST_FIRST_DAY && monthDay <= LATEST_FIRST_DAY;
+  const year = yearOf(date);
+  const earliest = addDays(monthStart(year, EARLIEST_FIRST_DAY.month), EARLIEST_FIRST_DAY.day - 1);
+  const latest = addDays(monthStart(year, LATEST_FIRST_DAY.month), LATEST_FIRST_DAY.day - 1);
+  return compareDates(date, earliest) >= 0 && compareDates(date, latest) <= 0;
 }
 
 /** The first Monday of September. */
@@ -79,21 +92,4 @@ function lastWeekdayOfMonth(anyDayInMonth: CalendarDate, weekday: Weekday): Cale
   const last = lastDayOfMonth(anyDayInMonth);
   const daysBack = (weekdayOf(last) - weekday + DAYS_PER_WEEK) % DAYS_PER_WEEK;
   return addDays(last, -daysBack);
-}
-
-/** Day zero of the following month is the last of this one; UTC keeps it timezone-free. */
-function lastDayOfMonth(day: CalendarDate): CalendarDate {
-  return new Date(Date.UTC(yearOf(day), monthOf(day), 0)).toISOString().slice(0, 10);
-}
-
-function monthStart(year: number, month: number): CalendarDate {
-  return `${year}-${String(month).padStart(2, '0')}-01`;
-}
-
-function yearOf(day: CalendarDate): number {
-  return Number(day.slice(0, 4));
-}
-
-function monthOf(day: CalendarDate): number {
-  return Number(day.slice(5, 7));
 }

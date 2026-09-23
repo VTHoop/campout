@@ -59,11 +59,15 @@ export function coveragePeriods(
 
 /**
  * The gap between the labelled year and the one after it: summer, on a
- * traditional calendar. Derived from the two calendars, never stored.
+ * traditional calendar. Derived, never stored.
  *
- * The following year is the one labelled next: "2027-28" after "2026-27". Returns
- * `undefined` when it is not held, or when school runs straight through with no
- * weekday between. It never invents an end date (ADR-0013).
+ * The following year is the one labelled next: "2027-28" after "2026-27". When it
+ * is held, summer ends the day before its first instructional day. When it is not,
+ * summer ends the day before an estimated first day back, and the period is marked
+ * `PeriodBasis.Estimated` with the rule used (ADR-0014).
+ *
+ * Returns `undefined` when school runs straight through with no weekday between,
+ * or when the following year is not held and the estimate fails its range check.
  *
  * @throws RangeError if no calendar carries the label, or if a calendar
  *   contradicts itself.
@@ -86,8 +90,9 @@ export function longestPeriod(
  * A weekend inside a closure belongs to that closure.
  *
  * @throws RangeError when we cannot say whether school is open: the date is
- *   outside every calendar, or it falls in a summer whose neighbouring year is
- *   not held. That is not the same as "school is in session" (AGENTS.md §1).
+ *   before every calendar, after the last summer we can resolve (published or
+ *   estimated, ADR-0014), or in a summer whose preceding year is not held. That is
+ *   not the same as "school is in session" (AGENTS.md §1).
  */
 export function coveragePeriodOf(
   calendars: readonly SchoolYearCalendar[],

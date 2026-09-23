@@ -174,7 +174,7 @@ describe('coveragePeriods', () => {
   });
 
   // With only the first year held, summer's end is estimated from this year's
-  // first day (CAM-26, superseding ADR-0013's "never invent an end date").
+  // first day (ADR-0014, superseding ADR-0013's "never invent an end date").
   // 2026-27 starts the second-to-last Monday of August, so 2027-28 is estimated
   // to start Mon Aug 23 2027.
   it('estimates the summer when the following year is not published', () => {
@@ -434,7 +434,7 @@ describe('coveragePeriodOf', () => {
     expect(() => coveragePeriodOf(bothYears, date)).toThrow(RangeError);
   });
 
-  // The following year is not held, so this summer's end is estimated (CAM-26).
+  // The following year is not held, so this summer's end is estimated (ADR-0014).
   it('finds the estimated summer for a date in it when the following year is not published', () => {
     expect(coveragePeriodOf([year2026], '2027-06-20')?.closure.endDate).toBe('2027-08-22');
   });
@@ -458,9 +458,7 @@ describe('coveragePeriodOf', () => {
   });
 });
 
-// A record that contradicts itself is a bug, not an input. Rendering it would put
-// a wrong day on a parent's grid, so the planner refuses (AGENTS.md §1).
-// CAM-26: every period says whether its dates are published or estimated.
+// Every period says whether its dates are published or estimated (ADR-0014).
 describe('published or estimated', () => {
   it('marks a stored closure as published', () => {
     expect(periodOn(bothYears, '2026-12-24').basis).toBe(PeriodBasis.Published);
@@ -530,6 +528,8 @@ describe('published or estimated', () => {
   });
 });
 
+// A record that contradicts itself is a bug, not an input. Rendering it would put
+// a wrong day on a parent's grid, so the planner refuses (AGENTS.md §1).
 describe('refusing inconsistent calendars', () => {
   const askAbout = (calendars: readonly SchoolYearCalendar[]) =>
     coveragePeriodOf(calendars, '2026-10-14');

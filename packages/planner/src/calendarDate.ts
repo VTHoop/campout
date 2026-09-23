@@ -118,3 +118,25 @@ export function firstWeekdayOnOrAfter(date: CalendarDate): CalendarDate {
 export function lastWeekdayOnOrBefore(date: CalendarDate): CalendarDate {
   return isWeekend(date) ? previousWeekday(date) : date;
 }
+
+/** The calendar year of a date. */
+export function yearOf(date: CalendarDate): number {
+  return Number(date.slice(0, 4));
+}
+
+/** The month of a date, 1 for January through 12 for December. */
+export function monthOf(date: CalendarDate): number {
+  return Number(date.slice(5, 7));
+}
+
+/** The first day of a month, `month` being 1 through 12. */
+export function monthStart(year: number, month: number): CalendarDate {
+  return `${year}-${String(month).padStart(2, '0')}-01`;
+}
+
+/** The last day of the month containing `date`. */
+export function lastDayOfMonth(date: CalendarDate): CalendarDate {
+  // Day zero of the following month is the last of this one, and Date.UTC rolls
+  // December into January for us.
+  return fromEpochMs(Date.UTC(yearOf(date), monthOf(date), 0));
+}
