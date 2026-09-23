@@ -9,11 +9,9 @@ import { findDraftIssues } from './validateCalendarDraft';
  * the skill's judgment calls (recorded as `flags` on each draft, for a human
  * to weigh) — only that the shape the skill promises is the shape it wrote.
  *
- * No Bellwood year-round draft here: further research found no Chesterfield
- * school, Bellwood included, actually runs a year-round calendar for
- * 2026-27, despite the district's page still carrying a 2025-26 Bellwood
- * section. `CalendarType.YearRound` stays in the model for a district that
- * does run one; this just isn't evidence of Chesterfield being that case.
+ * No year-round draft here: no v1 district or school runs a year-round
+ * calendar. `CalendarType.YearRound` stays in the model so one can be added
+ * if it appears.
  */
 describe('CAM-23 acceptance-case drafts', () => {
   it.each([

@@ -67,14 +67,14 @@ describe('findDraftIssues', () => {
     const draft: CalendarDraft = {
       calendar: {
         ...calendar,
-        school: 'Bellwood Elementary',
+        school: 'Fixture Elementary',
         lastInstructionalDay: calendar.firstInstructionalDay,
       },
       sourceUrl: draftWithUrl.sourceUrl,
       flags: [],
     };
     expect(findDraftIssues(draft)).toEqual([
-      'chesterfield Bellwood Elementary 2026-27 ends instruction (2026-08-24) on or before it starts (2026-08-24)',
+      'chesterfield Fixture Elementary 2026-27 ends instruction (2026-08-24) on or before it starts (2026-08-24)',
     ]);
   });
 
