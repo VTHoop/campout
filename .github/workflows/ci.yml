@@ -54,6 +54,10 @@ jobs:
       # The tests need only Postgres, auth (gotrue), PostgREST and the kong
       # gateway; skipping the rest cuts ~12 image pulls to 4.
       - run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        env:
+          # setup-cli exports ghcr.io here, which makes the CLI pull from ghcr.io
+          # alone. Cleared, it tries public.ecr.aws, then ghcr.io, then Docker Hub.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ''
       - run: pnpm test:rls
       - if: always()
         run: supabase stop
