@@ -25,7 +25,7 @@ describe('localKeys', () => {
     vi.doUnmock('node:child_process');
   });
 
-  it('prefers SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY env vars over the local CLI status', async () => {
+  it('prefers SUPABASE_URL/PUBLISHABLE_KEY/SECRET_KEY env vars over the local CLI status', async () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_example';
     process.env.SUPABASE_SECRET_KEY = 'sb_secret_example';
