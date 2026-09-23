@@ -173,15 +173,24 @@ describe('coveragePeriods', () => {
     );
   });
 
-  // Summer needs two years. With only the first, its end date is unknown, and
-  // we never invent one (ADR-0013).
-  it('leaves out the summer when the following year is not published', () => {
-    const periods = coveragePeriods([year2026], '2026-08-24', '2027-06-09');
+  // With only the first year held, summer's end is estimated from this year's
+  // first day (CAM-26, superseding ADR-0013's "never invent an end date").
+  // 2026-27 starts the second-to-last Monday of August, so 2027-28 is estimated
+  // to start Mon Aug 23 2027.
+  it('estimates the summer when the following year is not published', () => {
+    const periods = coveragePeriods([year2026], '2026-08-24', '2027-06-20');
 
-    expect(startDates(periods)).toEqual(['2026-09-07', '2026-11-25', '2026-12-21', '2027-03-29']);
+    expect(startDates(periods)).toEqual([
+      '2026-09-07',
+      '2026-11-25',
+      '2026-12-21',
+      '2027-03-29',
+      '2027-06-10',
+    ]);
+    expect(periods.at(-1)?.closure.endDate).toBe('2027-08-22');
   });
 
-  it('leaves out the gap when the two years do not abut', () => {
+  it('estimates only the first summer when a year is missing between two held years', () => {
     const skipped: SchoolYearCalendar = {
       ...year2027,
       label: '2028-29',
@@ -194,7 +203,14 @@ describe('coveragePeriods', () => {
 
     const periods = coveragePeriods([year2026, skipped], '2026-08-24', '2028-08-24');
 
-    expect(startDates(periods)).toEqual(['2026-09-07', '2026-11-25', '2026-12-21', '2027-03-29']);
+    expect(startDates(periods)).toEqual([
+      '2026-09-07',
+      '2026-11-25',
+      '2026-12-21',
+      '2027-03-29',
+      '2027-06-10',
+    ]);
+    expect(periods.at(-1)?.closure.endDate).toBe('2027-08-22');
   });
 
   it('leaves out a gap that holds no weekdays', () => {
@@ -228,8 +244,10 @@ describe('coveragePeriods', () => {
     expect(() => coveragePeriods(bothYears, from, to)).toThrow(RangeError);
   });
 
-  it('throws when the range ends in a summer whose following year is not published', () => {
-    expect(() => coveragePeriods([year2026], '2026-08-24', '2027-06-20')).toThrow(RangeError);
+  // The estimate reaches the estimated first day back and no further: whether
+  // school is open after it depends on a calendar we do not hold.
+  it('throws when the range ends past an estimated summer', () => {
+    expect(() => coveragePeriods([year2026], '2026-08-24', '2027-08-23')).toThrow(RangeError);
   });
 
   it('throws when the range starts in a summer whose preceding year is not published', () => {
@@ -284,15 +302,23 @@ describe('longestPeriod', () => {
     expect(longestPeriod([year2027, year2026], '2026-27')?.closure.startDate).toBe('2027-06-10');
   });
 
-  it('returns undefined when the following year is not in the list', () => {
-    expect(longestPeriod([year2026], '2026-27')).toBeUndefined();
+  it('estimates the summer when the following year is not in the list', () => {
+    const summer = longestPeriod([year2026], '2026-27');
+
+    expect(summer?.closure.startDate).toBe('2027-06-10');
+    expect(summer?.closure.endDate).toBe('2027-08-22');
   });
 
-  it('returns undefined for the last year we hold', () => {
-    expect(longestPeriod(bothYears, '2027-28')).toBeUndefined();
+  // 2027-28 starts Wed Aug 25, the last Wednesday of August, so 2028-29 is
+  // estimated to start the last Wednesday of August 2028: Aug 30.
+  it('estimates the summer after the last year we hold', () => {
+    const summer = longestPeriod(bothYears, '2027-28');
+
+    expect(summer?.closure.startDate).toBe('2028-06-09');
+    expect(summer?.closure.endDate).toBe('2028-08-29');
   });
 
-  it('returns undefined when the following year does not abut', () => {
+  it('estimates the summer when the following year does not abut', () => {
     const skipped: SchoolYearCalendar = {
       ...year2027,
       label: '2028-29',
@@ -303,7 +329,7 @@ describe('longestPeriod', () => {
       closures: [],
     };
 
-    expect(longestPeriod([year2026, skipped], '2026-27')).toBeUndefined();
+    expect(longestPeriod([year2026, skipped], '2026-27')?.closure.endDate).toBe('2027-08-22');
   });
 
   it('returns undefined when school runs straight through with no weekday between', () => {
@@ -408,10 +434,15 @@ describe('coveragePeriodOf', () => {
     expect(() => coveragePeriodOf(bothYears, date)).toThrow(RangeError);
   });
 
-  // Inside the 2026-27 window, but the summer's end depends on a calendar we do
-  // not hold. Answering "in session" here would be wrong, and so would a guess.
-  it('throws for a summer date when the following year is not published', () => {
-    expect(() => coveragePeriodOf([year2026], '2027-06-20')).toThrow(RangeError);
+  // The following year is not held, so this summer's end is estimated (CAM-26).
+  it('finds the estimated summer for a date in it when the following year is not published', () => {
+    expect(coveragePeriodOf([year2026], '2027-06-20')?.closure.endDate).toBe('2027-08-22');
+  });
+
+  // On the estimated first day back and after it, whether school is open depends
+  // on a calendar we do not hold. Answering "in session" would be a guess.
+  it('throws for a date past an estimated summer', () => {
+    expect(() => coveragePeriodOf([year2026], '2027-08-23')).toThrow(RangeError);
   });
 
   it('throws for a summer date when the preceding year is not published', () => {
