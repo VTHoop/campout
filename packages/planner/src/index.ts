@@ -6,7 +6,8 @@
  * route handler and in the browser as a parent drags a session into a cell.
  *
  * Shipped: the closure model (ADR-0013) — school-year calendars in, the periods a
- * parent has to cover out — and the calendar-date primitives it rests on.
+ * parent has to cover out, with an estimated summer end where the next year is
+ * unpublished (ADR-0014) — and the calendar-date primitives it rests on.
  */
 
 export type { CalendarDate } from './calendarDate';
@@ -26,11 +27,15 @@ export {
 } from './calendarDate';
 export { describe, orderedCalendars } from './calendars';
 export { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
+export type { FirstDayEstimate } from './estimate';
+export { estimateNextFirstDay } from './estimate';
 export type {
   Closure,
   CoveragePeriod,
   CoverageWeek,
+  EstimatedPeriod,
+  PublishedPeriod,
   SchoolYearCalendar,
 } from './types';
-export { CalendarType, ClosureTag, SchoolDistrict } from './types';
+export { CalendarType, ClosureTag, EstimateRule, PeriodBasis, SchoolDistrict } from './types';
 export { weeksBetween } from './weeks';

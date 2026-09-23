@@ -31,10 +31,14 @@ Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to th
 **Three answers, and the difference between them matters:**
 
 - `coveragePeriodOf` returns `undefined` when school is in session that day.
-- It **throws** when we cannot say — the date is before the first calendar or after the last, or it falls in a summer whose neighbouring year is not held. A date we hold no calendar for is not "school is in session".
-- `longestPeriod` returns `undefined` when the following year's calendar is absent, so the app can say summer is not published yet. **It never invents an end date.**
+- It **throws** when we cannot say — the date is before the first calendar, after the last summer we can resolve, or in a summer whose preceding year is not held. A date we hold no calendar for is not "school is in session".
+- `longestPeriod` returns `undefined` when there is no summer to show: the gap holds no weekday, or the following year is absent **and** its estimated first day fails the range check.
 
-A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: tagged `break`, with a `sourceLabel` that says so. The district never said it, so never show that label as the district's words.
+**When the following year is not published, summer's end is estimated** ([ADR-0014](./adr/0014-estimating-an-unpublished-first-day-back.md)). Richmond City and Hanover publish one year at a time, after camp registration opens. `estimateNextFirstDay` in `estimate.ts` applies the rules: a Labor Day anchor, then the same weekday counted back from the end of the month, then a Jul 1 – Sep 15 range check. Nothing is stored, so a published calendar replaces the estimate on the next read.
+
+Every `CoveragePeriod` has a **`basis`**: `PeriodBasis.Published`, or `PeriodBasis.Estimated` with `estimatedBy` naming the `EstimateRule`. It is a union, so narrow on `basis` before reading `estimatedBy`. **Never present an estimated end date as the district's.** The published date always wins: with the following year held, nothing is estimated.
+
+A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: tagged `break`, with a `sourceLabel` that says so (and says the first day back is estimated when it is). The district never said it, so never show that label as the district's words.
 
 The planner also **throws** on a calendar that contradicts itself — a closure outside its instructional days, two closures sharing a day, overlapping school years, a coverage window that does not contain its own school year. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
 

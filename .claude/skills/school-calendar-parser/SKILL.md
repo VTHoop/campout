@@ -13,7 +13,7 @@ Given a district name (or its calendar URL) and a school year, or two adjacent y
 
 # Inputs
 - **District** — one of the four `SchoolDistrict` enum values (`richmond_city`, `chesterfield`, `henrico`, `hanover`), or a URL to that district's published calendar.
-- **School year(s)** — one label (`2026-27`) or two adjacent ones. Two adjacent years are strongly preferred: summer never publishes as an event anywhere seen so far, so it only resolves once both years are held (see `longestPeriod` in `@campout/planner`).
+- **School year(s)** — one label (`2026-27`) or two adjacent ones. **Draft every year the district has published, and no more.** A single published year is a complete draft, not a partial one: when the following year is not held, the planner estimates its first day back and summer still resolves (ADR-0014). Richmond City and Hanover publish only the current year until their boards approve the next, around mid-January.
 - If a Linear ticket number is given (e.g. `CAM-23`, or the district's slice of `CAM-4`), read its TC section first — it carries source-specific findings from prior runs against that exact district, and this skill should not rediscover them from scratch.
 
 # Rules learned from two real, structurally different sources
@@ -35,7 +35,7 @@ These held for both Chesterfield (HTML page + a clean 29-event ICS feed) and Hen
 Read the calling ticket's TC notes for this district if given one. Note the calendar URL(s), whether a bot-check blocks a plain fetch, and whether a PDF or ICS feed exists alongside the HTML page.
 
 ## 2. Fetch the primary source
-Prefer the rendered HTML page. If blocked by a bot-check, use a real browser session. Capture the two adjacent school years if both are published (most districts seen so far publish at least the current and next year on one page).
+Prefer the rendered HTML page. If blocked by a bot-check, use a real browser session. Capture the next school year too if it is published. Chesterfield publishes two years ahead; Richmond City and Hanover publish only the current year, so do not go hunting for a next year that does not exist yet.
 
 ## 3. Extract
 Walk the page month by month. For each entry:
@@ -66,4 +66,4 @@ If the source is a durable, stable URL, set `sourceUrl` and leave `sourceDocumen
 One file per district per school year: `docs/data/school-calendars/<district>-<label>.draft.ts`, e.g. `chesterfield-2026-27.draft.ts`, `henrico-2026-27.draft.ts` — or `<district>-<school-slug>-<label>.draft.ts` for a school-specific calendar once one is confirmed to actually be operating (§ Rule 8).
 
 ## 8. Report
-Summarize for the human reviewer: how many closures were drafted, what (if anything) got flagged and why, and where the draft file and any captured source document landed. The PR diff is the review — there is no separate queue to submit to.
+Summarize for the human reviewer: how many closures were drafted, what (if anything) got flagged and why, and where the draft file and any captured source document landed. **If the district has only one published year, say so**: its summer will end on an estimated first day back (ADR-0014) until the next year is published and drafted. That is a statement, not a flag. Nothing needs deciding. The PR diff is the review — there is no separate queue to submit to.
