@@ -38,7 +38,7 @@ A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: ta
 
 The planner also **throws** on a calendar that contradicts itself — a closure outside its instructional days, two closures sharing a day, overlapping school years, a coverage window that does not contain its own school year. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.
 
-Years are neighbours when their **labels** follow each other (`2026-27`, then `2027-28`); a label that is not `YYYY-YY` throws. Pass calendars for **one district or school**. `coveragePeriods` sorts them for you, but it refuses a list that mixes owners, because a gap between Chesterfield's year and Bellwood's is not a summer.
+Years are neighbours when their **labels** follow each other (`2026-27`, then `2027-28`); a label that is not `YYYY-YY` throws. Pass calendars for **one district or school**. `coveragePeriods` sorts them for you, but it refuses a list that mixes owners, because a gap between a district's year and one school's own year is not a summer.
 
 ## Purity in `@campout/planner`
 
