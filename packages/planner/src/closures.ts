@@ -8,12 +8,21 @@ import {
   lastWeekdayOnOrBefore,
 } from './calendarDate';
 import { byStartDate, followingLabel, orderedCalendars } from './calendars';
-import type { Closure, CoveragePeriod, SchoolYearCalendar } from './types';
+import { estimateNextFirstDay } from './estimate';
+import type {
+  Closure,
+  CoveragePeriod,
+  EstimatedPeriod,
+  PublishedPeriod,
+  SchoolYearCalendar,
+} from './types';
 import { ClosureTag, PeriodBasis } from './types';
 import { weeksBetween } from './weeks';
 
 /** No district publishes summer, so this closure has no district words to quote. */
 const DERIVED_SOURCE_LABEL = 'Between school years (derived)';
+/** As above, but the first day back is ours, not the district's (ADR-0014). */
+const ESTIMATED_SOURCE_LABEL = 'Between school years (derived; first day back estimated)';
 
 /**
  * Every run of closed weekdays that touches `from`–`to`, in date order: each
@@ -68,9 +77,8 @@ export function longestPeriod(
     throw new RangeError(`No calendar is labelled "${label}"`);
   }
 
-  const pair = adjacentYears(years).find(([earlier]) => earlier.label === label);
-  const gap = pair && gapBetween(...pair);
-  return gap && periodFor(gap);
+  const summer = summersOf(years).find(({ after }) => after.label === label);
+  return summer && periodFor(summer);
 }
 
 /**
@@ -93,18 +101,17 @@ export function coveragePeriodOf(
 }
 
 function periodsOf(years: readonly SchoolYearCalendar[]): readonly CoveragePeriod[] {
-  return closuresOf(years)
+  const stored = years
+    .flatMap((year) => year.closures)
+    .map((closure): Sourced => ({ closure, provenance: PUBLISHED }));
+  return [...stored, ...summersOf(years)]
+    .sort((a, b) => byStartDate(a.closure, b.closure))
     .map(periodFor)
     .filter((period) => period !== undefined);
 }
 
-function closuresOf(years: readonly SchoolYearCalendar[]): readonly Closure[] {
-  const stored = years.flatMap((year) => year.closures);
-  return [...stored, ...gapsOf(years)].sort(byStartDate);
-}
-
 /** A closure's weekdays and weeks, or `undefined` when it falls entirely on a weekend. */
-function periodFor(closure: Closure): CoveragePeriod | undefined {
+function periodFor({ closure, provenance }: Sourced): CoveragePeriod | undefined {
   const first = firstWeekdayOnOrAfter(closure.startDate);
   const last = lastWeekdayOnOrBefore(closure.endDate);
   if (compareDates(first, last) > 0) return undefined;
@@ -114,47 +121,78 @@ function periodFor(closure: Closure): CoveragePeriod | undefined {
     (total, week) => total + daysBetween(week.firstDayNeedingCover, week.lastDayNeedingCover) + 1,
     0,
   );
-  return { closure, weekdays, weeks, basis: PeriodBasis.Published };
+  return { closure, weekdays, weeks, ...provenance };
 }
 
-type YearPair = readonly [SchoolYearCalendar, SchoolYearCalendar];
+/** Where a period's dates came from. Spread into the period, so the two cannot disagree. */
+type Provenance = Pick<PublishedPeriod, 'basis'> | Pick<EstimatedPeriod, 'basis' | 'estimatedBy'>;
+
+const PUBLISHED: Provenance = { basis: PeriodBasis.Published };
+
+interface Sourced {
+  readonly closure: Closure;
+  readonly provenance: Provenance;
+}
+
+/** The time between a school year and the next: summer, on a traditional calendar. */
+interface Summer extends Sourced {
+  readonly after: SchoolYearCalendar;
+}
 
 /**
- * Each held year paired with the held year labelled next. A missing year breaks
- * the chain, so it is never bridged into a two-year "summer". Coverage windows
- * are not consulted: a window that stops at the last day of school is natural,
- * and must not make a summer we can derive look unknown.
+ * The summer after each held year. It ends before the year labelled next when
+ * that year is held — coverage windows are not consulted, so a window that stops
+ * at the last day of school cannot make a derivable summer look unknown. When it
+ * is not held, the summer ends before an estimated first day (ADR-0014), or is
+ * left out when no estimate passes the range check.
  */
-function adjacentYears(years: readonly SchoolYearCalendar[]): readonly YearPair[] {
+function summersOf(years: readonly SchoolYearCalendar[]): readonly Summer[] {
   const byLabel = new Map(years.map((year) => [year.label, year] as const));
-  const pairs: YearPair[] = [];
-  for (const year of years) {
-    const next = byLabel.get(followingLabel(year.label));
-    if (next) pairs.push([year, next]);
-  }
-  return pairs;
+  return years
+    .map((year) => summerAfter(year, byLabel.get(followingLabel(year.label))))
+    .filter((summer) => summer !== undefined);
 }
 
-function gapsOf(years: readonly SchoolYearCalendar[]): readonly Closure[] {
-  return adjacentYears(years)
-    .map((pair) => gapBetween(...pair))
-    .filter((gap) => gap !== undefined);
+function summerAfter(
+  year: SchoolYearCalendar,
+  next: SchoolYearCalendar | undefined,
+): Summer | undefined {
+  if (next) return gapBefore(year, next.firstInstructionalDay, PUBLISHED);
+
+  const estimate = estimateNextFirstDay(year.firstInstructionalDay);
+  return (
+    estimate &&
+    gapBefore(year, estimate.firstDay, {
+      basis: PeriodBasis.Estimated,
+      estimatedBy: estimate.rule,
+    })
+  );
 }
 
-/** The days between one year's last instructional day and the next year's first. */
-function gapBetween(earlier: SchoolYearCalendar, later: SchoolYearCalendar): Closure | undefined {
-  const startDate = addDays(earlier.lastInstructionalDay, 1);
-  const endDate = addDays(later.firstInstructionalDay, -1);
+/** The days between `year`'s last instructional day and the next year's first. */
+function gapBefore(
+  year: SchoolYearCalendar,
+  firstDayBack: CalendarDate,
+  provenance: Provenance,
+): Summer | undefined {
+  const startDate = addDays(year.lastInstructionalDay, 1);
+  const endDate = addDays(firstDayBack, -1);
   if (compareDates(endDate, startDate) < 0) return undefined;
 
-  return { startDate, endDate, tags: [ClosureTag.Break], sourceLabel: DERIVED_SOURCE_LABEL };
+  const sourceLabel =
+    provenance.basis === PeriodBasis.Published ? DERIVED_SOURCE_LABEL : ESTIMATED_SOURCE_LABEL;
+  return {
+    after: year,
+    closure: { startDate, endDate, tags: [ClosureTag.Break], sourceLabel },
+    provenance,
+  };
 }
 
 function assertKnown(years: readonly SchoolYearCalendar[], day: CalendarDate): void {
   const inSchool = years.some((year) =>
     isWithin({ startDate: year.firstInstructionalDay, endDate: year.lastInstructionalDay }, day),
   );
-  if (!inSchool && !gapsOf(years).some((gap) => isWithin(gap, day))) {
+  if (!inSchool && !summersOf(years).some(({ closure }) => isWithin(closure, day))) {
     throw new RangeError(`No school calendar we hold says whether school is open on ${day}`);
   }
 }
