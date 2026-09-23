@@ -112,5 +112,4 @@ Vitest's text reporter does not print `packages/planner/**` rows while they sit 
 | Environment | Database | Notes |
 |---|---|---|
 | Local | `supabase start` (Docker) | `pnpm supabase:reset` re-applies migrations. Required for `pnpm test:rls`. |
-| Preview | Shared Supabase project | Vercel preview per PR, so a non-technical reviewer can check camp data at a URL. |
-| Production | Supabase project | Vercel production on merge to `main`. |
+| Live | Supabase project `campout` (`buxtoklftaiovuhjkqoi`, us-east-1) | Provisioned CAM-25. One project for now, doubling as Preview and Production — the split this table used to describe is a future decision, not yet built. `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_SECRET_KEY` point at it. |

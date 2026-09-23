@@ -64,9 +64,9 @@ If one fires, **fix the code — do not work around the hook.** Both were tested
 | `main` branch protection | on — PR required, 4 checks must pass, admins included |
 | Toolchain — Biome · tsc · Vitest · Playwright · Lefthook · CI | wired and passing |
 | Agent guards — TDD guard, privacy guard | installed, and tested against their own failure cases |
-| Schema — catalog and household migrations, RLS on every table | written, **not yet applied to a Supabase project** |
+| Schema — catalog and household migrations, RLS on every table | applied to the live `campout` Supabase project (CAM-25) |
 | `@campout/planner` — the closure model | shipped, covered at 100% |
-| RLS policy tests | in place — two households, two JWTs, real Postgres in CI |
+| RLS policy tests | in place — two households, two JWTs, real Postgres in CI, and against the live project |
 | CodeScene ratchet | wired to project 84686; floor at 9.90 / 9.80 against a measured 10.00 |
 
 `packages/planner/src/weeks.ts` and its tests are the reference example of the loop this repo expects: pure, dates passed in as arguments, bad input refused loudly, fully covered. Read them before writing your first module here.
