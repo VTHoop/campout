@@ -28,6 +28,9 @@ jobs:
   rls:
     name: RLS policy tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,13 +38,26 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      # Pinned: `latest` can silently change which images the tests run against.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0
       - run: pnpm install --frozen-lockfile
+      # Anonymous ghcr.io pulls are throttled hardest on shared runners; the
+      # workflow token raises the allowance and needs no extra secret.
+      - run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
       # Policies are the only boundary between one family's children and
       # another's (ADR-0004). This job is not optional and not allowed to fail.
-      - run: supabase start
+      # The tests need only Postgres, auth (gotrue), PostgREST and the kong
+      # gateway; skipping the rest cuts ~12 image pulls to 4.
+      - run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        env:
+          # setup-cli exports ghcr.io here, which makes the CLI pull from ghcr.io
+          # alone. Cleared, it tries public.ecr.aws, then ghcr.io, then Docker Hub.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ''
       - run: pnpm test:rls
       - if: always()
         run: supabase stop

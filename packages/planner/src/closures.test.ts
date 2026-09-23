@@ -468,7 +468,7 @@ describe('refusing inconsistent calendars', () => {
     ['calendars from two districts', [year2026, { ...year2027, district: SchoolDistrict.Henrico }]],
     [
       'a district calendar mixed with a single school’s',
-      [year2026, { ...year2027, school: 'Bellwood Elementary' }],
+      [year2026, { ...year2027, school: 'Fixture Elementary' }],
     ],
     ['two calendars with the same label', [year2026, { ...year2027, label: '2026-27' }]],
     ['a label that is not written YYYY-YY', [{ ...year2026, label: '2026-2027' }]],

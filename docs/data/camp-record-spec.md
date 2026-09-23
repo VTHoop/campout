@@ -76,7 +76,7 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 
 ## `school_calendars` and `school_closures`
 
-One `school_calendars` row per school year per district — or per school, when a school runs its own calendar (Chesterfield's Bellwood Elementary is year-round). Unique on `(district, school, label)`, and `school` is null for the district-wide calendar.
+One `school_calendars` row per school year per district — or per school, when a school runs its own calendar. No v1 calendar is school-specific or year-round; the shape exists so one can be added without a migration. Unique on `(district, school, label)`, and `school` is null for the district-wide calendar.
 
 | Field | Required | Notes |
 |---|---|---|

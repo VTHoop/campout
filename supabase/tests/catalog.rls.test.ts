@@ -602,12 +602,12 @@ describe('school calendar shape', () => {
 
   it('accepts the same label for a single school inside the district', async () => {
     await withSeededCalendar(async () => {
-      const bellwood = await insertCalendar({
+      const schoolCalendar = await insertCalendar({
         school: 'Fixture Elementary',
         type: 'year_round',
       });
-      await removeCalendar(bellwood.id);
-      expect(bellwood.error).toBeNull();
+      await removeCalendar(schoolCalendar.id);
+      expect(schoolCalendar.error).toBeNull();
     });
   });
 });

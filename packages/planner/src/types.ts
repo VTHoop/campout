@@ -15,7 +15,7 @@ export enum SchoolDistrict {
   Hanover = 'hanover',
 }
 
-/** How a school year is shaped. Chesterfield publishes both (ADR-0013). */
+/** How a school year is shaped (ADR-0013). No v1 calendar is year-round, but the model is ready for one. */
 export enum CalendarType {
   Traditional = 'traditional',
   YearRound = 'year_round',
@@ -44,7 +44,7 @@ export interface Closure {
 export interface SchoolYearCalendar {
   readonly district: SchoolDistrict;
   readonly type: CalendarType;
-  /** Absent for the district-wide calendar; set for a school on its own, e.g. Bellwood. */
+  /** Absent for the district-wide calendar; set only for a school that runs its own. */
   readonly school?: string;
   /**
    * The district's name for the year, written YYYY-YY: "2026-27". The planner pairs
