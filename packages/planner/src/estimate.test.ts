@@ -37,6 +37,19 @@ describe('estimateNextFirstDay — weekday from the end of the month', () => {
     });
   });
 
+  // Counting back never leaves the month. The first Monday of August 2027 is
+  // four weeks before Aug 31; four weeks back from the last Monday of August
+  // 2028 would be Jul 31, so the estimate is the first Monday of August instead.
+  it.each([
+    ['an early-August start', '2027-08-02', '2028-08-07'],
+    ['a first-of-July start', '2026-07-01', '2027-07-07'],
+  ])('keeps %s in its month', (_label, firstDay, expected) => {
+    expect(estimateNextFirstDay(firstDay)).toEqual({
+      firstDay: expected,
+      rule: EstimateRule.WeekdayFromMonthEnd,
+    });
+  });
+
   // Eight days after Labor Day is outside the anchor's one-week reach.
   it('uses the month-end rule a day past the Labor Day window', () => {
     expect(estimateNextFirstDay('2026-09-15')).toEqual({
