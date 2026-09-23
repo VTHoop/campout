@@ -239,7 +239,7 @@ describe('coveragePeriods', () => {
   // plan" — the failure this product exists to prevent (AGENTS.md §1).
   it.each([
     ['starts before every calendar', '2026-06-30', '2026-09-01'],
-    ['ends after every calendar', '2028-01-04', '2028-07-01'],
+    ['ends after every calendar', '2028-01-04', '2028-09-01'],
   ])('throws when the range %s', (_label, from, to) => {
     expect(() => coveragePeriods(bothYears, from, to)).toThrow(RangeError);
   });
@@ -429,7 +429,7 @@ describe('coveragePeriodOf', () => {
   // A date we hold no calendar for is not "school is in session" (AGENTS.md §1).
   it.each([
     ['before every calendar', '2026-06-30'],
-    ['after every calendar', '2028-07-01'],
+    ['after every calendar', '2028-09-01'],
   ])('throws for a date %s', (_label, date) => {
     expect(() => coveragePeriodOf(bothYears, date)).toThrow(RangeError);
   });
