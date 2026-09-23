@@ -86,7 +86,7 @@ describe('estimateNextFirstDay — range check', () => {
   // An estimate outside Jul 1 - Sep 15 is more likely wrong than useful, so
   // summer's end stays not published yet.
   it.each([
-    ['before Jul 1', '2026-07-01'],
+    ['before Jul 1', '2026-06-29'],
     ['after Sep 15', '2026-09-17'],
     ['in June', '2026-06-22'],
   ])('gives no estimate when it would land %s', (_label, firstDay) => {
