@@ -12,8 +12,8 @@ import { createClient } from '@supabase/supabase-js';
 
 interface LocalKeys {
   url: string;
-  anonKey: string;
-  serviceRoleKey: string;
+  publishableKey: string;
+  secretKey: string;
 }
 
 let cached: LocalKeys | null = null;
@@ -33,7 +33,7 @@ function required(value: string | undefined, name: string): string {
 }
 
 /**
- * Read SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY, so the
+ * Read SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY, so the
  * same suite can be pointed at a live project (CAM-25) instead of only local
  * Docker. All three or none: a half-set override would silently mix a remote
  * URL with local keys, which fails as a confusing auth error rather than
@@ -41,9 +41,9 @@ function required(value: string | undefined, name: string): string {
  */
 function envKeys(): LocalKeys | null {
   const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && anonKey && serviceRoleKey) return { url, anonKey, serviceRoleKey };
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (url && publishableKey && secretKey) return { url, publishableKey, secretKey };
   return null;
 }
 
@@ -83,14 +83,15 @@ export function localKeys(): LocalKeys {
 
   cached = {
     url: required(status.API_URL, 'API_URL'),
-    anonKey: required(status.ANON_KEY, 'ANON_KEY'),
-    serviceRoleKey: required(status.SERVICE_ROLE_KEY, 'SERVICE_ROLE_KEY'),
+    publishableKey: required(status.ANON_KEY, 'ANON_KEY'),
+    secretKey: required(status.SERVICE_ROLE_KEY, 'SERVICE_ROLE_KEY'),
   };
   return cached;
 }
 
 /**
- * A client holding the service-role key, which **bypasses every RLS policy**.
+ * A client holding the secret key, which **bypasses every RLS policy** via the
+ * service_role Postgres role.
  *
  * Legitimate here and nowhere else: creating test users needs admin rights, and
  * a few assertions need to see rows a policy is correctly hiding, to prove the
@@ -99,8 +100,8 @@ export function localKeys(): LocalKeys {
  * packages/, and this directory is deliberately outside that gate.
  */
 export function serviceClient(): SupabaseClient {
-  const { url, serviceRoleKey } = localKeys();
-  return createClient(url, serviceRoleKey, {
+  const { url, secretKey } = localKeys();
+  return createClient(url, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -119,7 +120,7 @@ export interface TestUser {
  * an identity and cannot pass because of leftover state from another file.
  */
 export async function createTestUser(label: string): Promise<TestUser> {
-  const { url, anonKey } = localKeys();
+  const { url, publishableKey } = localKeys();
   const admin = serviceClient();
 
   const email = `${label}-${crypto.randomUUID()}@campout.test`;
@@ -134,7 +135,7 @@ export async function createTestUser(label: string): Promise<TestUser> {
   const id = data.user?.id;
   if (!id) throw new Error(`Created test user ${label} but got no id back`);
 
-  const client = createClient(url, anonKey, {
+  const client = createClient(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const signIn = await client.auth.signInWithPassword({ email, password });
@@ -146,8 +147,8 @@ export async function createTestUser(label: string): Promise<TestUser> {
 
 /** A client with no session at all — the anonymous visitor reading the public catalog. */
 export function anonClient(): SupabaseClient {
-  const { url, anonKey } = localKeys();
-  return createClient(url, anonKey, {
+  const { url, publishableKey } = localKeys();
+  return createClient(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

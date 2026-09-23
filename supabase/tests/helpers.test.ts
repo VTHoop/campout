@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *
  * The RLS suite otherwise only ever talks to local Docker via `supabase status`.
  * These pin the second path: pointing the same suite at a live project by
- * setting SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY, so "pass
- * against the live project, not just local Docker" is something you can
+ * setting SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY, so
+ * "pass against the live project, not just local Docker" is something you can
  * actually run, not just claim.
  */
 describe('localKeys', () => {
@@ -16,8 +16,8 @@ describe('localKeys', () => {
     vi.resetModules();
     process.env = { ...ORIGINAL_ENV };
     delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_ANON_KEY;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.SUPABASE_SECRET_KEY;
   });
 
   afterEach(() => {
@@ -27,15 +27,15 @@ describe('localKeys', () => {
 
   it('prefers SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY env vars over the local CLI status', async () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
-    process.env.SUPABASE_ANON_KEY = 'anon-key';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_example';
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_example';
 
     const { localKeys } = await import('./helpers');
 
     expect(localKeys()).toEqual({
       url: 'https://example.supabase.co',
-      anonKey: 'anon-key',
-      serviceRoleKey: 'service-role-key',
+      publishableKey: 'sb_publishable_example',
+      secretKey: 'sb_secret_example',
     });
   });
 
@@ -54,14 +54,14 @@ describe('localKeys', () => {
 
     expect(localKeys()).toEqual({
       url: 'http://127.0.0.1:54321',
-      anonKey: 'local-anon',
-      serviceRoleKey: 'local-service-role',
+      publishableKey: 'local-anon',
+      secretKey: 'local-service-role',
     });
   });
 
   it('falls back to `supabase status` when only some env vars are set', async () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
-    // ANON_KEY and SERVICE_ROLE_KEY are deliberately left unset — a half-set
+    // PUBLISHABLE_KEY and SECRET_KEY are deliberately left unset — a half-set
     // override must not silently mix a remote URL with local keys.
 
     vi.doMock('node:child_process', () => ({
@@ -78,8 +78,8 @@ describe('localKeys', () => {
 
     expect(localKeys()).toEqual({
       url: 'http://127.0.0.1:54321',
-      anonKey: 'local-anon',
-      serviceRoleKey: 'local-service-role',
+      publishableKey: 'local-anon',
+      secretKey: 'local-service-role',
     });
   });
 });
