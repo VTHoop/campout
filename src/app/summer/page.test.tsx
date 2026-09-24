@@ -1,15 +1,24 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import HomePage from './page';
+import SummerPage, { metadata } from './page';
 
-describe('HomePage', () => {
+describe('SummerPage', () => {
+  it('is headed Summer', () => {
+    render(<SummerPage />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Summer');
+  });
+
+  it('titles the browser tab Summer', () => {
+    expect(metadata.title).toBe('Summer');
+  });
+
   it('renders the summer derived from the planner package', () => {
-    render(<HomePage />);
+    render(<SummerPage />);
     expect(screen.getByTestId('week-count')).toHaveTextContent('10 weeks of summer');
   });
 
   it('lists every week of summer', () => {
-    render(<HomePage />);
+    render(<SummerPage />);
     expect(screen.getAllByRole('listitem')).toHaveLength(10);
   });
 });

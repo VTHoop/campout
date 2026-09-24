@@ -1,5 +1,6 @@
 import type { SchoolYearCalendar } from '@campout/planner';
 import { CalendarType, longestPeriod, SchoolDistrict } from '@campout/planner';
+import type { Metadata } from 'next';
 
 /**
  * Placeholder landing page.
@@ -35,7 +36,10 @@ const PLACEHOLDER_CALENDARS: readonly SchoolYearCalendar[] = [
   },
 ];
 
-export default function HomePage() {
+// Stub for the red commit (CAM-29).
+export const metadata: Metadata = {};
+
+export default function SummerPage() {
   const summer = longestPeriod(PLACEHOLDER_CALENDARS, '2026-27');
   if (!summer) {
     throw new Error('The placeholder calendars must hold a summer between 2026-27 and 2027-28');
