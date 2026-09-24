@@ -6,12 +6,16 @@ import {
   daysBetween,
   firstWeekdayOnOrAfter,
   isWeekend,
+  lastDayOfMonth,
   lastWeekdayOnOrBefore,
   mondayOf,
+  monthOf,
+  monthStart,
   nextWeekday,
   previousWeekday,
   Weekday,
   weekdayOf,
+  yearOf,
 } from './calendarDate';
 
 describe('assertCalendarDate', () => {
@@ -193,5 +197,30 @@ describe('lastWeekdayOnOrBefore', () => {
 
   it('moves a Saturday to the preceding Friday', () => {
     expect(lastWeekdayOnOrBefore('2027-06-12')).toBe('2027-06-11');
+  });
+});
+
+describe('yearOf and monthOf', () => {
+  it('read the year and the 1-based month', () => {
+    expect(yearOf('2027-08-23')).toBe(2027);
+    expect(monthOf('2027-08-23')).toBe(8);
+  });
+});
+
+describe('monthStart', () => {
+  it('pads a single-digit month', () => {
+    expect(monthStart(2027, 9)).toBe('2027-09-01');
+  });
+});
+
+describe('lastDayOfMonth', () => {
+  it.each([
+    ['a 31-day month', '2027-08-23', '2027-08-31'],
+    ['a 30-day month', '2027-09-01', '2027-09-30'],
+    ['February in a leap year', '2028-02-10', '2028-02-29'],
+    ['February in a common year', '2027-02-10', '2027-02-28'],
+    ['December, across the year end', '2027-12-01', '2027-12-31'],
+  ])('finds the end of %s', (_label, date, expected) => {
+    expect(lastDayOfMonth(date)).toBe(expected);
   });
 });
