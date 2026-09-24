@@ -40,6 +40,7 @@ Each token is a Tailwind colour: `bg-paper`, `text-ink`, `border-rule`.
 | `blueprint` | Links and the primary action. |
 | `marigold` | Attention fill. **Never text** — 1.9:1 on paper. |
 | `marigold-wash` | Background of an attention panel, with `ink` text on it. |
+| `marigold-hatch` | Ground beneath the `marigold` hatch of an uncovered day. A fill, never text. |
 | `brick` | Conflict state only. Never brand, never decoration. |
 
 The shadcn names alias these: `background` → `paper`, `foreground` → `ink`, `card` → `surface`, `border` and `input` → `rule`, `ring` and `primary` → `blueprint` (with `surface` text), `muted` → `tint`, `muted-foreground` → `ink-muted`, `destructive` → `brick`. Use the Campout name in our own markup; the aliases exist so shadcn components render right.
@@ -67,11 +68,13 @@ Spacing is a 4px step, and the scale is `4 8 12 16 24 32 48 64` — Tailwind ste
 
 Radius says what a thing is: `rounded-none` week tab and grid cell · `rounded-control` chip, pill, control · `rounded-card` card and panel · `rounded-full` category dot.
 
-Rules carry weight instead of shadows: a hairline `rule` separates (`border border-rule`), a section rule in `ink` divides a section (`border-2 border-ink`). Their widths are `--rule-hairline` and `--rule-section`.
+Rules carry weight instead of shadows: a hairline `rule` separates (`border border-rule`), a section rule in `ink` divides a section (`border-2 border-ink`). The widths are Tailwind's own `border` and `border-2`; there is no third.
 
 ## The session card
 
-A horizontal card, `radius 10`, `1px rule` border, white on paper. Two parts.
+A horizontal card: `rounded-card`, a hairline `rule` border, `surface` on `paper`. Two parts.
+
+Some sizes below — 13px, the date block's 10–12px and 20–27px, its 112px/78px column — fall between steps of the scales above and have no token yet. They are the proposal, not values to hard-code: the card ticket maps each onto an existing token or adds one to `globals.css`.
 
 **The date block** — a fixed-width left column (112px desktop, 78px phone) with its own right border.
 
@@ -81,14 +84,14 @@ A horizontal card, `radius 10`, `1px rule` border, white on paper. Two parts.
 
 **The body**, in this order:
 
-1. Camp name — Title. Provider and location beneath in 13px `ink-muted`.
-2. `1px rule`.
-3. Facts row, 14px/600 tabular, wrapping: hours · ages · price · distance. Distance sets `ink-muted` weight 500 — it is ours, not the camp's.
+1. Camp name — `text-title`. Provider and location beneath in 13px `ink-muted`.
+2. Hairline `rule`.
+3. Facts row, `text-ui` at 600, `tabular-nums`, wrapping: hours · ages · price · distance. Distance sets `ink-muted` weight 500 — it is ours, not the camp's.
 4. Category: dot plus word, 13px `ink-muted`.
 5. Attention panel, only when there is something to say (see below).
 6. Actions.
-7. `1px rule`.
-8. Provenance: 12px `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **See what we read** link.
+7. Hairline `rule`.
+8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **See what we read** link.
 
 ### Rules the card must keep
 
@@ -103,13 +106,15 @@ Every state is **a fill, a glyph and a word.** Remove the colour and it still re
 
 | State | Fill | Glyph |
 |---|---|---|
-| Covered | `#2C8778` solid | check |
-| Covered by family | white, 2px `#2C8778` border | none — the word carries it |
-| No coverage | 45° hatch, `marigold` on `#F2CE83` | dash |
+| Covered | `category-outdoors` green, solid | check |
+| Covered by family | `surface`, 2px `category-outdoors` border | none — the word carries it |
+| No coverage | 45° hatch, `marigold` on `marigold-hatch` | dash |
 | Overlap | `brick` solid | cross |
-| Ends early | white, 2px `ink` border | clock |
+| Ends early | `surface`, 2px `ink` border | clock |
 
-An inline attention panel is `marigold-wash` with a `1px marigold` border, an icon and one sentence of `ink` at 12px. Use it for a real consequence — *"Runs Monday to Thursday. Friday is still uncovered for Nora."* — never for decoration.
+*Covered* borrows `category-outdoors` rather than restating its value; if the coverage grid wants the two to diverge, it adds a state token then.
+
+An inline attention panel is `marigold-wash` with a hairline `marigold` border, an icon and one sentence of `ink` in `text-caption`. Use it for a real consequence — *"Runs Monday to Thursday. Friday is still uncovered for Nora."* — never for decoration.
 
 ## Filters
 
@@ -132,7 +137,7 @@ An inline attention panel is `marigold-wash` with a `1px marigold` border, an ic
 
 **Mobile first — the phone is the hard case, at ~390px.** Page gutter 16px, cards full width.
 
-Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a `1px rule` border. The week strip is a full-width band beneath the header.
+Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a hairline `rule` border. The week strip is a full-width band beneath the header.
 
 Accessibility is not a pass at the end. Real `<button>`, `<a href>`, `<input>` + `<label>`, `<fieldset>`/`<legend>` for filter groups, `aria-label` on every icon-only control, visible keyboard focus, and no interactive `div`s.
 

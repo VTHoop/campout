@@ -261,7 +261,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 | Files | **Supabase Storage** | Source PDFs captured at verification time, so we can prove what a camp said. |
 | Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O. The school-closure model (summer is derived, never stored), and the coverage analyzers. Runs in a route handler **and** in the browser. ADR-0008 |
 | Maps | **MapLibre GL** + MapTiler tiles | Open-source renderer; the tile provider is swappable. ADR-0007 |
-| Styling | **Tailwind v4** + **shadcn/ui** | Design tokens land with the first real UI. |
+| Styling | **Tailwind v4** + **shadcn/ui** | Design tokens: the `@theme` block in `src/app/globals.css`; reasoning in `docs/DESIGN.md`. |
 | Package manager | **pnpm 11**, Node 24 | `pnpm-workspace.yaml` for the planner package. |
 
 ### Data shape

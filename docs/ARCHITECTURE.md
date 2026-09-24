@@ -12,7 +12,7 @@
 | Files | **Supabase Storage** | Source PDFs captured when a record is verified. |
 | Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O, no clock. Runs server-side and in the browser. ADR-0008 |
 | Maps | **MapLibre GL** + MapTiler tiles | Open-source renderer; tile provider swappable behind one env value. ADR-0007 |
-| Styling | **Tailwind v4** + shadcn/ui | Tokens land with the directory UI. |
+| Styling | **Tailwind v4** + shadcn/ui | Tokens: the `@theme` block in `src/app/globals.css`; reasoning in `docs/DESIGN.md`. |
 | Tooling | Biome · tsc · Vitest · Playwright · Lefthook | ADR-0009 |
 | Package manager | pnpm 11, Node 24 | `.nvmrc` pins 24. |
 

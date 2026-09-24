@@ -32,6 +32,7 @@
   --color-blueprint: #1d5b79;
   --color-marigold: #e3a324;
   --color-marigold-wash: #fbf1dc;
+  --color-marigold-hatch: #f2ce83; /* ground under the no-coverage hatch */
   --color-brick: #a23b29;
 
   /* Category hues — one darkness, dot only, never a filled badge. */
@@ -74,9 +75,8 @@
   --radius-control: 0.375rem; /* chip, pill, control */
   --radius-card: 0.625rem; /* card, panel */
 
-  /* Rules carry weight instead of shadows. */
-  --rule-hairline: 1px; /* `rule` colour: separates */
-  --rule-section: 2px; /* `ink` colour: divides a section */
+  /* Rules carry weight instead of shadows: `border border-rule` separates,
+     `border-2 border-ink` divides a section. Tailwind owns the two widths. */
 }
 
 :root {
