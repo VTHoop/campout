@@ -15,7 +15,9 @@ Artboards: <https://claude.ai/artifact/AEidqSDU9ixBcwpaVYJY8F> — **humans only
 | Navigation and information architecture | **Undecided.** The artboards show a nav bar with Find camps / Summer / Days off. Nobody agreed to that. Do not build it, and do not treat it as a decision. |
 | Dark mode | Not drawn. `globals.css` already declares `color-scheme: light dark`. |
 
-**When the first UI ticket lands, the tokens below move into `src/app/globals.css` as a Tailwind v4 `@theme` block, and that becomes the source of truth.** This file then keeps the reasoning and the patterns, not the values. Two copies of a hex code is one too many.
+**The values live in [`src/app/globals.css`](../src/app/globals.css) — its `@theme` block is the source of truth.** This file keeps the reasoning and the patterns: what each token is for and why. Two copies of a hex code is one too many, so the tables below name tokens, not values. Change a value there; change its reasoning here.
+
+`globals.css` has three layers: the Campout tokens in `@theme`, the shadcn/ui variable contract (`--background`, `--primary`, …) aliased onto them in `:root`, and an `@theme inline` block exposing those aliases as utilities. A dark palette, when drawn, is one block overriding the colour tokens; the aliases follow.
 
 ## The idea
 
@@ -25,52 +27,47 @@ Artboards: <https://claude.ai/artifact/AEidqSDU9ixBcwpaVYJY8F> — **humans only
 
 ## Colour
 
-| Token | Value | Use |
-|---|---|---|
-| `paper` | `#EEF1F0` | Page ground. Cool chalk, deliberately not cream. |
-| `surface` | `#FFFFFF` | Card and panel face. |
-| `tint` | `#E4EAE9` | Date-block body, inline info panels. |
-| `ink` | `#14302E` | Text, headings, date-block tab. The near-black. |
-| `ink-muted` | `#4C6563` | Meta, captions, help text. |
-| `rule` | `#C4CFCD` | Every border and divider. |
-| `blueprint` | `#1D5B79` | Links and the primary action. |
-| `marigold` | `#E3A324` | Attention fill. **Never text** — 2.1:1 on paper. |
-| `marigold-wash` | `#FBF1DC` | Background of an attention panel, with `ink` text on it. |
-| `brick` | `#A23B29` | Conflict state only. Never brand, never decoration. |
+Each token is a Tailwind colour: `bg-paper`, `text-ink`, `border-rule`.
 
-Contrast: `ink` on `paper` is ~12:1, `blueprint` on `paper` ~7:1, `ink-muted` on `paper` ~5.8:1. `ink` on `marigold` is ~8:1, which is why marigold is a fill you put ink on rather than a colour you set text in.
+| Token | Use |
+|---|---|
+| `paper` | Page ground. Cool chalk, deliberately not cream. |
+| `surface` | Card and panel face. |
+| `tint` | Date-block body, inline info panels. |
+| `ink` | Text, headings, date-block tab. The near-black. |
+| `ink-muted` | Meta, captions, help text. |
+| `rule` | Every border and divider. |
+| `blueprint` | Links and the primary action. |
+| `marigold` | Attention fill. **Never text** — 1.9:1 on paper. |
+| `marigold-wash` | Background of an attention panel, with `ink` text on it. |
+| `brick` | Conflict state only. Never brand, never decoration. |
+
+The shadcn names alias these: `background` → `paper`, `foreground` → `ink`, `card` → `surface`, `border` and `input` → `rule`, `ring` and `primary` → `blueprint` (with `surface` text), `muted` → `tint`, `muted-foreground` → `ink-muted`, `destructive` → `brick`. Use the Campout name in our own markup; the aliases exist so shadcn components render right.
+
+Contrast, WCAG, measured at the current values: `ink` on `paper` 12.4:1, `blueprint` on `paper` 6.5:1, `ink-muted` on `paper` 5.5:1 (5.1:1 on `tint`), `brick` on `surface` 6.6:1, `surface` on `blueprint` 7.4:1. `ink` on `marigold` is 6.4:1, which is why marigold is a fill you put ink on rather than a colour you set text in. **Change a colour, re-measure every pair it appears in** — every text pair must stay at or above 4.5:1.
 
 ### Category hues
 
-Six hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
-
-`sports #1D5B79` · `stem #5A4B8C` · `arts #A93A68` · `outdoors #2C8778` · `academic #8C6310` · `faith-based #6B5648`
+Tokens `category-sports` … `category-faith-based`. Six hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
 
 ## Type
 
-Two families, both from Google Fonts.
+Two families, both from Google Fonts, self-hosted through `next/font/google` in `src/app/layout.tsx` (no `<link>` to Google). `font-display` is Bricolage; `font-sans` is Instrument Sans and the page default.
 
 - **Bricolage Grotesque** — display. Weights 600/700, letter-spacing `-0.015em` to `-0.03em` as size grows.
 - **Instrument Sans** — everything a parent reads twice. Weights 400/500/600.
 
-| Role | Size / line-height | Weight |
-|---|---|---|
-| Display | 52 / 1.02 | 700 |
-| Heading | 26 / 1.1 | 700 |
-| Title (camp name) | 20 / 1.25 | 600 |
-| Body | 15 / 1.55 | 400 |
-| UI and data | 14 / 1.4 | 500–600 |
-| Caption | 12 / 1.4 | 400 |
+Each role is a `text-*` token carrying size, line-height and default weight: `text-display`, `text-heading`, `text-title` (camp name), `text-body`, `text-ui` (UI and data, 500 by default; step to 600 with `font-semibold`), `text-caption`. The two display roles also carry their letter-spacing.
 
-**Every date, price, age range and distance sets `font-variant-numeric: tabular-nums`.** Columns of data that do not line up look broken.
+**Every date, price, age range and distance uses the `tabular-nums` utility.** Columns of data that do not line up look broken.
 
 ## Space, radius, rule
 
-Spacing scale: `4 8 12 16 24 32 48 64`. **Touch targets are 44px minimum** — this is used one-handed at 9pm.
+Spacing is a 4px step, and the scale is `4 8 12 16 24 32 48 64` — Tailwind steps `1 2 3 4 6 8 12 16`. Reach for those and not the steps between. **Touch targets are 44px minimum** (`min-h-touch`) — this is used one-handed at 9pm.
 
-Radius says what a thing is: `0` week tab and grid cell · `6` chip, pill, control · `10` card and panel · `50%` category dot.
+Radius says what a thing is: `rounded-none` week tab and grid cell · `rounded-control` chip, pill, control · `rounded-card` card and panel · `rounded-full` category dot.
 
-Rules carry weight instead of shadows: `1px rule` separates, `2px ink` divides a section.
+Rules carry weight instead of shadows: a hairline `rule` separates (`border border-rule`), a section rule in `ink` divides a section (`border-2 border-ink`). Their widths are `--rule-hairline` and `--rule-section`.
 
 ## The session card
 

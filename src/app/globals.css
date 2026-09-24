@@ -1,8 +1,123 @@
 @import "tailwindcss";
 
-/* Design tokens land with the directory UI (ADR-0012 phase 1). Kept minimal on
-   purpose — the visual language is a decision to make deliberately, not to
-   accumulate by default. */
+/*
+ * Design tokens — the source of truth for every value in docs/DESIGN.md, which
+ * keeps the reasoning. A starting slate, expected to move during the MVP.
+ *
+ * Three layers, in order:
+ *   1. `@theme` — the Campout palette and scales. Each token becomes a utility
+ *      (`bg-paper`, `text-ink`, `text-heading`, `rounded-card`) and a CSS
+ *      variable on :root.
+ *   2. `:root` — the shadcn/ui variable contract, aliasing the palette. One
+ *      palette, two names for some of it; never a second hex code.
+ *   3. `@theme inline` — exposes the shadcn names as utilities
+ *      (`bg-background`, `border-border`) and binds the next/font families.
+ *
+ * Dark mode is not drawn. When it is, it is one block redefining the layer-1
+ * colours for `prefers-color-scheme: dark`; layers 2 and 3 follow on their own.
+ */
+
+@theme {
+  /* Ground and surfaces */
+  --color-paper: #eef1f0;
+  --color-surface: #ffffff;
+  --color-tint: #e4eae9;
+
+  /* Text and structure */
+  --color-ink: #14302e;
+  --color-ink-muted: #4c6563;
+  --color-rule: #c4cfcd;
+
+  /* Action, attention, conflict. Marigold is a fill you put ink on — never text. */
+  --color-blueprint: #1d5b79;
+  --color-marigold: #e3a324;
+  --color-marigold-wash: #fbf1dc;
+  --color-brick: #a23b29;
+
+  /* Category hues — one darkness, dot only, never a filled badge. */
+  --color-category-sports: #1d5b79;
+  --color-category-stem: #5a4b8c;
+  --color-category-arts: #a93a68;
+  --color-category-outdoors: #2c8778;
+  --color-category-academic: #8c6310;
+  --color-category-faith-based: #6b5648;
+
+  /* Type scale. Letter-spacing tightens as display size grows. */
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.02;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.03em;
+  --text-heading: 1.625rem;
+  --text-heading--line-height: 1.1;
+  --text-heading--font-weight: 700;
+  --text-heading--letter-spacing: -0.015em;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.25;
+  --text-title--font-weight: 600;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 400;
+  --text-ui: 0.875rem;
+  --text-ui--line-height: 1.4;
+  --text-ui--font-weight: 500;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 400;
+
+  /* Spacing: a 4px step. The scale 4 8 12 16 24 32 48 64 is steps
+     1 2 3 4 6 8 12 16 (`p-4` = 16px). */
+  --spacing: 0.25rem;
+  --spacing-touch: 2.75rem; /* 44px minimum target: `min-h-touch`, `min-w-touch` */
+
+  /* Radius says what a thing is. Week tab and grid cell: `rounded-none`.
+     Category dot: `rounded-full`. */
+  --radius-control: 0.375rem; /* chip, pill, control */
+  --radius-card: 0.625rem; /* card, panel */
+
+  /* Rules carry weight instead of shadows. */
+  --rule-hairline: 1px; /* `rule` colour: separates */
+  --rule-section: 2px; /* `ink` colour: divides a section */
+}
+
 :root {
   color-scheme: light dark;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-ink);
+  --border: var(--color-rule);
+  --input: var(--color-rule);
+  --ring: var(--color-blueprint);
+  --primary: var(--color-blueprint);
+  --primary-foreground: var(--color-surface);
+  --muted: var(--color-tint);
+  --muted-foreground: var(--color-ink-muted);
+  --destructive: var(--color-brick);
+  --radius: var(--radius-card);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+
+  /* Families come from next/font in layout.tsx, set as variables on <html>. */
+  --font-display: var(--font-bricolage-grotesque), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background font-sans text-body text-foreground;
+  }
 }
