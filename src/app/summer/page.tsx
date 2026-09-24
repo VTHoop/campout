@@ -3,7 +3,7 @@ import { CalendarType, longestPeriod, SchoolDistrict } from '@campout/planner';
 import type { Metadata } from 'next';
 
 /**
- * Placeholder landing page.
+ * Placeholder Summer page, until the real one is built.
  *
  * It exists to prove the seam the whole app is built on: the pure planner
  * package (ADR-0008) imported and executed inside a React Server Component,
@@ -36,8 +36,7 @@ const PLACEHOLDER_CALENDARS: readonly SchoolYearCalendar[] = [
   },
 ];
 
-// Stub for the red commit (CAM-29).
-export const metadata: Metadata = {};
+export const metadata: Metadata = { title: 'Summer' };
 
 export default function SummerPage() {
   const summer = longestPeriod(PLACEHOLDER_CALENDARS, '2026-27');
@@ -47,8 +46,7 @@ export default function SummerPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="font-display text-display text-ink">Campout</h1>
-      <p className="mt-3 text-body text-ink-muted">Plan the days school is out.</p>
+      <h1 className="font-display text-display text-ink">Summer</h1>
       <section className="mt-8 rounded-card border border-rule bg-surface">
         <p
           data-testid="week-count"

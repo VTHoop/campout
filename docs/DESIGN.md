@@ -12,7 +12,7 @@ Artboards: <https://claude.ai/artifact/AEidqSDU9ixBcwpaVYJY8F> — **humans only
 | Session card anatomy | Layout proposed. The **field rules** are not — they come from AGENTS.md §2 and `docs/data/camp-record-spec.md`. |
 | Filters and sort | Proposed, except the sort options, which are a product rule. |
 | State signals | Proposed shapes; the **rule** that state is never colour alone is from AGENTS.md §2. |
-| Navigation and information architecture | **Undecided.** The artboards show a nav bar with Find camps / Summer / Days off. Nobody agreed to that. Do not build it, and do not treat it as a decision. |
+| Navigation and information architecture | **Built from the artboards, iterating (CAM-29).** Summer and Days off tabs; Home and Find camps not yet. See *Navigation* below. |
 | Dark mode | Not drawn. `globals.css` already declares `color-scheme: light dark`. |
 
 **The values live in [`src/app/globals.css`](../src/app/globals.css) — its `@theme` block is the source of truth.** This file keeps the reasoning and the patterns: what each token is for and why. Two copies of a hex code is one too many, so the tables below name tokens, not values. Change a value there; change its reasoning here.
@@ -141,9 +141,18 @@ Desktop directory is three columns: a 272px filter rail, a ~552px list column, a
 
 Accessibility is not a pass at the end. Real `<button>`, `<a href>`, `<input>` + `<label>`, `<fieldset>`/`<legend>` for filter groups, `aria-label` on every icon-only control, visible keyboard focus, and no interactive `div`s.
 
+## Navigation
+
+The artboards are the anchor; we build from them and change course as we learn. Current nav (`src/components/site-nav.tsx`), rendered by the root layout on every page, including the 404 page:
+
+- An `ink` bar holding the `Campout` wordmark (Bricolage, `paper`, links to `/summer`) and two tabs: **Summer** (`/summer`) and **Days off** (`/days-off`). `/` redirects to `/summer` with a temporary redirect, since Home will claim it.
+- **Below `lg`:** wordmark on its own row, the tabs beneath as two full-width buttons at least `min-h-touch` tall. Current is a `paper` fill with `ink` text; the other is outlined in `ink-muted`.
+- **From `lg`:** one bar, the tabs inline after the wordmark. Current is underlined in `paper`. `lg` rather than `md` for now, so tablets get the phone layout; that may move.
+- The current tab carries `aria-current="page"`. Focus is a `paper` outline, because the `ring` token (`blueprint`) disappears on `ink`.
+- Not yet built: the Home control (household and ZIP) at the right of the desktop bar, and Find camps.
+
 ## Undecided
 
-- **Navigation and IA.** Deferred on purpose. The artboards show one; it is illustration, not a decision.
 - **Dark mode.** Every token needs a counterpart. Not drawn.
 - **Photography.** There is none, and the card is built to not need any.
 - **The palette and the typefaces themselves.** Proposed, and expected to move while the MVP is built.
