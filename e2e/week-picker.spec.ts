@@ -10,7 +10,8 @@ import { expect, type Page, test } from '@playwright/test';
  */
 
 function tile(page: Page, number: number) {
-  return page.getByRole('button', { name: new RegExp(`^Week ${number},`) });
+  // A substring match: "Week 1, Monday" is not inside "Week 10, Monday …".
+  return page.getByRole('button', { name: `Week ${number}, Monday` });
 }
 
 function earlier(page: Page) {

@@ -18,7 +18,7 @@ function tiles() {
 }
 
 function tile(number: number) {
-  return screen.getByRole('button', { name: new RegExp(`^Week ${number},`) });
+  return screen.getByRole('button', { name: (name) => name.startsWith(`Week ${number}, `) });
 }
 
 describe('WeekPicker', () => {
