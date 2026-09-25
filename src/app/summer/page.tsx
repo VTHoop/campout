@@ -53,15 +53,14 @@ export default function SummerPage() {
 
   return (
     <main>
-      <h1 className="px-4 pt-6 font-display text-heading text-ink lg:px-6">Summer</h1>
       <section
         aria-labelledby="your-summer"
-        className="mt-4 flex flex-col gap-3 border-rule border-y bg-surface px-4 py-3 lg:flex-row lg:items-center lg:gap-6 lg:px-6"
+        className="flex flex-col gap-3 border-rule border-b bg-surface px-4 py-3 lg:flex-row lg:items-center lg:gap-6 lg:px-6"
       >
         <div className="shrink-0">
-          <h2 id="your-summer" className="text-ui font-semibold text-ink">
+          <h1 id="your-summer" className="text-ui font-semibold text-ink">
             Your summer
-          </h2>
+          </h1>
           <p className="text-caption tabular-nums text-ink-muted">
             {district}, {yearOf(firstWeek.monday)} · {summer.weeks.length} weeks
           </p>
