@@ -1,6 +1,17 @@
-// Stub for the red commit (CAM-30).
-import type { SchoolDistrict } from '@campout/planner';
+import { SchoolDistrict } from '@campout/planner';
 
-export function districtName(_district: SchoolDistrict): string {
-  return '';
+/** How each district is written for a parent. */
+const NAMES = new Map(
+  Object.entries({
+    [SchoolDistrict.RichmondCity]: 'Richmond City',
+    [SchoolDistrict.Chesterfield]: 'Chesterfield',
+    [SchoolDistrict.Henrico]: 'Henrico',
+    [SchoolDistrict.Hanover]: 'Hanover',
+  } satisfies Record<SchoolDistrict, string>),
+);
+
+export function districtName(district: SchoolDistrict): string {
+  const name = NAMES.get(district);
+  if (name === undefined) throw new RangeError(`No display name for district "${district}"`);
+  return name;
 }

@@ -118,7 +118,11 @@ An inline attention panel is `marigold-wash` with a hairline `marigold` border, 
 
 ## Filters
 
-- **The week picker is the signature control**: a strip of small tiles, one per week, each showing the week number over its Monday. Selected is `ink` fill with `paper` text; unselected is white with a `rule` border. It is a small copy of the planner grid, so a parent learns the grid before opening it. Six-column grid on desktop, horizontally scrolling row on phone.
+- **The week picker is the signature control** (`src/components/week-picker.tsx`, CAM-30): a strip of small tiles, one per week, each showing the week number over its Monday (`Jun 14`) and nothing else. Selected is `ink` fill with `paper` text; unselected is white with a `rule` border. It is a small copy of the planner grid, so a parent learns the grid before opening it.
+  - **One row on every viewport.** Tiles stretch to fill the band; when they cannot all fit, arrows either side (`Earlier weeks`, `Later weeks`) page a screenful at a time and disable at each end, and swiping still scrolls. When every week fits, there are no arrows.
+  - **Exactly one week is selected**, week 1 on load. A parent fills a gap one week at a time, and "weeks 3 and 4" is ambiguous (either week, or both?). The two-row, two-week sketch in the foundation artboards is superseded by the flow artboards, which pick one week.
+  - A partial week looks like a full one on its tile; the partial span shows on the session card instead.
+  - Beside it (left on desktop, above on phone): `Your summer` over `{District}, {year} · {N} weeks`.
 - Every filter **states its unit in the label** — "Within 10 miles", "Up to $450" — so nobody guesses whether 10 means miles or minutes.
 - **Counts sit beside each category and go to zero** rather than disappearing. A filter that vanishes looks like a bug.
 - Selected state is a fill **plus** `aria-pressed`, never colour alone.

@@ -17,3 +17,15 @@ import { afterEach } from 'vitest';
  * global clock stub would paper over exactly the bug that rule exists to catch.
  */
 afterEach(cleanup);
+
+/**
+ * jsdom has no layout, so it ships no `ResizeObserver`. A silent one stands in:
+ * with no layout there is never a size to report. Behaviour that depends on
+ * real sizes is covered in Playwright.
+ */
+class SilentResizeObserver implements ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+globalThis.ResizeObserver ??= SilentResizeObserver;
