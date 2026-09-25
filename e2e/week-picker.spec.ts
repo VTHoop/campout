@@ -75,9 +75,8 @@ test.describe('on a phone', () => {
   test('tracks a swipe: scrolling the row by hand enables the earlier arrow', async ({ page }) => {
     await page.goto('/summer');
     await expect(earlier(page)).toBeDisabled();
-    await page
-      .getByRole('group', { name: 'Weeks of summer' })
-      .evaluate((row) => row.scrollBy({ left: 150 }));
+    await tile(page, 2).hover();
+    await page.mouse.wheel(150, 0);
     await expect(earlier(page)).toBeEnabled();
   });
 
