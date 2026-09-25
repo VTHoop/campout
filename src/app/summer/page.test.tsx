@@ -5,7 +5,7 @@ import SummerPage, { metadata } from './page';
 describe('SummerPage', () => {
   it('is headed Summer', () => {
     render(<SummerPage />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Summer');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your summer');
   });
 
   it('titles the browser tab Summer', () => {
@@ -24,7 +24,7 @@ describe('SummerPage', () => {
 
   it('introduces the weeks as Your summer', () => {
     render(<SummerPage />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Your summer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Your summer' })).toBeInTheDocument();
   });
 
   it('runs from the week of Monday June 14 to the week of Monday August 16', () => {
