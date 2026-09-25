@@ -1,21 +1,24 @@
 import type { SchoolYearCalendar } from '@campout/planner';
-import { CalendarType, longestPeriod, SchoolDistrict } from '@campout/planner';
+import { CalendarType, longestPeriod, SchoolDistrict, yearOf } from '@campout/planner';
 import type { Metadata } from 'next';
+import { WeekPicker } from '@/components/week-picker';
+import { districtName } from '@/lib/districts';
 
 /**
- * Placeholder Summer page, until the real one is built.
+ * The Summer page, so far: summer's weeks as the week picker (CAM-30).
  *
- * It exists to prove the seam the whole app is built on: the pure planner
- * package (ADR-0008) imported and executed inside a React Server Component,
- * with no database, no clock, and no client bundle.
+ * The planner package (ADR-0008) derives the weeks inside this React Server
+ * Component, with no database and no clock; only the picker ships to the client.
  *
  * The calendars below are hard-coded placeholders. Real district calendars are
  * reference data, and belong in Postgres. Summer is not stored on either one: it
  * is derived from the gap between the two (ADR-0013).
  */
+const PLACEHOLDER_DISTRICT = SchoolDistrict.Chesterfield;
+
 const PLACEHOLDER_CALENDARS: readonly SchoolYearCalendar[] = [
   {
-    district: SchoolDistrict.Chesterfield,
+    district: PLACEHOLDER_DISTRICT,
     type: CalendarType.Traditional,
     label: '2026-27',
     firstInstructionalDay: '2026-08-24',
@@ -25,7 +28,7 @@ const PLACEHOLDER_CALENDARS: readonly SchoolYearCalendar[] = [
     closures: [],
   },
   {
-    district: SchoolDistrict.Chesterfield,
+    district: PLACEHOLDER_DISTRICT,
     type: CalendarType.Traditional,
     label: '2027-28',
     firstInstructionalDay: '2027-08-23',
@@ -44,24 +47,25 @@ export default function SummerPage() {
     throw new Error('The placeholder calendars must hold a summer between 2026-27 and 2027-28');
   }
 
+  const district = districtName(PLACEHOLDER_DISTRICT);
+  const firstWeek = summer.weeks.at(0);
+  if (!firstWeek) throw new Error('A summer always holds at least one week');
+
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="font-display text-display text-ink">Summer</h1>
-      <section className="mt-8 rounded-card border border-rule bg-surface">
-        <p
-          data-testid="week-count"
-          className="border-rule border-b px-4 py-3 font-display text-title tabular-nums"
-        >
-          {summer.weeks.length} weeks of summer to cover in 2027.
-        </p>
-        <ol className="divide-y divide-rule">
-          {summer.weeks.map((week) => (
-            <li key={week.monday} className="px-4 py-3 text-ui tabular-nums">
-              Week {week.index + 1}: {week.monday} – {week.friday}
-              {week.isPartial ? <span className="font-semibold text-brick"> (partial)</span> : null}
-            </li>
-          ))}
-        </ol>
+    <main>
+      <section
+        aria-labelledby="your-summer"
+        className="flex flex-col gap-3 border-rule border-b bg-surface px-4 py-3 lg:flex-row lg:items-center lg:gap-6 lg:px-6"
+      >
+        <div className="shrink-0">
+          <h1 id="your-summer" className="text-ui font-semibold text-ink">
+            Your summer
+          </h1>
+          <p className="text-caption tabular-nums text-ink-muted">
+            {district}, {yearOf(firstWeek.monday)} · {summer.weeks.length} weeks
+          </p>
+        </div>
+        <WeekPicker weeks={summer.weeks} />
       </section>
     </main>
   );

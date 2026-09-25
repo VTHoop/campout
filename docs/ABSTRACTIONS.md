@@ -82,12 +82,25 @@ Browser storage only. Never sent to Supabase, never logged, never in an error re
 
 **Cross-device sync is out of scope and needs a new ADR** (ADR-0006). It is not an implementation detail.
 
+## Displaying a `CalendarDate`
+
+```ts
+import { longMonthDay, shortMonthDay } from '@/lib/dates'; // 'June 14', 'Jun 14'
+import { districtName } from '@/lib/districts'; // 'Richmond City'
+```
+
+Format dates for display through `src/lib/dates.ts`, never with `new Date(date).toLocaleDateString()`: a bare `YYYY-MM-DD` parses as UTC midnight and prints as the day before anywhere west of Greenwich. The helpers validate the date and format it in UTC, so the day shown is the day stored.
+
+## shadcn/ui and `cn`
+
+Components live in `src/components/ui/`, restyled on Campout tokens (ADR-0015). Join classes with `cn` from `src/lib/utils.ts`: it knows our `text-*` type roles, which plain tailwind-merge would mistake for colours and drop. Style a pressed or selected state from its ARIA attribute (`aria-pressed:bg-ink`), as the week picker does, so the colour cannot drift from what a screen reader hears.
+
 ## Server vs. Client Components
 
 The boundary agents get wrong most often, so state it plainly:
 
 - **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`.
-- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab.
+- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, and the week picker, which holds the selected week.
 - **The planner package runs in both.** That is the point of its purity.
 - **The vault is client-only, always.** If you find yourself passing vault data across the boundary as props, stop — that is the leak ADR-0006 exists to prevent.
 

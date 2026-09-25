@@ -12,7 +12,7 @@
 | Files | **Supabase Storage** | Source PDFs captured when a record is verified. |
 | Planner | **`@campout/planner`** (pnpm workspace, `private: true`) | Pure TS, no I/O, no clock. Runs server-side and in the browser. ADR-0008 |
 | Maps | **MapLibre GL** + MapTiler tiles | Open-source renderer; tile provider swappable behind one env value. ADR-0007 |
-| Styling | **Tailwind v4** + shadcn/ui | Tokens: the `@theme` block in `src/app/globals.css`; reasoning in `docs/DESIGN.md`. |
+| Styling | **Tailwind v4** + shadcn/ui | Tokens: the `@theme` block in `src/app/globals.css`; reasoning in `docs/DESIGN.md`. shadcn components live in `src/components/ui/`, restyled on those tokens. ADR-0015 |
 | Tooling | Biome · tsc · Vitest · Playwright · Lefthook | ADR-0009 |
 | Package manager | pnpm 11, Node 24 | `.nvmrc` pins 24. |
 
@@ -96,7 +96,11 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
-| `src/app/summer/page.tsx` | Placeholder Summer page; proves the planner-in-a-Server-Component seam. |
+| `src/app/summer/page.tsx` | The Summer page: the planner derives summer's weeks in a Server Component, shown in the week picker. Calendars are still placeholders. |
+| `src/components/week-picker.tsx` | The week picker (DESIGN.md → *Filters*). A Client Component; selection is local state for now. |
+| `src/components/ui/` | shadcn/ui components on Campout tokens (ADR-0015). |
+| `src/lib/utils.ts` | `cn`, taught Campout's type roles (ADR-0015). |
+| `src/lib/dates.ts`, `src/lib/districts.ts` | Display formats for a `CalendarDate` and a `SchoolDistrict`. |
 | `src/components/site-nav.tsx` | The top nav bar, rendered by the root layout (DESIGN.md → *Navigation*). |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |

@@ -1,4 +1,11 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./packages/planner" }]
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./packages/planner" }],
+  // Next reads path aliases from this file only, not from the referenced
+  // projects; shadcn/ui components import through `@/`. Mirrors tsconfig.app.json.
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }
