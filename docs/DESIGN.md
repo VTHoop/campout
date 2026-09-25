@@ -146,8 +146,9 @@ Accessibility is not a pass at the end. Real `<button>`, `<a href>`, `<input>` +
 The artboards are the anchor; we build from them and change course as we learn. Current nav (`src/components/site-nav.tsx`), rendered by the root layout on every page, including the 404 page:
 
 - An `ink` bar holding the `Campout` wordmark (Bricolage, `paper`, links to `/summer`) and two tabs: **Summer** (`/summer`) and **Days off** (`/days-off`). `/` redirects to `/summer` with a temporary redirect, since Home will claim it.
-- **Below `lg`:** wordmark on its own row, the tabs beneath as two full-width buttons at least `min-h-touch` tall. Current is a `paper` fill with `ink` text; the other is outlined in `ink-muted`.
+- **Below `lg`:** wordmark on its own row, the tabs beneath as two full-width buttons at least `min-h-touch` tall. Current is a `paper` fill with `ink` text; the other is `rule` text, outlined in `ink-muted`.
 - **From `lg`:** one bar, the tabs inline after the wordmark. Current is underlined in `paper`. `lg` rather than `md` for now, so tablets get the phone layout; that may move.
+- On the `ink` bar, text is `paper` (12.4:1) or, for an inactive tab, `rule` (8.8:1). `rule` is otherwise the border colour; it is set as text only here, where the prototype's muted label needs a light tone that isn't full `paper`. The `ink-muted` outline is 2.2:1: it's decoration, and the label identifies the tab.
 - The current tab carries `aria-current="page"`. Focus is a `paper` outline, because the `ring` token (`blueprint`) disappears on `ink`.
 - Not yet built: the Home control (household and ZIP) at the right of the desktop bar, and Find camps.
 
