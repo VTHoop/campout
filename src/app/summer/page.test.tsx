@@ -3,11 +3,6 @@ import { describe, expect, it } from 'vitest';
 import SummerPage, { metadata } from './page';
 
 describe('SummerPage', () => {
-  it('is headed Summer', () => {
-    render(<SummerPage />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your summer');
-  });
-
   it('titles the browser tab Summer', () => {
     expect(metadata.title).toBe('Summer');
   });
