@@ -70,7 +70,9 @@ function useRowScroll() {
     if (!row) return;
     const observer = new ResizeObserver(measure);
     observer.observe(row);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [measure]);
 
   const page = useCallback((direction: 1 | -1) => {
@@ -141,7 +143,9 @@ export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
           size="icon"
           aria-label="Earlier weeks"
           disabled={!state.canGoEarlier}
-          onClick={() => page(-1)}
+          onClick={() => {
+            page(-1);
+          }}
         >
           <ChevronIcon pointing="left" />
         </Button>
@@ -157,7 +161,9 @@ export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
             key={week.monday}
             week={week}
             selected={week.index === selected}
-            onSelect={() => setSelected(week.index)}
+            onSelect={() => {
+              setSelected(week.index);
+            }}
           />
         ))}
       </div>
@@ -168,7 +174,9 @@ export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
           size="icon"
           aria-label="Later weeks"
           disabled={!state.canGoLater}
-          onClick={() => page(1)}
+          onClick={() => {
+            page(1);
+          }}
         >
           <ChevronIcon pointing="right" />
         </Button>

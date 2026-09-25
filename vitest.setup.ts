@@ -28,4 +28,4 @@ class SilentResizeObserver implements ResizeObserver {
   unobserve(): void {}
   disconnect(): void {}
 }
-globalThis.ResizeObserver ??= SilentResizeObserver;
+globalThis.ResizeObserver = SilentResizeObserver;
