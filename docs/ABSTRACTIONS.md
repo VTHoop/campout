@@ -87,7 +87,7 @@ Browser storage only. Never sent to Supabase, never logged, never in an error re
 The boundary agents get wrong most often, so state it plainly:
 
 - **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`.
-- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state.
+- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab.
 - **The planner package runs in both.** That is the point of its purity.
 - **The vault is client-only, always.** If you find yourself passing vault data across the boundary as props, stop — that is the leak ADR-0006 exists to prevent.
 

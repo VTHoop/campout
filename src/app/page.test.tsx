@@ -1,15 +1,12 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-import HomePage from './page';
+import { redirect } from 'next/navigation';
+import { describe, expect, it, vi } from 'vitest';
+import RootPage from './page';
 
-describe('HomePage', () => {
-  it('renders the summer derived from the planner package', () => {
-    render(<HomePage />);
-    expect(screen.getByTestId('week-count')).toHaveTextContent('10 weeks of summer');
-  });
+vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
-  it('lists every week of summer', () => {
-    render(<HomePage />);
-    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+describe('RootPage', () => {
+  it('sends the visitor to Summer with a temporary redirect', () => {
+    RootPage();
+    expect(redirect).toHaveBeenCalledWith('/summer');
   });
 });

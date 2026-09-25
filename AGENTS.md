@@ -240,7 +240,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 - Respect `robots.txt` and rate limits when fetching. We are a small operation reading a few hundred pages a year, and we should be invisible.
 
 ### UI
-- **Read [`docs/DESIGN.md`](./docs/DESIGN.md) before building any UI.** Tokens, the session-card anatomy, state signals and copy rules live there. Everything in it is **proposed and expected to change during the MVP** — it is a starting point to work from, not a spec to defend. Navigation and information architecture are deliberately undecided; do not invent them.
+- **Read [`docs/DESIGN.md`](./docs/DESIGN.md) before building any UI.** Tokens, the session-card anatomy, state signals and copy rules live there. Everything in it is **proposed and expected to change during the MVP** — it is a starting point to work from, not a spec to defend. The artboards are the anchor to build from and iterate on; navigation follows them (DESIGN.md → *Navigation*).
 - **Use shadcn/ui components.** No raw HTML form controls for user-facing UI (`<input>`, `<select>`, `<button>`, native date pickers). Search `src/components/` for an existing component before building a new one. New UI must feel native to the app — if it looks like a browser default, it's wrong.
 - **Mobile-first.** A parent plans this on a phone at 9pm. The planner grid must work at ~400px, which is the hardest layout problem in this app — solve it first, not last.
 - **Accessibility is not optional on the grid.** It is a table of real data; it gets real table semantics, keyboard navigation, and a non-color signal for every state. Coverage gaps must never be communicated by color alone.

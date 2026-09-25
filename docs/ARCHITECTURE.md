@@ -95,7 +95,9 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
-| `src/app/page.tsx` | Placeholder landing page; proves the planner-in-a-Server-Component seam. |
+| `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
+| `src/app/summer/page.tsx` | Placeholder Summer page; proves the planner-in-a-Server-Component seam. |
+| `src/components/site-nav.tsx` | The top nav bar, rendered by the root layout (DESIGN.md → *Navigation*). |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
 | `.claude/agents/challenger.md` | Adversarial reviewer for the Automatic Code Review Protocol |

@@ -11,6 +11,8 @@ test('the app mounts without uncaught errors', async ({ page }) => {
 
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Campout' })).toBeVisible();
+  await expect(page).toHaveURL('/summer');
+  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Summer', level: 1 })).toBeVisible();
   expect(errors).toEqual([]);
 });

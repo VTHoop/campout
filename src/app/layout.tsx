@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Instrument_Sans } from 'next/font/google';
+import { SiteNav } from '../components/site-nav';
 import './globals.css';
 
 // Self-hosted at build time, so no request reaches Google from the browser. The
@@ -15,7 +16,7 @@ const sans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Campout',
+  title: { default: 'Campout', template: '%s · Campout' },
   description:
     'Plan the days school is out, from twelve weeks of summer to a single teacher workday.',
 };
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SiteNav />
+        {children}
+      </body>
     </html>
   );
 }
