@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
@@ -17,6 +18,8 @@ export default defineConfig({
     projects: [
       {
         plugins: [react()],
+        // Mirrors the `@/*` path in tsconfig.app.json, which shadcn/ui imports use.
+        resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
         test: {
           name: 'unit',
           environment: 'jsdom',
