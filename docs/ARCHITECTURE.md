@@ -78,6 +78,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `calendars.ts` | **shipped** | Validates a list of `SchoolYearCalendar`s and puts them in date order. Throws on anything that contradicts itself. |
 | `closures.ts` | **shipped** | `coveragePeriods()`, `longestPeriod()`, `coveragePeriodOf()` — every run of closed weekdays, summer included. The module everything else indexes off. ADR-0013 |
 | `estimate.ts` | **shipped** | `estimateNextFirstDay()` — the likely first day of an unpublished next school year, so summer has an end before the district publishes it. ADR-0014 |
+| `summers.ts` | **shipped** | `summerChoices(calendars, today)` — the summers a parent can pick (each between two loaded years, plus an estimated one only when it is the upcoming summer) and the upcoming default. CAM-31 |
 | `coverage.ts` | not yet written | Uncovered weeks. |
 | `overlap.ts` | not yet written | Two sessions for one child on the same day. |
 | `hours.ts` | not yet written | A session ending before the household workday does. |
@@ -96,7 +97,11 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
-| `src/app/summer/page.tsx` | The Summer page: the planner derives summer's weeks in a Server Component, shown in the week picker. Calendars are still placeholders. |
+| `src/app/summer/page.tsx` | The Summer page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL. |
+| `src/app/summer/summer-view.tsx` | The Summer page's body: the planner derives the summers in a Server Component; the chosen one drives the caption and the week picker. An unknown `?summer=` falls back to the upcoming summer. |
+| `src/components/summer-chooser.tsx` | The summer chooser: one link per summer, the choice kept in the URL, marked with `aria-current`. |
+| `src/lib/calendars/chesterfield.ts` | Chesterfield's school years, read from the parser's drafts in `docs/data/school-calendars/` until calendars are in Postgres (CAM-4). |
+| `src/lib/today.ts` | `richmondDate(instant)` — the calendar date in Richmond at an instant. |
 | `src/components/week-picker.tsx` | The week picker (DESIGN.md → *Filters*). A Client Component; selection is local state for now. |
 | `src/components/ui/` | shadcn/ui components on Campout tokens (ADR-0015). |
 | `src/lib/utils.ts` | `cn`, taught Campout's type roles (ADR-0015). |
