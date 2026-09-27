@@ -41,7 +41,9 @@ const PLACEHOLDER_CALENDARS: readonly SchoolYearCalendar[] = [
 
 export const metadata: Metadata = { title: 'Summer' };
 
-export default function SummerPage() {
+export default async function SummerPage(_props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const summer = longestPeriod(PLACEHOLDER_CALENDARS, '2026-27');
   if (!summer) {
     throw new Error('The placeholder calendars must hold a summer between 2026-27 and 2027-28');
