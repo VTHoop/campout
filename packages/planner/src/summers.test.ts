@@ -39,16 +39,13 @@ describe('summerChoices', () => {
   });
 
   it('dates each summer from the gap between its two school years', () => {
-    const [summer2026, summer2027] = summerChoices(threeYears, '2026-09-27').summers;
-    expect(summer2026?.period.closure).toMatchObject({
-      startDate: '2026-05-30',
-      endDate: '2026-08-23',
-    });
-    expect(summer2027?.period.closure).toMatchObject({
-      startDate: '2027-06-05',
-      endDate: '2027-08-22',
-    });
-    expect(summer2027?.period.basis).toBe(PeriodBasis.Published);
+    const periods = summerChoices(threeYears, '2026-09-27').summers.map(({ period }) => period);
+    expect(periods.map(({ closure }) => closure.startDate)).toEqual(['2026-05-30', '2027-06-05']);
+    expect(periods.map(({ closure }) => closure.endDate)).toEqual(['2026-08-23', '2027-08-22']);
+    expect(periods.map(({ basis }) => basis)).toEqual([
+      PeriodBasis.Published,
+      PeriodBasis.Published,
+    ]);
   });
 
   it('defaults to the next summer to start while school is in session', () => {
