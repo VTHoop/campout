@@ -30,6 +30,8 @@ export { describe, orderedCalendars } from './calendars';
 export { coveragePeriodOf, coveragePeriods, longestPeriod } from './closures';
 export type { FirstDayEstimate } from './estimate';
 export { estimateNextFirstDay } from './estimate';
+export type { SummerChoice, SummerChoices } from './summers';
+export { summerChoices } from './summers';
 export type {
   Closure,
   CoveragePeriod,
