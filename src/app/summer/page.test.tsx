@@ -1,37 +1,152 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import SummerPage, { metadata } from './page';
+import { SummerView } from './summer-view';
+
+/**
+ * The page is drawn from Chesterfield's drafted calendars for 2025-26 through
+ * 2027-28 (CAM-31). Summer 2026 runs May 30 – Aug 23, summer 2027 June 5 –
+ * Aug 22. Today is passed in, so these hold whatever the date they run on.
+ */
+const SEPTEMBER_2026 = '2026-09-27';
+
+function renderSummer({
+  today = SEPTEMBER_2026,
+  requested,
+}: {
+  today?: string;
+  requested?: string | string[];
+} = {}) {
+  render(<SummerView today={today} requested={requested} />);
+}
+
+function weekTiles() {
+  return screen.getAllByRole('button', { name: /^Week \d+, Monday / });
+}
+
+function chooserYears() {
+  const chooser = screen.getByRole('navigation', { name: 'Choose a summer' });
+  return within(chooser)
+    .getAllByRole('link')
+    .map((link) => link.textContent);
+}
+
+function currentSummer() {
+  const chooser = screen.getByRole('navigation', { name: 'Choose a summer' });
+  return within(chooser)
+    .getAllByRole('link')
+    .filter((link) => link.getAttribute('aria-current') === 'true')
+    .map((link) => link.textContent);
+}
 
 describe('SummerPage', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('titles the browser tab Summer', () => {
     expect(metadata.title).toBe('Summer');
   });
 
   it('renders the summer derived from the planner package', () => {
-    render(<SummerPage />);
-    expect(screen.getByText('Chesterfield, 2027 · 10 weeks')).toBeInTheDocument();
+    renderSummer();
+    expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
   });
 
   it('lists every week of summer', () => {
-    render(<SummerPage />);
-    expect(screen.getAllByRole('button', { name: /^Week \d+, Monday / })).toHaveLength(10);
+    renderSummer();
+    expect(weekTiles()).toHaveLength(11);
   });
 
   it('introduces the weeks as Your summer', () => {
-    render(<SummerPage />);
+    renderSummer();
     expect(screen.getByRole('heading', { level: 1, name: 'Your summer' })).toBeInTheDocument();
   });
 
-  it('runs from the week of Monday June 14 to the week of Monday August 16', () => {
-    render(<SummerPage />);
-    const weeks = screen.getAllByRole('button', { name: /^Week \d+, Monday / });
-    expect(weeks.at(0)).toHaveAccessibleName('Week 1, Monday June 14');
-    expect(weeks.at(-1)).toHaveAccessibleName('Week 10, Monday August 16');
+  it('runs from the week of Monday June 7 to the week of Monday August 16', () => {
+    renderSummer();
+    const weeks = weekTiles();
+    expect(weeks.at(0)).toHaveAccessibleName('Week 1, Monday June 7');
+    expect(weeks.at(-1)).toHaveAccessibleName('Week 11, Monday August 16');
   });
 
   it('has no Browse all camps link and no gap count yet', () => {
-    render(<SummerPage />);
+    renderSummer();
     expect(screen.queryByRole('link', { name: /browse all camps/i })).toBeNull();
     expect(screen.queryByText(/still have a gap/i)).toBeNull();
+  });
+
+  it('offers the summers between loaded school years, and no estimated one', () => {
+    renderSummer();
+    expect(chooserYears()).toEqual(['2026', '2027']);
+  });
+
+  it('defaults to the upcoming summer while school is in session', () => {
+    renderSummer();
+    expect(currentSummer()).toEqual(['2027']);
+  });
+
+  it('defaults to the summer in progress', () => {
+    renderSummer({ today: '2027-07-15' });
+    expect(currentSummer()).toEqual(['2027']);
+    expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
+  });
+
+  // School is back on Aug 23 2027, and 2028-29 is not loaded: summer 2028 is
+  // estimated to end before Monday Aug 21 (ADR-0014).
+  it('offers an estimated summer when the upcoming one has no next year loaded', () => {
+    renderSummer({ today: '2027-08-23' });
+    expect(chooserYears()).toEqual(['2026', '2027', '2028']);
+    expect(currentSummer()).toEqual(['2028']);
+    expect(screen.getByText('Chesterfield, 2028 · 11 weeks')).toBeInTheDocument();
+  });
+
+  it('does not label a summer as estimated in the chooser', () => {
+    renderSummer({ today: '2027-08-23' });
+    const chooser = screen.getByRole('navigation', { name: 'Choose a summer' });
+    expect(within(chooser).queryByText(/estimat/i)).toBeNull();
+    expect(within(chooser).getByRole('link', { name: 'Summer 2028' })).toBeInTheDocument();
+  });
+
+  it('shows the chosen summer’s weeks', () => {
+    renderSummer({ requested: '2026' });
+    const weeks = weekTiles();
+    expect(weeks).toHaveLength(12);
+    expect(weeks.at(0)).toHaveAccessibleName('Week 1, Monday June 1');
+    expect(weeks.at(-1)).toHaveAccessibleName('Week 12, Monday August 17');
+  });
+
+  it('follows the chosen summer in the caption', () => {
+    renderSummer({ requested: '2026' });
+    expect(screen.getByText('Chesterfield, 2026 · 12 weeks')).toBeInTheDocument();
+    expect(currentSummer()).toEqual(['2026']);
+  });
+
+  it.each([
+    ['a summer not on offer', '2019'],
+    ['an estimated summer while the upcoming one is published', '2028'],
+    ['a value that is not a year', 'summer'],
+    ['an empty value', ''],
+    ['a repeated parameter', ['2026', '2027']],
+  ])('falls back to the default silently for %s', (_case, requested) => {
+    renderSummer({ requested });
+    expect(currentSummer()).toEqual(['2027']);
+    expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
+  });
+
+  it('reads today from the clock in Richmond and the summer from the URL', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
+
+    render(await SummerPage({ searchParams: Promise.resolve({ summer: '2026' }) }));
+    expect(screen.getByText('Chesterfield, 2026 · 12 weeks')).toBeInTheDocument();
+  });
+
+  it('defaults from the clock when the URL names no summer', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-07-15T16:00:00Z'));
+
+    render(await SummerPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
   });
 });

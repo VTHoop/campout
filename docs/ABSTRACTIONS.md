@@ -38,6 +38,8 @@ Weeks are Monday-anchored and run to Sunday, so a Saturday session belongs to th
 
 Every `CoveragePeriod` has a **`basis`**: `PeriodBasis.Published`, or `PeriodBasis.Estimated` with `estimatedBy` naming the `EstimateRule`. It is a union, so narrow on `basis` before reading `estimatedBy`. **Never present an estimated end date as the district's.** The published date always wins: with the following year held, nothing is estimated.
 
+**Which summers a parent can pick** is `summerChoices(calendars, today)` in `summers.ts`. It offers every summer between two consecutive loaded years, earliest first, and adds an estimated summer only when that summer is the upcoming one: a published summer is never displaced by a guess. `upcoming` is the summer in progress on `today`, else the next to start, else the latest the calendars produce. Pass `today` in; the page reads it with `richmondDate(new Date())` at the request boundary (`src/lib/today.ts`).
+
 A `CoveragePeriod` for the between-years gap carries a **derived** `Closure`: tagged `break`, with a `sourceLabel` that says so (and says the first day back is estimated when it is). The district never said it, so never show that label as the district's words.
 
 The planner also **throws** on a calendar that contradicts itself — a closure outside its instructional days, two closures sharing a day, overlapping school years, a coverage window that does not contain its own school year. An empty grid reads to a parent as "nothing to plan", which is worse than a loud failure.

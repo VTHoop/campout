@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { chesterfield202526Draft } from '../../../docs/data/school-calendars/chesterfield-2025-26.draft';
 import { chesterfield202627Draft } from '../../../docs/data/school-calendars/chesterfield-2026-27.draft';
+import { chesterfield202728Draft } from '../../../docs/data/school-calendars/chesterfield-2027-28.draft';
 import { henrico202627Draft } from '../../../docs/data/school-calendars/henrico-2026-27.draft';
 import { findDraftIssues } from './validateCalendarDraft';
 
@@ -15,7 +17,9 @@ import { findDraftIssues } from './validateCalendarDraft';
  */
 describe('CAM-23 acceptance-case drafts', () => {
   it.each([
+    ['Chesterfield 2025-26 traditional', chesterfield202526Draft],
     ['Chesterfield 2026-27 traditional', chesterfield202627Draft],
+    ['Chesterfield 2027-28 traditional', chesterfield202728Draft],
     ['Henrico 2026-27 traditional', henrico202627Draft],
   ])('%s has no structural or provenance issues', (_label, draft) => {
     expect(findDraftIssues(draft)).toEqual([]);
