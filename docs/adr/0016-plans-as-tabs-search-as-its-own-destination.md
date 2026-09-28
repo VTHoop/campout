@@ -12,12 +12,13 @@ Both horizons ask the same question: is this day covered, and by whom? (`docs/CO
 
 ## Decision
 - **The tabs are Summer, Days off and Find camps.** Summer (`/summer`) and Days off (`/days-off`) are the family's plans, each in the shape that suits it: a grid for the contiguous summer, a dated list for the scattered days off. Find camps (`/camps`) is the camp finder.
-- **"When" is a filter on the finder, not a page.** It is one control over the closures of a school year (ADR-0013), so a summer week and a single day off are chosen the same way. For a signed-in household it shows each option's coverage.
+- **Find camps is search and nothing else:** a filter rail (a sheet on a phone), the results, and the map. Nothing sits in a band above the results.
+- **"When" is a filter on the finder, not a page and not a band.** The week tiles live inside it, in the rail with the other filters. It is one control over the closures of a school year (ADR-0013), so a summer week and a single day off are chosen the same way. For a signed-in household it shows each option's coverage.
 - **A plan's gap opens the finder with that gap already set** (`/camps?week=3&child=…`), and the finder says which gap it is filling. From the Find camps tab the same page opens with no filters set, and "Add to plan" asks which child and which day.
 - **The finder moved from `/summer` to `/camps` (CAM-35).** Links made for it (`/summer?summer=` and `/summer?week=`) are sent on with a temporary redirect, not a permanent one: browsers cache a permanent redirect, and the plan may give those parameters a meaning of its own.
 
 ## Consequences
 - `/summer` is a placeholder until the summer grid (CAM-11) is built, and `/` still redirects to it.
-- The finder's filters (CAM-5) own what the Summer page used to: the week strip becomes the "When" filter, and it gains days off and a child filter.
+- The finder's filters own what the Summer page used to. The full-width week strip goes away; its tiles move into the When filter, which gains days off. Until that lands, the strip stays as CAM-30–32 built it.
 - The nav has three tabs. On a phone they share one row, which leaves each about a third of 390px. A fourth tab means revisiting the phone layout, not just adding to the list.
-- The desktop artboard's layout (a week strip that shows coverage, over results and a map) survives, as the finder's layout rather than as the Summer page.
+- This departs from the desktop artboard (p.8) as well as from the old Summer page: its week band over the results is not kept. Its filter rail, results column and map are.

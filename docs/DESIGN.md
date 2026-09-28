@@ -141,7 +141,7 @@ An inline attention panel is `marigold-wash` with a hairline `marigold` border, 
 
 **Mobile first — the phone is the hard case, at ~390px.** Page gutter 16px, cards full width.
 
-Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a hairline `rule` border. The week strip is a full-width band beneath the header.
+Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a hairline `rule` border. There is no band above the results: the week tiles live inside the When filter in the rail (ADR-0016). The full-width week strip built for CAM-30–32 stays until the When filter replaces it.
 
 Accessibility is not a pass at the end. Real `<button>`, `<a href>`, `<input>` + `<label>`, `<fieldset>`/`<legend>` for filter groups, `aria-label` on every icon-only control, visible keyboard focus, and no interactive `div`s.
 
