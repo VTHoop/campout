@@ -9,8 +9,8 @@ import { longMonthDay, shortMonthDay } from '@/lib/dates';
  * The week picker, drawn from the prototype (CAM-30; DESIGN.md → *Filters*).
  *
  * One row of tiles on every viewport, one per week: the week number over its
- * Monday. Exactly one week is selected — week 1 on load — and for now selecting
- * one changes nothing else on the page. When the row overflows, arrows either
+ * Monday. Exactly one week is selected, and the page owns which: it lives in the
+ * URL (CAM-32), so the picker is told the selection and reports a new one. When the row overflows, arrows either
  * side page it a screenful at a time; swiping still scrolls it natively.
  *
  * Selection is styled from `aria-pressed`, so the colour cannot drift from the
@@ -132,12 +132,15 @@ function WeekTile({
 
 export function WeekPicker({
   weeks,
+  selected,
+  onSelect,
 }: {
   weeks: readonly CoverageWeek[];
+  /** Zero-based index of the selected week. */
   selected: number;
+  /** Hears a newly chosen week; not called when the selected week is clicked again. */
   onSelect: (index: number) => void;
 }) {
-  const [selected, setSelected] = useState(0);
   const { rowRef, state, measure, page } = useRowScroll();
 
   return (
@@ -168,7 +171,7 @@ export function WeekPicker({
             week={week}
             selected={week.index === selected}
             onSelect={() => {
-              setSelected(week.index);
+              if (week.index !== selected) onSelect(week.index);
             }}
           />
         ))}
