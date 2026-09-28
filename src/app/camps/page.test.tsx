@@ -2,8 +2,8 @@ import { render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listSessionCards } from '@/lib/catalog/session-cards';
-import SummerPage, { metadata } from './page';
-import { SummerView } from './summer-view';
+import { CampsView } from './camps-view';
+import CampsPage, { metadata } from './page';
 
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
@@ -32,7 +32,7 @@ function renderSummer({
   today?: string;
   requested?: string | string[];
 } = {}) {
-  render(<SummerView today={today} requested={requested} cards={CARDS} />);
+  render(<CampsView today={today} requested={requested} cards={CARDS} />);
 }
 
 function weekTiles() {
@@ -54,7 +54,7 @@ function currentSummer() {
     .map((link) => link.textContent);
 }
 
-describe('SummerPage', () => {
+describe('CampsPage', () => {
   beforeEach(() => {
     atUrl('');
   });
@@ -63,8 +63,8 @@ describe('SummerPage', () => {
     vi.useRealTimers();
   });
 
-  it('titles the browser tab Summer', () => {
-    expect(metadata.title).toBe('Summer');
+  it('titles the browser tab Find camps', () => {
+    expect(metadata.title).toBe('Find camps');
   });
 
   it('renders the summer derived from the planner package', () => {
@@ -157,7 +157,7 @@ describe('SummerPage', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
 
-    render(await SummerPage({ searchParams: Promise.resolve({ summer: '2026' }) }));
+    render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026' }) }));
     expect(screen.getByText('Chesterfield, 2026 · 12 weeks')).toBeInTheDocument();
   });
 
@@ -165,7 +165,7 @@ describe('SummerPage', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2027-07-15T16:00:00Z'));
 
-    render(await SummerPage({ searchParams: Promise.resolve({}) }));
+    render(await CampsPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
   });
 
@@ -192,7 +192,7 @@ describe('SummerPage', () => {
     vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
     atUrl('summer=2026&week=10');
 
-    render(await SummerPage({ searchParams: Promise.resolve({ summer: '2026', week: '10' }) }));
+    render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026', week: '10' }) }));
     expect(
       screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' }),
     ).toBeInTheDocument();
