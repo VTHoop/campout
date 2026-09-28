@@ -1,6 +1,6 @@
 import { weeksBetween } from '@campout/planner';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { scrollState, WeekPicker } from './week-picker';
 
 /**
@@ -10,8 +10,16 @@ import { scrollState, WeekPicker } from './week-picker';
  *
  * School shuts on Wednesday June 9, so week 1 is partial (Wed–Fri), and summer
  * runs to Friday July 2: four weeks.
+ *
+ * The picker is controlled: the selected week lives in the URL (CAM-32), so the
+ * page tells the picker which week is selected and hears which one is chosen.
  */
 const WEEKS = weeksBetween('2027-06-09', '2027-07-02');
+
+function renderPicker({ selected = 0, onSelect = vi.fn() } = {}) {
+  render(<WeekPicker weeks={WEEKS} selected={selected} onSelect={onSelect} />);
+  return onSelect;
+}
 
 function tiles() {
   return screen.getAllByRole('button', { name: /^Week \d+,/ });
@@ -23,7 +31,7 @@ function tile(number: number) {
 
 describe('WeekPicker', () => {
   it('shows one tile per week, in order, named for its number and its Monday', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+    renderPicker();
     expect(tiles().map((t) => t.getAttribute('aria-label'))).toEqual([
       'Week 1, Monday June 7',
       'Week 2, Monday June 14',
@@ -33,42 +41,41 @@ describe('WeekPicker', () => {
   });
 
   it('shows the week number over its Monday, and nothing else', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+    renderPicker();
     expect(tile(2).textContent).toBe('2Jun 14');
   });
 
   it('shows a partial week like any other, with no marker', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+    renderPicker();
     expect(tile(1).textContent).toBe('1Jun 7');
     expect(screen.queryByText(/partial/i)).toBeNull();
   });
 
   it('groups the tiles under an accessible name', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+    renderPicker();
     expect(screen.getByRole('group', { name: 'Weeks of summer' })).toContainElement(tile(1));
   });
 
-  it('selects week 1 on load, and only week 1', () => {
-    render(<WeekPicker weeks={WEEKS} />);
-    expect(screen.getAllByRole('button', { pressed: true })).toEqual([tile(1)]);
-  });
-
-  it('selects the tile clicked and deselects the one before it', () => {
-    render(<WeekPicker weeks={WEEKS} />);
-    fireEvent.click(tile(3));
+  it('presses the selected week, and only that week', () => {
+    renderPicker({ selected: 2 });
     expect(screen.getAllByRole('button', { pressed: true })).toEqual([tile(3)]);
     expect(tile(1)).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('keeps a selected tile selected when it is clicked again', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+  it('reports the week clicked', () => {
+    const onSelect = renderPicker();
+    fireEvent.click(tile(3));
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith(2);
+  });
+
+  it('reports nothing when the selected week is clicked again', () => {
+    const onSelect = renderPicker({ selected: 1 });
     fireEvent.click(tile(2));
-    fireEvent.click(tile(2));
-    expect(screen.getAllByRole('button', { pressed: true })).toEqual([tile(2)]);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('shows no arrows when every week fits', () => {
-    render(<WeekPicker weeks={WEEKS} />);
+    renderPicker();
     expect(screen.queryByRole('button', { name: 'Earlier weeks' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Later weeks' })).toBeNull();
   });

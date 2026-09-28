@@ -76,6 +76,12 @@ The general rule this leaves behind: **if a policy depends on state a trigger cr
 
 **A read model that can represent an unverified record is a bug.** Build types so a record without `verifiedAt` cannot be constructed, rather than checking for it at every render site — the check you have to remember is the one that gets missed. `verified_at` is shown to the parent on every session: stale data here is not cosmetic, because a parent who shows up to a camp that moved has lost a workday.
 
+**The one open exception is `SessionCardView`** (`src/lib/catalog/session-cards.ts`, CAM-32), which has no `verifiedAt` yet because it is built on the unverified mock catalog. CAM-28, which moves it onto Supabase, adds `verifiedAt` as a required field and the card's verified line with it.
+
+## Session cards come from one service
+
+The Summer page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards()` (`src/lib/catalog/session-cards.ts`). Neither imports the catalog. The service joins each session to its camp, provider and location, picks the registration link (the camp's registration URL, else its phone, else the provider's website), and throws on a reference it cannot resolve. It is async already, so swapping the mock catalog for a Supabase read (CAM-28) touches neither the page nor the card.
+
 ## The browser vault (`src/lib/vault/`, not yet built)
 
 Emergency contacts, insurance, physician, medical history — everything camp registration forms want and Campout must never hold.
@@ -102,7 +108,7 @@ Components live in `src/components/ui/`, restyled on Campout tokens (ADR-0015). 
 The boundary agents get wrong most often, so state it plainly:
 
 - **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`.
-- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, and the week picker, which holds the selected week.
+- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, and the summer's weeks (`SummerWeeks`), which read the selected week from `?week=` and change it with `history.pushState` — Next.js syncs that into `useSearchParams` with no server round trip.
 - **The planner package runs in both.** That is the point of its purity.
 - **The vault is client-only, always.** If you find yourself passing vault data across the boundary as props, stop — that is the leak ADR-0006 exists to prevent.
 

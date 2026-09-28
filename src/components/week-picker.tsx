@@ -1,7 +1,7 @@
 'use client';
 
 import type { CoverageWeek } from '@campout/planner';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { longMonthDay, shortMonthDay } from '@/lib/dates';
 
@@ -9,8 +9,8 @@ import { longMonthDay, shortMonthDay } from '@/lib/dates';
  * The week picker, drawn from the prototype (CAM-30; DESIGN.md → *Filters*).
  *
  * One row of tiles on every viewport, one per week: the week number over its
- * Monday. Exactly one week is selected — week 1 on load — and for now selecting
- * one changes nothing else on the page. When the row overflows, arrows either
+ * Monday. Exactly one week is selected, and the page owns which: it lives in the
+ * URL (CAM-32), so the picker is told the selection and reports a new one. When the row overflows, arrows either
  * side page it a screenful at a time; swiping still scrolls it natively.
  *
  * Selection is styled from `aria-pressed`, so the colour cannot drift from the
@@ -49,6 +49,37 @@ function sameState(a: ScrollState, b: ScrollState): boolean {
     a.canGoEarlier === b.canGoEarlier &&
     a.canGoLater === b.canGoLater
   );
+}
+
+/** How far to scroll a row so a tile sits inside it: 0 when it already does. */
+function revealOffset(
+  row: { readonly left: number; readonly right: number },
+  tile: { readonly left: number; readonly right: number },
+): number {
+  if (tile.left < row.left) return tile.left - row.left;
+  if (tile.right > row.right) return tile.right - row.right;
+  return 0;
+}
+
+/**
+ * Scrolls the selected tile into the row, so a link to week 10 shows tile 10 on
+ * a phone. Row only: the page itself never moves. It runs again when the row
+ * starts to overflow, because the arrows appearing resizes the row — and
+ * instantly, not smoothly, because Chrome re-snaps a mandatory-snap row to its
+ * last snapped tile on a resize, cancelling a scroll still in flight.
+ */
+function useRevealSelected(
+  rowRef: RefObject<HTMLDivElement | null>,
+  selected: number,
+  overflows: boolean,
+) {
+  useEffect(() => {
+    const row = rowRef.current;
+    const tile = row?.children.item(selected);
+    if (!overflows || !row || !tile) return;
+    const offset = revealOffset(row.getBoundingClientRect(), tile.getBoundingClientRect());
+    if (offset !== 0) row.scrollTo({ left: row.scrollLeft + offset, behavior: 'instant' });
+  }, [rowRef, selected, overflows]);
 }
 
 /** Tracks whether the row overflows and which way it can still scroll. */
@@ -130,9 +161,19 @@ function WeekTile({
   );
 }
 
-export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
-  const [selected, setSelected] = useState(0);
+export function WeekPicker({
+  weeks,
+  selected,
+  onSelect,
+}: {
+  weeks: readonly CoverageWeek[];
+  /** Zero-based index of the selected week. */
+  selected: number;
+  /** Hears a newly chosen week; not called when the selected week is clicked again. */
+  onSelect: (index: number) => void;
+}) {
   const { rowRef, state, measure, page } = useRowScroll();
+  useRevealSelected(rowRef, selected, state.overflows);
 
   return (
     <fieldset aria-label="Weeks of summer" className="flex min-w-0 flex-1 items-center gap-2">
@@ -162,7 +203,7 @@ export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
             week={week}
             selected={week.index === selected}
             onSelect={() => {
-              setSelected(week.index);
+              if (week.index !== selected) onSelect(week.index);
             }}
           />
         ))}

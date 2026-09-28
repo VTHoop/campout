@@ -97,12 +97,16 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
-| `src/app/summer/page.tsx` | The Summer page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL. |
-| `src/app/summer/summer-view.tsx` | The Summer page's body: the planner derives the summers in a Server Component; the chosen one drives the caption and the week picker. An unknown `?summer=` falls back to the upcoming summer. |
+| `src/app/summer/page.tsx` | The Summer page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL, and loads the session cards. |
+| `src/app/summer/summer-view.tsx` | The Summer page's body: the planner derives the summers in a Server Component; the chosen one drives the caption, the week picker and the cards. An unknown `?summer=` falls back to the upcoming summer. |
+| `src/components/summer-weeks.tsx` | The week picker over the selected week's session cards. A Client Component: the week lives in `?week=`, read with `useSearchParams` and changed with `history.pushState`, so choosing a week makes no server round trip. |
+| `src/components/session-card.tsx` | The session card (DESIGN.md → *The session card*). Renders a `SessionCardView`; never imports the catalog. |
+| `src/lib/catalog/session-cards.ts` | The data-access service for session cards: `listSessionCards()` joins sessions to camp, provider and location as `SessionCardView`s. The only reader of the mock catalog; CAM-28 swaps it for Supabase. |
+| `src/lib/session-card-format.ts`, `src/lib/week-sessions.ts` | The card's facts as a parent reads them (hours, ages, price, week tab, partial-week callout); which cards a week shows, and which week `?week=` selects. |
 | `src/components/summer-chooser.tsx` | The summer chooser: one link per summer, the choice kept in the URL, marked with `aria-current`. |
 | `src/lib/calendars/chesterfield.ts` | Chesterfield's school years, read from the parser's drafts in `docs/data/school-calendars/` until calendars are in Postgres (CAM-4). |
 | `src/lib/today.ts` | `richmondDate(instant)` — the calendar date in Richmond at an instant. |
-| `src/components/week-picker.tsx` | The week picker (DESIGN.md → *Filters*). A Client Component; selection is local state for now. |
+| `src/components/week-picker.tsx` | The week picker (DESIGN.md → *Filters*). A controlled Client Component: the page tells it the selected week and hears a new one. |
 | `src/components/ui/` | shadcn/ui components on Campout tokens (ADR-0015). |
 | `src/lib/utils.ts` | `cn`, taught Campout's type roles (ADR-0015). |
 | `src/lib/dates.ts`, `src/lib/districts.ts` | Display formats for a `CalendarDate` and a `SchoolDistrict`. |

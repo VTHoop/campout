@@ -1,7 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { listSessionCards } from '@/lib/catalog/session-cards';
 import SummerPage, { metadata } from './page';
 import { SummerView } from './summer-view';
+
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useSearchParams: vi.fn(),
+}));
 
 /**
  * The page is drawn from Chesterfield's drafted calendars for 2025-26 through
@@ -9,6 +16,14 @@ import { SummerView } from './summer-view';
  * Aug 22. Today is passed in, so these hold whatever the date they run on.
  */
 const SEPTEMBER_2026 = '2026-09-27';
+const CARDS = await listSessionCards();
+
+/** The week picker reads `?week=` from the URL on the client (CAM-32). */
+function atUrl(search: string) {
+  vi.mocked(useSearchParams).mockReturnValue(
+    new ReadonlyURLSearchParams(new URLSearchParams(search)),
+  );
+}
 
 function renderSummer({
   today = SEPTEMBER_2026,
@@ -17,7 +32,7 @@ function renderSummer({
   today?: string;
   requested?: string | string[];
 } = {}) {
-  render(<SummerView today={today} requested={requested} />);
+  render(<SummerView today={today} requested={requested} cards={CARDS} />);
 }
 
 function weekTiles() {
@@ -40,6 +55,10 @@ function currentSummer() {
 }
 
 describe('SummerPage', () => {
+  beforeEach(() => {
+    atUrl('');
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -148,5 +167,34 @@ describe('SummerPage', () => {
 
     render(await SummerPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText('Chesterfield, 2027 · 11 weeks')).toBeInTheDocument();
+  });
+
+  it('shows the selected week’s session cards below the week picker', () => {
+    atUrl('summer=2026&week=10');
+    renderSummer({ requested: '2026' });
+    const picker = screen.getByRole('group', { name: 'Weeks of summer' });
+    const heading = screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' });
+    expect(picker.compareDocumentPosition(heading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'VCU Baseball Summer Youth Camps' }),
+    ).toBeInTheDocument();
+  });
+
+  it('lists no camps for a summer the mock catalog has none in', () => {
+    renderSummer();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'No camps listed for week 1' }),
+    ).toBeInTheDocument();
+  });
+
+  it('loads the cards from the session-card service', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
+    atUrl('summer=2026&week=10');
+
+    render(await SummerPage({ searchParams: Promise.resolve({ summer: '2026', week: '10' }) }));
+    expect(
+      screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' }),
+    ).toBeInTheDocument();
   });
 });
