@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
 /**
- * The app nav bar (CAM-29). The unit suite covers its links and aria-current;
+ * The app nav bar (CAM-29; the Find camps tab, CAM-35). The unit suite covers its links and aria-current;
  * this covers what only a real browser can: the redirect status, the 404 page,
  * and which layout each viewport gets. The layout switches at Tailwind's `lg`
  * (1024px), so 390px is the phone case and 1280px the desktop one.
@@ -39,6 +39,24 @@ test('the tabs move between Summer and Days off', async ({ page }) => {
   await expect(page).toHaveTitle('Summer · Campout');
 });
 
+test('the Find camps tab opens the camp finder', async ({ page }) => {
+  await page.goto('/summer');
+  await nav(page).getByRole('link', { name: 'Find camps' }).click();
+
+  await expect(page).toHaveURL('/camps');
+  await expect(page).toHaveTitle('Find camps · Campout');
+  await expect(nav(page).getByRole('link', { name: 'Find camps' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+});
+
+test('a link made for the finder on /summer is sent on to /camps', async ({ request }) => {
+  const response = await request.get('/summer?summer=2026&week=3', { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  expect(response.headers().location).toBe('/camps?summer=2026&week=3');
+});
+
 test('the 404 page keeps the nav, so a bad URL still has a way back', async ({ page }) => {
   const response = await page.goto('/no-such-page');
   expect(response?.status()).toBe(404);
@@ -48,17 +66,21 @@ test('the 404 page keeps the nav, so a bad URL still has a way back', async ({ p
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
+  // Three tabs since CAM-35: they share one row, which keeps the width split.
   test('stacks the tabs beneath the wordmark, splitting the width', async ({ page }) => {
     await page.goto('/summer');
     const wordmark = await boxOf(page, 'Campout home');
     const summer = await boxOf(page, 'Summer');
     const daysOff = await boxOf(page, 'Days off');
+    const findCamps = await boxOf(page, 'Find camps');
 
     expect(summer.y).toBeGreaterThanOrEqual(wordmark.y + wordmark.height);
     expect(daysOff.y).toBe(summer.y);
-    expect(summer.width + daysOff.width).toBeGreaterThan(390 * 0.8);
+    expect(findCamps.y).toBe(summer.y);
+    expect(summer.width + daysOff.width + findCamps.width).toBeGreaterThan(390 * 0.8);
     expect(summer.height).toBeGreaterThanOrEqual(44);
     expect(daysOff.height).toBeGreaterThanOrEqual(44);
+    expect(findCamps.height).toBeGreaterThanOrEqual(44);
   });
 });
 
@@ -70,10 +92,12 @@ test.describe('on a desktop', () => {
     const wordmark = await boxOf(page, 'Campout home');
     const summer = await boxOf(page, 'Summer');
     const daysOff = await boxOf(page, 'Days off');
+    const findCamps = await boxOf(page, 'Find camps');
 
     expect(summer.y).toBeLessThan(wordmark.y + wordmark.height);
     expect(summer.x).toBeGreaterThan(wordmark.x + wordmark.width);
     expect(daysOff.x).toBeGreaterThan(summer.x + summer.width);
-    expect(summer.width + daysOff.width).toBeLessThan(1280 / 2);
+    expect(findCamps.x).toBeGreaterThan(daysOff.x + daysOff.width);
+    expect(summer.width + daysOff.width + findCamps.width).toBeLessThan(1280 / 2);
   });
 });
