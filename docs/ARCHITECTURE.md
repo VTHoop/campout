@@ -97,8 +97,9 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
-| `src/app/summer/page.tsx` | The Summer page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL, and loads the session cards. |
-| `src/app/summer/summer-view.tsx` | The Summer page's body: the planner derives the summers in a Server Component; the chosen one drives the caption, the week picker and the cards. An unknown `?summer=` falls back to the upcoming summer. |
+| `src/app/summer/page.tsx` | The Summer page: the family's summer plan (CAM-11), a placeholder until then. Sends a URL carrying `?summer=` or `?week=` on to `/camps` (307), where the finder moved (CAM-35, ADR-0016). |
+| `src/app/camps/page.tsx` | The Find camps page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL, and loads the session cards. |
+| `src/app/camps/camps-view.tsx` | The Find camps page's body: the planner derives the summers in a Server Component; the chosen one drives the caption, the week picker and the cards. An unknown `?summer=` falls back to the upcoming summer. |
 | `src/components/summer-weeks.tsx` | The week picker over the selected week's session cards. A Client Component: the week lives in `?week=`, read with `useSearchParams` and changed with `history.pushState`, so choosing a week makes no server round trip. |
 | `src/components/session-card.tsx` | The session card (DESIGN.md → *The session card*). Renders a `SessionCardView`; never imports the catalog. |
 | `src/lib/catalog/session-cards.ts` | The data-access service for session cards: `listSessionCards()` joins sessions to camp, provider and location as `SessionCardView`s. The only reader of the mock catalog; CAM-28 swaps it for Supabase. |
