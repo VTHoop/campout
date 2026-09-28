@@ -87,6 +87,11 @@ test('an out-of-range week shows week 1', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
+  test('brings a linked week’s tile into view', async ({ page }) => {
+    await open(page, WEEK_10);
+    await expect(tile(page, 10)).toBeInViewport();
+  });
+
   test('has no horizontal page scroll', async ({ page }) => {
     await open(page, WEEK_10);
     const overflow = await page.evaluate(
