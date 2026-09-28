@@ -52,7 +52,7 @@ export function SummerView({
           <SummerChooser years={choices.summers.map((summer) => summer.year)} selected={year} />
         </div>
         {/* Keyed by summer, so switching summers starts the picker again at week 1. */}
-        <WeekPicker key={year} weeks={period.weeks} />
+        <WeekPicker key={year} weeks={period.weeks} selected={0} onSelect={() => undefined} />
       </section>
     </main>
   );

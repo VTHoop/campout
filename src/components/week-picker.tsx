@@ -130,7 +130,13 @@ function WeekTile({
   );
 }
 
-export function WeekPicker({ weeks }: { weeks: readonly CoverageWeek[] }) {
+export function WeekPicker({
+  weeks,
+}: {
+  weeks: readonly CoverageWeek[];
+  selected: number;
+  onSelect: (index: number) => void;
+}) {
   const [selected, setSelected] = useState(0);
   const { rowRef, state, measure, page } = useRowScroll();
 
