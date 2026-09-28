@@ -7,14 +7,13 @@ import {
   weekdayOf,
 } from '@campout/planner';
 import type { AgeRange, GradeRange, WallClockTime } from './catalog/types';
+import { dayOfMonth, longMonth, longWeekday, shortMonth, shortWeekday } from './dates';
 
 /**
  * The session card's facts, as a parent reads them (CAM-32; DESIGN.md → *The
  * session card*). A fact the source did not state comes back `undefined`, never
  * as a default: the card says "Hours not stated" rather than implying all day.
- *
- * Dates are formatted in UTC so the day shown is the day stored, whatever the
- * reader's timezone (docs/ABSTRACTIONS.md → *CalendarDate*).
+ * Dates go through `./dates`, so the day shown is the day stored.
  */
 
 export interface WeekTab {
@@ -32,17 +31,6 @@ export interface WeekTab {
 
 const WEEKDAYS_IN_A_WEEK = 5;
 const NOON: WallClockTime = '12:00';
-
-function utc(options: Intl.DateTimeFormatOptions) {
-  const format = new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' });
-  return (date: CalendarDate) => format.format(new Date(`${date}T00:00:00Z`));
-}
-
-const shortMonth = utc({ month: 'short' });
-const longMonth = utc({ month: 'long' });
-const dayOfMonth = utc({ day: 'numeric' });
-const shortWeekday = utc({ weekday: 'short' });
-const longWeekday = utc({ weekday: 'long' });
 
 const WHOLE_DOLLARS = new Intl.NumberFormat('en-US', {
   style: 'currency',
