@@ -28,11 +28,11 @@ describe('SummerChooser', () => {
     render(<SummerChooser years={[2026, 2027]} selected={2027} />);
     expect(screen.getByRole('link', { name: 'Summer 2026' })).toHaveAttribute(
       'href',
-      '/summer?summer=2026',
+      '/camps?summer=2026',
     );
     expect(screen.getByRole('link', { name: 'Summer 2027' })).toHaveAttribute(
       'href',
-      '/summer?summer=2027',
+      '/camps?summer=2027',
     );
   });
 

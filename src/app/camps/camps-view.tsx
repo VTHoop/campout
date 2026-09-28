@@ -7,7 +7,7 @@ import type { SessionCardView } from '@/lib/catalog/session-cards';
 import { districtName } from '@/lib/districts';
 
 /**
- * The Summer page's body: a summer chooser over the chosen summer's weeks, and
+ * The Find camps page's body: a summer chooser over the chosen summer's weeks, and
  * the selected week's session cards below them (CAM-30, CAM-31, CAM-32).
  *
  * The planner package (ADR-0008) derives the summers inside this React Server
@@ -25,7 +25,7 @@ function chosenSummer(
   return summers.find((summer) => String(summer.year) === requested) ?? upcoming;
 }
 
-export function SummerView({
+export function CampsView({
   today,
   requested,
   cards,

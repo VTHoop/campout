@@ -11,7 +11,7 @@ import { expect, type Page, test } from '@playwright/test';
  * 1280px it does.
  */
 
-const SUMMER_2027 = '/summer?summer=2027';
+const SUMMER_2027 = '/camps?summer=2027';
 const LAST = 11;
 
 function tile(page: Page, number: number) {

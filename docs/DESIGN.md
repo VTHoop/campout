@@ -12,7 +12,7 @@ Artboards: <https://claude.ai/artifact/AEidqSDU9ixBcwpaVYJY8F> — **humans only
 | Session card anatomy | Layout proposed. The **field rules** are not — they come from AGENTS.md §2 and `docs/data/camp-record-spec.md`. |
 | Filters and sort | Proposed, except the sort options, which are a product rule. |
 | State signals | Proposed shapes; the **rule** that state is never colour alone is from AGENTS.md §2. |
-| Navigation and information architecture | **Built from the artboards, iterating (CAM-29).** Summer and Days off tabs; Home and Find camps not yet. See *Navigation* below. |
+| Navigation and information architecture | **Built from the artboards, iterating (CAM-29, CAM-35, ADR-0016).** Summer, Days off and Find camps tabs; Home not yet. See *Navigation* below. |
 | Dark mode | Not drawn. `globals.css` already declares `color-scheme: light dark`. |
 
 **The values live in [`src/app/globals.css`](../src/app/globals.css) — its `@theme` block is the source of truth.** This file keeps the reasoning and the patterns: what each token is for and why. Two copies of a hex code is one too many, so the tables below name tokens, not values. Change a value there; change its reasoning here.
@@ -118,7 +118,7 @@ An inline attention panel is `marigold-wash` with a hairline `marigold` border, 
 
 ## Filters
 
-- **The week picker is the signature control** (`src/components/week-picker.tsx`, CAM-30): a strip of small tiles, one per week, each showing the week number over its Monday (`Jun 14`) and nothing else. Selected is `ink` fill with `paper` text; unselected is white with a `rule` border. It is a small copy of the planner grid, so a parent learns the grid before opening it.
+- **The week picker is the signature control** (`src/components/week-picker.tsx`, CAM-30), on Find camps (`/camps`): a strip of small tiles, one per week, each showing the week number over its Monday (`Jun 14`) and nothing else. Selected is `ink` fill with `paper` text; unselected is white with a `rule` border. It is a small copy of the planner grid, so a parent learns the grid before opening it.
   - **One row on every viewport.** Tiles stretch to fill the band; when they cannot all fit, arrows either side (`Earlier weeks`, `Later weeks`) page a screenful at a time and disable at each end, and swiping still scrolls. When every week fits, there are no arrows.
   - **Exactly one week is selected**, kept in the URL (`?week=3`) so a reload, back/forward and a shared link all show it; week 1 when `?week` is absent or names no week of the summer. A parent fills a gap one week at a time, and "weeks 3 and 4" is ambiguous (either week, or both?). The two-row, two-week sketch in the foundation artboards is superseded by the flow artboards, which pick one week.
   - A partial week looks like a full one on its tile; the partial span shows on the session card instead.
@@ -141,20 +141,25 @@ An inline attention panel is `marigold-wash` with a hairline `marigold` border, 
 
 **Mobile first — the phone is the hard case, at ~390px.** Page gutter 16px, cards full width.
 
-Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a hairline `rule` border. The week strip is a full-width band beneath the header.
+Desktop directory is three columns: a 272px filter rail, a ~552px list column, and the map filling the rest. Both side columns have a hairline `rule` border. There is no band above the results: the week tiles live inside the When filter in the rail (ADR-0016). The full-width week strip built for CAM-30–32 stays until the When filter replaces it.
 
 Accessibility is not a pass at the end. Real `<button>`, `<a href>`, `<input>` + `<label>`, `<fieldset>`/`<legend>` for filter groups, `aria-label` on every icon-only control, visible keyboard focus, and no interactive `div`s.
 
 ## Navigation
 
-The artboards are the anchor; we build from them and change course as we learn. Current nav (`src/components/site-nav.tsx`), rendered by the root layout on every page, including the 404 page:
+The artboards are the anchor; we build from them and change course as we learn.
 
-- An `ink` bar holding the `Campout` wordmark (Bricolage, `paper`, links to `/summer`) and two tabs: **Summer** (`/summer`) and **Days off** (`/days-off`). `/` redirects to `/summer` with a temporary redirect, since Home will claim it.
-- **Below `lg`:** wordmark on its own row, the tabs beneath as two full-width buttons at least `min-h-touch` tall. Current is a `paper` fill with `ink` text; the other is `rule` text, outlined in `ink-muted`.
+**Plans are the tabs; finding a camp is its own destination (ADR-0016).** Summer and Days off are the family's plans, and each answers *is this day covered, and by whom?* in its own shape: a grid for summer, a dated list for days off. Find camps is the finder. A gap in a plan links into it with that gap already set as filters, and the finder names the gap it is filling (*"Filling week 3 for Nora"*). The desktop artboard (p.8) drew the finder on the Summer page; the phone artboards (p.5–7) keep plan and finder apart, and the phone artboards win.
+
+Current nav (`src/components/site-nav.tsx`), rendered by the root layout on every page, including the 404 page:
+
+- An `ink` bar holding the `Campout` wordmark (Bricolage, `paper`, links to `/summer`) and three tabs: **Summer** (`/summer`), **Days off** (`/days-off`) and **Find camps** (`/camps`). `/` redirects to `/summer` with a temporary redirect, since Home will claim it.
+- `/summer` is a placeholder until the summer grid (CAM-11). A link made for the finder when it lived there (`/summer?week=3`, `/summer?summer=2026`) is sent on to `/camps` with its query, by a temporary redirect.
+- **Below `lg`:** wordmark on its own row, the tabs beneath in one row sharing the width, at least `min-h-touch` tall, labels in `text-body` at 600 so `Find camps` stays on one line at 320px. Current is a `paper` fill with `ink` text; the others are `rule` text, outlined in `ink-muted`.
 - **From `lg`:** one bar, the tabs inline after the wordmark. Current is underlined in `paper`. `lg` rather than `md` for now, so tablets get the phone layout; that may move.
 - On the `ink` bar, text is `paper` (12.4:1) or, for an inactive tab, `rule` (8.8:1). `rule` is otherwise the border colour; it is set as text only here, where the prototype's muted label needs a light tone that isn't full `paper`. The `ink-muted` outline is 2.2:1: it's decoration, and the label identifies the tab.
 - The current tab carries `aria-current="page"`. Focus is a `paper` outline, because the `ring` token (`blueprint`) disappears on `ink`.
-- Not yet built: the Home control (household and ZIP) at the right of the desktop bar, and Find camps.
+- Not yet built: the Home control (household and ZIP) at the right of the desktop bar.
 
 ## Undecided
 

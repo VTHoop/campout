@@ -31,11 +31,19 @@ describe('SiteNav', () => {
     renderAt('/summer');
     expect(screen.getByRole('link', { name: 'Summer' })).toHaveAttribute('href', '/summer');
     expect(screen.getByRole('link', { name: 'Days off' })).toHaveAttribute('href', '/days-off');
+    expect(screen.getByRole('link', { name: 'Find camps' })).toHaveAttribute('href', '/camps');
+  });
+
+  it('orders the tabs Summer, Days off, Find camps', () => {
+    renderAt('/summer');
+    const tabs = screen.getAllByRole('listitem').map((item) => item.textContent);
+    expect(tabs).toEqual(['Summer', 'Days off', 'Find camps']);
   });
 
   it.each([
     ['/summer', 'Summer', 'Days off'],
     ['/days-off', 'Days off', 'Summer'],
+    ['/camps', 'Find camps', 'Days off'],
   ])('on %s marks %s as the current page and not %s', (pathname, current, other) => {
     renderAt(pathname);
     expect(screen.getByRole('link', { name: current })).toHaveAttribute('aria-current', 'page');
@@ -46,5 +54,6 @@ describe('SiteNav', () => {
     renderAt('/no-such-page');
     expect(screen.getByRole('link', { name: 'Summer' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Days off' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Find camps' })).not.toHaveAttribute('aria-current');
   });
 });

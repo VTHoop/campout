@@ -10,7 +10,7 @@ import { expect, type Page, test } from '@playwright/test';
  * Week 10 is the week of August 3; week 1 the week of June 1.
  */
 
-const WEEK_10 = '/summer?summer=2026&week=10';
+const WEEK_10 = '/camps?summer=2026&week=10';
 
 /**
  * Load a page and let it hydrate before touching it. A click, or a Back, that
@@ -54,7 +54,7 @@ test('week 10 shows the VCU Ironbridge card, and week 1 replaces it', async ({ p
 
   await tile(page, 1).click();
 
-  await expect(page).toHaveURL('/summer?summer=2026&week=1');
+  await expect(page).toHaveURL('/camps?summer=2026&week=1');
   await expect(weekHeading(page)).toHaveText('2 camps, week of Jun 1');
   await expect(ironbridge).toHaveCount(0);
   await expect(card(page, 'Wacky Water Welcome')).toBeVisible();
@@ -79,7 +79,7 @@ test('the selected week survives a reload, and back and forward', async ({ page 
 });
 
 test('an out-of-range week shows week 1', async ({ page }) => {
-  await open(page, '/summer?summer=2026&week=99');
+  await open(page, '/camps?summer=2026&week=99');
   await expect(tile(page, 1)).toHaveAttribute('aria-pressed', 'true');
   await expect(weekHeading(page)).toHaveText('2 camps, week of Jun 1');
 });
@@ -113,7 +113,7 @@ test.describe('on a phone', () => {
   });
 
   test('keeps every card button at least 44px tall', async ({ page }) => {
-    await open(page, '/summer?summer=2026&week=1');
+    await open(page, '/camps?summer=2026&week=1');
     const buttons = page.getByRole('list').getByRole('link');
     await expect(buttons.first()).toBeVisible();
     for (const button of await buttons.all()) {

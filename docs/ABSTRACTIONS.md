@@ -80,7 +80,7 @@ The general rule this leaves behind: **if a policy depends on state a trigger cr
 
 ## Session cards come from one service
 
-The Summer page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards()` (`src/lib/catalog/session-cards.ts`). Neither imports the catalog. The service joins each session to its camp, provider and location, picks the registration link (the camp's registration URL, else its phone, else the provider's website), and throws on a reference it cannot resolve. It is async already, so swapping the mock catalog for a Supabase read (CAM-28) touches neither the page nor the card.
+The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards()` (`src/lib/catalog/session-cards.ts`). Neither imports the catalog. The service joins each session to its camp, provider and location, picks the registration link (the camp's registration URL, else its phone, else the provider's website), and throws on a reference it cannot resolve. It is async already, so swapping the mock catalog for a Supabase read (CAM-28) touches neither the page nor the card.
 
 ## The browser vault (`src/lib/vault/`, not yet built)
 
