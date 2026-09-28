@@ -27,8 +27,8 @@ function open(page: Page, url: string) {
 }
 
 function tile(page: Page, number: number) {
-  // Exact: "Week 1, Monday" is a prefix of "Week 10, Monday …".
-  return page.getByRole('button', { name: new RegExp(`^Week ${String(number)}, Monday`) });
+  // A substring match: "Week 1, Monday" is not inside "Week 10, Monday …".
+  return page.getByRole('button', { name: `Week ${String(number)}, Monday` });
 }
 
 function card(page: Page, name: string) {

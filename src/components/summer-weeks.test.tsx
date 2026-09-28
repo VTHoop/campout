@@ -1,7 +1,7 @@
 import { weeksBetween } from '@campout/planner';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { listSessionCards } from '@/lib/catalog/session-cards';
 import { SummerWeeks } from './summer-weeks';
 
@@ -37,8 +37,10 @@ function campNames() {
 }
 
 describe('SummerWeeks', () => {
+  let pushState: MockInstance<History['pushState']>;
+
   beforeEach(() => {
-    vi.spyOn(window.history, 'pushState').mockImplementation(() => undefined);
+    pushState = vi.spyOn(window.history, 'pushState').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -106,11 +108,7 @@ describe('SummerWeeks', () => {
   it('puts the chosen week in the URL, keeping the summer', () => {
     renderAt('summer=2026');
     fireEvent.click(tile(3));
-    expect(window.history.pushState).toHaveBeenCalledExactlyOnceWith(
-      null,
-      '',
-      '?summer=2026&week=3',
-    );
+    expect(pushState).toHaveBeenCalledExactlyOnceWith(null, '', '?summer=2026&week=3');
   });
 
   it('announces the heading, and only the heading, when the week changes', () => {
