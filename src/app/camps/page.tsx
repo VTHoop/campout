@@ -3,7 +3,7 @@ import { listSessionCards } from '@/lib/catalog/session-cards';
 import { richmondDate } from '@/lib/today';
 import { CampsView } from './camps-view';
 
-export const metadata: Metadata = { title: 'Summer' };
+export const metadata: Metadata = { title: 'Find camps' };
 
 /**
  * The Find camps page (CAM-35; built on /summer in CAM-30–32). The request boundary: the one place the wall clock is read,

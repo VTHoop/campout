@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
  * The summer chooser (CAM-31): one link per summer on offer, earliest first.
  *
  * Links rather than toggle buttons, because the choice lives in the URL
- * (`/summer?summer=2026`): it survives a reload, travels in a shared link, and
+ * (`/camps?summer=2026`): it survives a reload, travels in a shared link, and
  * works before any JavaScript has loaded. The chosen summer is styled like a
  * selected week tile, and it is styled from `aria-current`, so the fill cannot
  * drift from the state a screen reader hears.
@@ -23,7 +23,7 @@ export function SummerChooser({ years, selected }: { years: readonly number[]; s
           <li key={year}>
             <Button asChild variant="outline" className={OPTION}>
               <Link
-                href={`/summer?summer=${String(year)}`}
+                href={`/camps?summer=${String(year)}`}
                 aria-label={`Summer ${String(year)}`}
                 aria-current={year === selected ? 'true' : undefined}
               >
