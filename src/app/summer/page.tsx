@@ -14,5 +14,5 @@ export default async function SummerPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { summer } = await searchParams;
-  return <SummerView today={richmondDate(new Date())} requested={summer} />;
+  return <SummerView today={richmondDate(new Date())} requested={summer} cards={[]} />;
 }

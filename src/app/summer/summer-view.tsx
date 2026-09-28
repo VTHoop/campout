@@ -3,6 +3,7 @@ import { SchoolDistrict, summerChoices } from '@campout/planner';
 import { SummerChooser } from '@/components/summer-chooser';
 import { WeekPicker } from '@/components/week-picker';
 import { CHESTERFIELD_CALENDARS } from '@/lib/calendars/chesterfield';
+import type { SessionCardView } from '@/lib/catalog/session-cards';
 import { districtName } from '@/lib/districts';
 
 /**
@@ -30,6 +31,7 @@ export function SummerView({
 }: {
   today: CalendarDate;
   requested: string | string[] | undefined;
+  cards: readonly SessionCardView[];
 }) {
   const choices = summerChoices(CHESTERFIELD_CALENDARS, today);
   const { year, period } = chosenSummer(choices, requested);
