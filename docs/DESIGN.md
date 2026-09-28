@@ -74,7 +74,7 @@ Rules carry weight instead of shadows: a hairline `rule` separates (`border bord
 
 A horizontal card: `rounded-card`, a hairline `rule` border, `surface` on `paper`. Two parts.
 
-Some sizes below — 13px, the date block's 10–12px and 20–27px, its 112px/78px column — fall between steps of the scales above and have no token yet. They are the proposal, not values to hard-code: the card ticket maps each onto an existing token or adds one to `globals.css`.
+Some sizes in the artboards fall between steps of the scales above. CAM-32 mapped each onto an existing token rather than adding new ones: 13px and the date block's 10–12px text are `text-caption`; the 20–27px date range is `text-title` on a phone and `text-heading` from `lg`; the 78px/112px column is `w-20`/`w-28`.
 
 **The date block** — a fixed-width left column (112px desktop, 78px phone) with its own right border.
 
@@ -88,7 +88,7 @@ Some sizes below — 13px, the date block's 10–12px and 20–27px, its 112px/7
 2. Hairline `rule`.
 3. Facts row, `text-ui` at 600, `tabular-nums`, wrapping: hours · ages · price · distance. Distance sets `ink-muted` weight 500 — it is ours, not the camp's.
 4. Category: dot plus word, 13px `ink-muted`.
-5. Attention panel, only when there is something to say (see below).
+5. Attention panel, only when there is something to say (see below). Today: a session covering fewer than five weekdays says `Covers 3 of 5 days`, plus `, and ends at noon` when it ends by 12:00pm.
 6. Actions.
 7. Hairline `rule`.
 8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **See what we read** link.
@@ -96,7 +96,7 @@ Some sizes below — 13px, the date block's 10–12px and 20–27px, its 112px/7
 ### Rules the card must keep
 
 - **A missing fact is stated, not hidden.** `Hours not stated` / `Price not stated` in italic `ink-muted`. Blank reads as free, or as all day. This mirrors the optional fields on `Session`.
-- **`Add to plan` is the primary button** (filled `blueprint`). Registration is a secondary outlined link, labelled `Register on the camp's site`, or `Call 804-378-1616` where there is no URL. Campout never takes a payment, so it must never look like it could.
+- **`Add to plan` is the primary button** (filled `blueprint`). Registration is a secondary outlined link, labelled `Register on the camp's site`, or `Call 804-378-1616` where there is no URL, or `Camp's site` where there is only the provider's website; none when there is none of those. Campout never takes a payment, so it must never look like it could.
 - **Nothing on the card ranks a camp.** No stars, no scores, no "popular", no "top pick". The card says what the camp told us and the day we checked.
 - The provenance line is permanent, not a tooltip. A parent who shows up to a camp that moved has lost a workday.
 
@@ -120,7 +120,7 @@ An inline attention panel is `marigold-wash` with a hairline `marigold` border, 
 
 - **The week picker is the signature control** (`src/components/week-picker.tsx`, CAM-30): a strip of small tiles, one per week, each showing the week number over its Monday (`Jun 14`) and nothing else. Selected is `ink` fill with `paper` text; unselected is white with a `rule` border. It is a small copy of the planner grid, so a parent learns the grid before opening it.
   - **One row on every viewport.** Tiles stretch to fill the band; when they cannot all fit, arrows either side (`Earlier weeks`, `Later weeks`) page a screenful at a time and disable at each end, and swiping still scrolls. When every week fits, there are no arrows.
-  - **Exactly one week is selected**, week 1 on load. A parent fills a gap one week at a time, and "weeks 3 and 4" is ambiguous (either week, or both?). The two-row, two-week sketch in the foundation artboards is superseded by the flow artboards, which pick one week.
+  - **Exactly one week is selected**, kept in the URL (`?week=3`) so a reload, back/forward and a shared link all show it; week 1 when `?week` is absent or names no week of the summer. A parent fills a gap one week at a time, and "weeks 3 and 4" is ambiguous (either week, or both?). The two-row, two-week sketch in the foundation artboards is superseded by the flow artboards, which pick one week.
   - A partial week looks like a full one on its tile; the partial span shows on the session card instead.
   - Beside it (left on desktop, above on phone): `Your summer` over `{District}, {year} · {N} weeks`.
 - Every filter **states its unit in the label** — "Within 10 miles", "Up to $450" — so nobody guesses whether 10 means miles or minutes.
