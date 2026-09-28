@@ -37,6 +37,21 @@ export const mockLocations: readonly Location[] = [
   },
 ];
 
+// acac's enrollment page for Summer Camp 2026. It states what the brochure
+// leaves out for the 12 themed weeks: hours, price, and grades.
+const acacSummerCampRegistration = {
+  url: 'https://acacmidlothian.campmanagement.com/p/request_for_info_m.php?action=enroll',
+} as const;
+
+// Every themed week is the same full-day camp, so they share the activities
+// the enrollment page lists: "field trips, daily swimming, sports, arts and
+// crafts, games and more", indoors and out. The theme is not a category.
+const acacSummerCampCategories: readonly Category[] = [
+  Category.Sports,
+  Category.Arts,
+  Category.Outdoors,
+];
+
 const acacTennisRegistration = {
   phone: '804-378-1616',
   notes: 'Register on the acac app or by calling the tennis desk.',
@@ -49,28 +64,32 @@ export const mockCamps: readonly Camp[] = [
     description:
       'Water-themed activities and games to kick off the summer, including an on-site foam party.',
     providerId: 'provider-acac',
-    categories: [Category.Outdoors],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-magical-mess',
     name: 'Magical Mess',
     description: 'Hands-on messy crafts and creative experiments for the week.',
     providerId: 'provider-acac',
-    categories: [Category.Arts],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-animal-planet',
     name: 'Animal Planet',
     description: 'An animal-themed week of games and learning activities about wildlife.',
     providerId: 'provider-acac',
-    categories: [Category.Academic],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-blast-from-the-past',
     name: 'Blast From the Past',
     description: 'A retro-themed week of throwback games and classic camp activities.',
     providerId: 'provider-acac',
-    categories: [Category.Outdoors],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-america-the-beautiful',
@@ -78,14 +97,16 @@ export const mockCamps: readonly Camp[] = [
     description:
       'A July 4th-themed week celebrating teamwork and community with red-white-and-blue activities.',
     providerId: 'provider-acac',
-    categories: [Category.Academic],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-hollywood',
     name: 'Camp Hollywood',
     description: 'A movie-and-performance-themed week of creative games and crafts.',
     providerId: 'provider-acac',
-    categories: [Category.Arts],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-global-games',
@@ -93,21 +114,24 @@ export const mockCamps: readonly Camp[] = [
     description:
       'An international games week of team competitions inspired by sports from around the world.',
     providerId: 'provider-acac',
-    categories: [Category.Sports],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-space-explorers',
     name: 'Space Explorers',
     description: 'A space-themed week exploring astronomy through games and activities.',
     providerId: 'provider-acac',
-    categories: [Category.STEM],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-glow-week',
     name: 'Glow Week',
     description: 'A neon and glow-in-the-dark themed week of crafts and high-energy games.',
     providerId: 'provider-acac',
-    categories: [Category.Arts],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-game-on',
@@ -115,21 +139,24 @@ export const mockCamps: readonly Camp[] = [
     description:
       'A video-game-themed week of team challenges and friendly multiplayer competitions.',
     providerId: 'provider-acac',
-    categories: [Category.STEM],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-surfs-up',
     name: "Surf's Up",
     description: 'A beach-themed week of water play, games, and creative crafts.',
     providerId: 'provider-acac',
-    categories: [Category.Outdoors],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-sayonara-summer',
     name: 'Sayonara Summer',
     description: 'A closing week of camper-favorite activities and an end-of-summer celebration.',
     providerId: 'provider-acac',
-    categories: [Category.Outdoors],
+    categories: acacSummerCampCategories,
+    registrationInfo: acacSummerCampRegistration,
   },
   {
     id: 'camp-junior-mini-tennis',
@@ -173,21 +200,25 @@ const generalCampSessions: readonly Session[] = [
   { campId: 'camp-global-games', startDate: '2026-07-13', endDate: '2026-07-17' },
   { campId: 'camp-space-explorers', startDate: '2026-07-20', endDate: '2026-07-24' },
   // Brochure prints "June 27-31", which is not a real date (June has 30 days).
-  // Corrected to the week the Monday-anchored sequence actually implies
-  // between Week 8 (Jul 20-24) and Week 10 (Aug 3-7): July 27-31.
+  // The enrollment page gives July 27-31.
   { campId: 'camp-glow-week', startDate: '2026-07-27', endDate: '2026-07-31' },
   { campId: 'camp-game-on', startDate: '2026-08-03', endDate: '2026-08-07' },
   { campId: 'camp-surfs-up', startDate: '2026-08-10', endDate: '2026-08-14' },
   { campId: 'camp-sayonara-summer', startDate: '2026-08-17', endDate: '2026-08-21' },
-  // No startTime/endTime/priceCents: the brochure states dates and a theme for
-  // these 12 weeks but no hours or price (only the tennis section states
-  // those). Left unset rather than guessed — see Session's doc comment.
+  // Hours, price, and grades are from the enrollment page: open 7 am - 6 pm,
+  // $495/week ($440 for members), Kindergarten to 8th grade. No age range is
+  // stated, so none is derived from the grades.
 ].map((session) => ({
   id: `session-${session.campId.replace('camp-', '')}`,
   campId: session.campId,
   locationId: 'location-acac-midlothian',
   startDate: session.startDate,
   endDate: session.endDate,
+  startTime: '07:00',
+  endTime: '18:00',
+  priceCents: 49_500,
+  priceNote: 'acac member price: $440/week',
+  gradeRange: { min: 0, max: 8 },
 }));
 
 const juniorMiniTennisDateRanges: ReadonlyArray<readonly [string, string]> = [

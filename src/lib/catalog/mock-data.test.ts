@@ -12,7 +12,8 @@ import { findCatalogInconsistencies } from './validateCatalog';
  *   or a test fixture. That check lives once, in validateCatalog.ts, and is
  *   just invoked here — see the first test below.
  * - Everything else here is transcription QA: does the mock data still say
- *   what the two source brochures in docs/data/ said. Those checks are
+ *   what its sources said: the two brochures in docs/data/ and acac's
+ *   enrollment page. Those checks are
  *   specific to this seed data and will grow only when that data changes,
  *   not when new behavior is added elsewhere in src/lib/catalog.
  */
@@ -69,7 +70,9 @@ describe('mockSessions', () => {
     expect(mockSessions).toHaveLength(28);
   });
 
-  it('leaves startTime, endTime, and priceCents undefined for the general-camp weeks, since the brochure states none', () => {
+  it("gives every general-camp week the enrollment page's hours, price, grades, categories, and registration link", () => {
+    // The brochure states none of these; acac's enrollment page does
+    // (acacmidlothian.campmanagement.com, Summer Camp 2026).
     const generalCampIds = new Set([
       'camp-wacky-water-welcome',
       'camp-magical-mess',
@@ -87,9 +90,22 @@ describe('mockSessions', () => {
     const generalSessions = mockSessions.filter((session) => generalCampIds.has(session.campId));
     expect(generalSessions).toHaveLength(12);
     for (const session of generalSessions) {
-      expect(session.startTime).toBeUndefined();
-      expect(session.endTime).toBeUndefined();
-      expect(session.priceCents).toBeUndefined();
+      expect(session.startTime).toBe('07:00');
+      expect(session.endTime).toBe('18:00');
+      expect(session.priceCents).toBe(49_500);
+      expect(session.priceNote).toBe('acac member price: $440/week');
+      expect(session.gradeRange).toEqual({ min: 0, max: 8 });
+      expect(session.ageRange).toBeUndefined();
+    }
+    const generalCamps = mockCamps.filter((camp) => generalCampIds.has(camp.id));
+    expect(generalCamps).toHaveLength(12);
+    for (const camp of generalCamps) {
+      // "Activities include field trips, daily swimming, sports, arts and
+      // crafts, games and more", with indoor and outdoor activities daily.
+      expect(camp.categories).toEqual([Category.Sports, Category.Arts, Category.Outdoors]);
+      expect(camp.registrationInfo?.url).toBe(
+        'https://acacmidlothian.campmanagement.com/p/request_for_info_m.php?action=enroll',
+      );
     }
   });
 
@@ -104,7 +120,7 @@ describe('mockSessions', () => {
     }
   });
 
-  it('corrects the brochure\'s impossible "June 27-31" Glow Week date to the sequential July 27-31 week', () => {
+  it('dates Glow Week July 27-31, as the enrollment page does, not the brochure\'s impossible "June 27-31"', () => {
     const glowWeek = mockSessions.find((session) => session.campId === 'camp-glow-week');
     expect(glowWeek?.startDate).toBe('2026-07-27');
     expect(glowWeek?.endDate).toBe('2026-07-31');
