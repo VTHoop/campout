@@ -1,7 +1,7 @@
 'use client';
 
 import type { CoverageWeek } from '@campout/planner';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { longMonthDay, shortMonthDay } from '@/lib/dates';
 
@@ -49,6 +49,37 @@ function sameState(a: ScrollState, b: ScrollState): boolean {
     a.canGoEarlier === b.canGoEarlier &&
     a.canGoLater === b.canGoLater
   );
+}
+
+/** How far to scroll a row so a tile sits inside it: 0 when it already does. */
+function revealOffset(
+  row: { readonly left: number; readonly right: number },
+  tile: { readonly left: number; readonly right: number },
+): number {
+  if (tile.left < row.left) return tile.left - row.left;
+  if (tile.right > row.right) return tile.right - row.right;
+  return 0;
+}
+
+/**
+ * Scrolls the selected tile into the row, so a link to week 10 shows tile 10 on
+ * a phone. Row only: the page itself never moves. It runs again when the row
+ * starts to overflow, because the arrows appearing resizes the row — and
+ * instantly, not smoothly, because Chrome re-snaps a mandatory-snap row to its
+ * last snapped tile on a resize, cancelling a scroll still in flight.
+ */
+function useRevealSelected(
+  rowRef: RefObject<HTMLDivElement | null>,
+  selected: number,
+  overflows: boolean,
+) {
+  useEffect(() => {
+    const row = rowRef.current;
+    const tile = row?.children.item(selected);
+    if (!overflows || !row || !tile) return;
+    const offset = revealOffset(row.getBoundingClientRect(), tile.getBoundingClientRect());
+    if (offset !== 0) row.scrollTo({ left: row.scrollLeft + offset, behavior: 'instant' });
+  }, [rowRef, selected, overflows]);
 }
 
 /** Tracks whether the row overflows and which way it can still scroll. */
@@ -142,6 +173,7 @@ export function WeekPicker({
   onSelect: (index: number) => void;
 }) {
   const { rowRef, state, measure, page } = useRowScroll();
+  useRevealSelected(rowRef, selected, state.overflows);
 
   return (
     <fieldset aria-label="Weeks of summer" className="flex min-w-0 flex-1 items-center gap-2">
