@@ -299,7 +299,8 @@ describe('Sports Center of Richmond (scor-richmond.com camps, and its DaySmart l
         locationId: 'location-scor',
         startTime: '09:00',
         endTime: '17:00',
-        priceCents: 9_000,
+        priceCents: 40_000,
+        priceNote: 'Or $90/day. Half day $55/day or $225/week. $20/year SCOR membership required.',
         ageRange: { min: 5, max: 12 },
       });
     }
@@ -327,7 +328,12 @@ describe('Sports Center of Richmond (scor-richmond.com camps, and its DaySmart l
     ]);
     for (const session of sessionsOf('camp-scor-school-holiday')) {
       expect(session.endDate).toBe(session.startDate);
-      expect(session).toMatchObject({ startTime: '09:00', endTime: '17:00', priceCents: 9_000 });
+      expect(session).toMatchObject({
+        startTime: '09:00',
+        endTime: '17:00',
+        priceCents: 9_000,
+        priceNote: 'Half day 9:00–12:30: $55. $20/year SCOR membership required.',
+      });
     }
   });
 });
