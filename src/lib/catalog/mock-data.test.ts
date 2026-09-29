@@ -65,8 +65,8 @@ describe('mockLocations', () => {
 describe('mockCamps', () => {
   it('has one entry per camp or class in the source documents', () => {
     // 12 acac weekly themes + 2 acac tennis variants + 1 VCU Baseball program
-    // + 6 SwimRVA camps + 2 SCOR camps + 4 Richmond Ballet camps and 6 classes.
-    expect(mockCamps).toHaveLength(33);
+    // + 6 SwimRVA camps + 2 SCOR camps + 3 Richmond Ballet camps.
+    expect(mockCamps).toHaveLength(26);
   });
 });
 
@@ -74,8 +74,8 @@ describe('mockSessions', () => {
   it('fully transcribes every dated offering from both source documents', () => {
     // acac: 12 general weeks + 9 Junior Mini Tennis dates + 3 Tournament All Day
     // dates = 24. VCU Baseball: 4. SwimRVA: 27. SCOR: 10 summer weeks + 17
-    // holiday days = 27. Richmond Ballet: 13. 95 total, not a representative sample.
-    expect(mockSessions).toHaveLength(95);
+    // holiday days = 27. Richmond Ballet: 6. 88 total, not a representative sample.
+    expect(mockSessions).toHaveLength(88);
   });
 
   it("gives every general-camp week the enrollment page's hours, price, grades, categories, and registration link", () => {
@@ -379,66 +379,19 @@ describe('Richmond Ballet (richmondballet.com, summer camps and classes)', () =>
     }
   });
 
+  // Out of scope: a session meets every weekday of its date range (CAM-27). The
+  // summer classes meet one or two days a week for five weeks, and the Mini
+  // Intensive Tuesday to Thursday afternoons, so none of them is listed.
   it.each([
-    {
-      campId: 'camp-srb-lower-iii-mini-intensive',
-      startDate: '2026-06-23',
-      endDate: '2026-07-23',
-      startTime: '16:00',
-      endTime: '18:30',
-      priceCents: 51_500,
-    },
-    {
-      campId: 'camp-srb-invitation-to-the-dance-class',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '09:00',
-      endTime: '09:50',
-      priceCents: 15_000,
-    },
-    {
-      campId: 'camp-srb-primary-class',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '10:50',
-      endTime: '11:50',
-      priceCents: 15_500,
-    },
-    {
-      campId: 'camp-srb-lower-ballet',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '16:30',
-      endTime: '17:30',
-      priceCents: 25_000,
-    },
-    {
-      campId: 'camp-srb-lower-theatre-dance',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '17:30',
-      endTime: '18:30',
-      priceCents: 19_500,
-    },
-    {
-      campId: 'camp-srb-lower-character-dance',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '17:30',
-      endTime: '18:30',
-      priceCents: 19_500,
-    },
-    {
-      campId: 'camp-srb-lower-modern',
-      startDate: '2026-06-22',
-      endDate: '2026-07-25',
-      startTime: '17:30',
-      endTime: '18:30',
-      priceCents: 19_500,
-    },
-  ])('records $campId as one session spanning its whole term', ({ campId, ...expected }) => {
-    const actual = sessionsOf(campId);
-    expect(actual).toHaveLength(1);
-    expect(actual[0]).toMatchObject({ ...expected, locationId: 'location-richmond-ballet' });
+    'camp-srb-lower-iii-mini-intensive',
+    'camp-srb-invitation-to-the-dance-class',
+    'camp-srb-primary-class',
+    'camp-srb-lower-ballet',
+    'camp-srb-lower-theatre-dance',
+    'camp-srb-lower-character-dance',
+    'camp-srb-lower-modern',
+  ])('leaves out %s, which does not meet every weekday of its term', (campId) => {
+    expect(mockCamps.map((camp) => camp.id)).not.toContain(campId);
+    expect(sessionsOf(campId)).toHaveLength(0);
   });
 });
