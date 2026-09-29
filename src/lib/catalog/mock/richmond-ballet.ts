@@ -2,27 +2,24 @@ import type { Camp, Session } from '../types';
 import { Category } from '../types';
 
 /**
- * The School of Richmond Ballet's 2026 summer camps and classes, from
- * richmondballet.com → School → Summer (CAM-42). Transcribed as the mock model
- * allows; what it can't hold is noted against the CAM-27 decision it belongs to.
+ * The School of Richmond Ballet's 2026 summer camps, from richmondballet.com →
+ * School → Summer (CAM-42). Transcribed as the mock model allows; what it can't
+ * hold is noted against the CAM-27 decision it belongs to.
  *
- * - Meeting days: the classes and the Mini Intensive meet on set weekdays
- *   across a five-week term (Saturdays; Tue and Thu; one weekday). A session is
- *   a start and an end date, so each reads as meeting every day of the term.
- * - Time options: the Invitation to the Dance and Primary classes each offer
- *   two Saturday times; only the first is held.
  * - Grade basis: Minds In Motion is for "rising 5th–8th graders".
- * - Skill: SRB Dance Camp is "not for beginners" (a year of ballet), and the
- *   Mini Intensive needs Lower III or three years of training.
+ * - Skill: SRB Dance Camp is "not for beginners" (a year of ballet).
  * - Also stated, not held: 10% off when both a June and a July camp week are
  *   booked; a parent showing at the end of each camp week; closed Friday,
  *   June 19, for Juneteenth.
+ * - Left out, as out of scope: a session meets every weekday of its date range
+ *   (CAM-27). The summer classes meet one or two days a week across a five-week
+ *   term (Saturdays, or late afternoons), and the Lower III Mini Intensive meets
+ *   Tuesday to Thursday, 4:00 to 6:30.
  */
 
 const PROVIDER = 'provider-richmond-ballet';
 const LOCATION = 'location-richmond-ballet';
 const REGISTER = { url: 'https://app.thestudiodirector.com/richmondballet/portal.sd?page=Enroll' };
-const TERM = { startDate: '2026-06-22', endDate: '2026-07-25' } as const;
 
 function camp(id: string, name: string, description: string): Camp {
   return {
@@ -51,33 +48,6 @@ export const richmondBalletCamps: readonly Camp[] = [
     'Minds In Motion Camp',
     'A full-day camp of dance, creative movement, music, and crafts.',
   ),
-  camp(
-    'camp-srb-lower-iii-mini-intensive',
-    'Lower III Mini Intensive',
-    'Ballet plus one other dance style, three late afternoons a week.',
-  ),
-  camp(
-    'camp-srb-invitation-to-the-dance-class',
-    'Invitation to the Dance (class)',
-    'A weekly Saturday ballet class for the youngest dancers.',
-  ),
-  camp(
-    'camp-srb-primary-class',
-    'Pre-Primary & Primary (class)',
-    'A weekly Saturday ballet class.',
-  ),
-  camp('camp-srb-lower-ballet', 'Lower Ballet (class)', 'Ballet class twice a week.'),
-  camp(
-    'camp-srb-lower-theatre-dance',
-    'Lower Theatre Dance (class)',
-    'A weekly theatre dance class.',
-  ),
-  camp(
-    'camp-srb-lower-character-dance',
-    'Lower Character Dance (class)',
-    'A weekly character dance class.',
-  ),
-  camp('camp-srb-lower-modern', 'Lower Modern (class)', 'A weekly modern dance class.'),
 ];
 
 const BOTH_WEEKS = (total: string) =>
@@ -148,64 +118,6 @@ export const richmondBalletSessions: readonly Session[] = [
       endTime: '16:00',
       priceCents: 35_000,
       gradeRange: { min: 5, max: 8 },
-    }),
-  ),
-  {
-    id: 'session-srb-lower-iii-mini-intensive-2026-06-23',
-    campId: 'camp-srb-lower-iii-mini-intensive',
-    locationId: LOCATION,
-    startDate: '2026-06-23',
-    endDate: '2026-07-23',
-    startTime: '16:00',
-    endTime: '18:30',
-    priceCents: 51_500,
-    priceNote: 'For the five-week session',
-  },
-  {
-    id: 'session-srb-invitation-to-the-dance-class-2026-06-22',
-    campId: 'camp-srb-invitation-to-the-dance-class',
-    locationId: LOCATION,
-    ...TERM,
-    startTime: '09:00',
-    endTime: '09:50',
-    priceCents: 15_000,
-    ageRange: { min: 4, max: 5 },
-  },
-  {
-    id: 'session-srb-primary-class-2026-06-22',
-    campId: 'camp-srb-primary-class',
-    locationId: LOCATION,
-    ...TERM,
-    startTime: '10:50',
-    endTime: '11:50',
-    priceCents: 15_500,
-    ageRange: { min: 6, max: 8 },
-  },
-  {
-    id: 'session-srb-lower-ballet-2026-06-22',
-    campId: 'camp-srb-lower-ballet',
-    locationId: LOCATION,
-    ...TERM,
-    startTime: '16:30',
-    endTime: '17:30',
-    priceCents: 25_000,
-    ageRange: { min: 8, max: 12 },
-  },
-  // Tuesday, Wednesday, and Thursday respectively, one hour each.
-  ...[
-    'camp-srb-lower-theatre-dance',
-    'camp-srb-lower-character-dance',
-    'camp-srb-lower-modern',
-  ].map(
-    (campId): Session => ({
-      id: `session-${campId.replace('camp-', '')}-2026-06-22`,
-      campId,
-      locationId: LOCATION,
-      ...TERM,
-      startTime: '17:30',
-      endTime: '18:30',
-      priceCents: 19_500,
-      ageRange: { min: 8, max: 12 },
     }),
   ),
 ];
