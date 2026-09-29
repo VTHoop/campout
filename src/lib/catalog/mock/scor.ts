@@ -10,9 +10,9 @@ import { Category } from '../types';
  *   the camps page says 2026 started "the May 25th week" and gives no end. The
  *   listing was still being set up: weeks from July 12 show "0 events", and
  *   the June 28 week's first day reads 7/4/2027. The week's own title is used.
- * - Price: the listing shows $90 for a week, because a family books single days
- *   or the week. The camps page gives $90/day or $400/week. The model has one
- *   price with no unit, so a day rate reads as a week rate.
+ * - Price is the price of the session as dated (CAM-27 decision 2): $400 for a
+ *   summer week, from the camps page (its 2026 prices; the 2027 listing shows
+ *   only the $90 day rate). A holiday day is $90. The day rate goes in the note.
  * - Time options: full day 9–5, a morning half day 9–12:30, or an afternoon
  *   half day 1–5 ($55/day, $225/week). One session holds one time.
  * - Care: early drop-off at 8 and late pickup are $10 add-ons. The model has
@@ -30,9 +30,14 @@ const LOCATION = 'location-scor';
 const REGISTER = {
   url: 'https://member.daysmartrecreation.com/#/online/scor/programs/5/level?facility_ids=1',
 };
-const FULL_DAY_PRICE = 9_000;
-const PRICE_NOTE =
-  'Per day; $400 for the full week. Half day $55/day. $20/year SCOR membership required.';
+const WEEK = {
+  priceCents: 40_000,
+  priceNote: 'Or $90/day. Half day $55/day or $225/week. $20/year SCOR membership required.',
+};
+const DAY = {
+  priceCents: 9_000,
+  priceNote: 'Half day 9:00–12:30: $55. $20/year SCOR membership required.',
+};
 
 export const scorCamps: readonly Camp[] = [
   {
@@ -53,7 +58,12 @@ export const scorCamps: readonly Camp[] = [
   },
 ];
 
-function day(campId: string, start: string, end: string): Session {
+function session(
+  campId: string,
+  start: string,
+  end: string,
+  price: { priceCents: number; priceNote: string },
+): Session {
   return {
     id: `session-${campId.replace('camp-', '')}-${start}`,
     campId,
@@ -62,8 +72,7 @@ function day(campId: string, start: string, end: string): Session {
     endDate: end,
     startTime: '09:00',
     endTime: '17:00',
-    priceCents: FULL_DAY_PRICE,
-    priceNote: PRICE_NOTE,
+    ...price,
     ageRange: { min: 5, max: 12 },
   };
 }
@@ -103,6 +112,8 @@ const HOLIDAY_DAYS_2026_27 = [
 ];
 
 export const scorSessions: readonly Session[] = [
-  ...SUMMER_2027_WEEKS.map(([start, end]) => day('camp-scor-all-sports-summer', start, end)),
-  ...HOLIDAY_DAYS_2026_27.map((date) => day('camp-scor-school-holiday', date, date)),
+  ...SUMMER_2027_WEEKS.map(([start, end]) =>
+    session('camp-scor-all-sports-summer', start, end, WEEK),
+  ),
+  ...HOLIDAY_DAYS_2026_27.map((date) => session('camp-scor-school-holiday', date, date, DAY)),
 ];
