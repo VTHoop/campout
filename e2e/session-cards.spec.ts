@@ -6,7 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
  * browser: the week in the URL through reload and back/forward, and the card's
  * layout on a phone.
  *
- * Pinned to summer 2026 through the URL, since the mock sessions are all 2026.
+ * Pinned to summer 2026 through the URL, where most mock sessions are.
  * Week 10 is the week of August 3; week 1 the week of June 1.
  */
 
@@ -55,7 +55,7 @@ test('week 10 shows the VCU Ironbridge card, and week 1 replaces it', async ({ p
   await tile(page, 1).click();
 
   await expect(page).toHaveURL('/camps?summer=2026&week=1');
-  await expect(weekHeading(page)).toHaveText('2 camps, week of Jun 1');
+  await expect(weekHeading(page)).toHaveText('4 camps, week of Jun 1');
   await expect(ironbridge).toHaveCount(0);
   await expect(card(page, 'Wacky Water Welcome')).toBeVisible();
 });
@@ -63,16 +63,16 @@ test('week 10 shows the VCU Ironbridge card, and week 1 replaces it', async ({ p
 test('the selected week survives a reload, and back and forward', async ({ page }) => {
   await open(page, WEEK_10);
   await tile(page, 3).click();
-  await expect(weekHeading(page)).toHaveText('3 camps, week of Jun 15');
+  await expect(weekHeading(page)).toHaveText('8 camps, week of Jun 15');
 
   await settle(page, () => page.reload());
   await expect(tile(page, 3)).toHaveAttribute('aria-pressed', 'true');
-  await expect(weekHeading(page)).toHaveText('3 camps, week of Jun 15');
+  await expect(weekHeading(page)).toHaveText('8 camps, week of Jun 15');
 
   await page.goBack();
   await expect(page).toHaveURL(WEEK_10);
   await expect(tile(page, 10)).toHaveAttribute('aria-pressed', 'true');
-  await expect(weekHeading(page)).toHaveText('3 camps, week of Aug 3');
+  await expect(weekHeading(page)).toHaveText('7 camps, week of Aug 3');
 
   await page.goForward();
   await expect(tile(page, 3)).toHaveAttribute('aria-pressed', 'true');
@@ -81,7 +81,7 @@ test('the selected week survives a reload, and back and forward', async ({ page 
 test('an out-of-range week shows week 1', async ({ page }) => {
   await open(page, '/camps?summer=2026&week=99');
   await expect(tile(page, 1)).toHaveAttribute('aria-pressed', 'true');
-  await expect(weekHeading(page)).toHaveText('2 camps, week of Jun 1');
+  await expect(weekHeading(page)).toHaveText('4 camps, week of Jun 1');
 });
 
 test.describe('on a phone', () => {

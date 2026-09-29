@@ -1,9 +1,19 @@
+import { richmondBalletCamps, richmondBalletSessions } from './mock/richmond-ballet';
+import { scorCamps, scorSessions } from './mock/scor';
+import { swimRvaCamps, swimRvaSessions } from './mock/swimrva';
 import type { Camp, Location, Provider, Session } from './types';
 import { Category } from './types';
 
 export const mockProviders: readonly Provider[] = [
   { id: 'provider-acac', name: 'acac' },
   { id: 'provider-vcu-baseball', name: 'VCU Baseball', website: 'https://ramsbaseballcamps.com' },
+  { id: 'provider-swimrva', name: 'SwimRVA', website: 'https://swimrichmond.org' },
+  { id: 'provider-scor', name: 'Sports Center of Richmond', website: 'https://scor-richmond.com' },
+  {
+    id: 'provider-richmond-ballet',
+    name: 'Richmond Ballet',
+    website: 'https://richmondballet.com',
+  },
 ];
 
 export const mockLocations: readonly Location[] = [
@@ -33,6 +43,43 @@ export const mockLocations: readonly Location[] = [
     name: 'Ironbridge Sports Park',
     address: '11400 Iron Bridge Rd Ste 100',
     city: 'Chester',
+    state: 'VA',
+  },
+  {
+    id: 'location-swimrva-csac',
+    name: 'SwimRVA-CSAC',
+    address: '5050 Ridgedale Parkway',
+    city: 'Richmond',
+    state: 'VA',
+  },
+  // SwimRVA's outdoor pool. No session is based here, but several CSAC weeks
+  // spend a day or two here; the model has one location per session (CAM-27).
+  {
+    id: 'location-swimrva-meadowbrook',
+    name: 'SwimRVA Meadowbrook',
+    address: '3700 Cogbill Road',
+    city: 'Richmond',
+    state: 'VA',
+  },
+  {
+    id: 'location-swimrva-north',
+    name: 'SwimRVA North',
+    address: '317 North Wilkinson Road',
+    city: 'Richmond',
+    state: 'VA',
+  },
+  {
+    id: 'location-scor',
+    name: 'Sports Center of Richmond',
+    address: '1385 Overbrook Rd',
+    city: 'Richmond',
+    state: 'VA',
+  },
+  {
+    id: 'location-richmond-ballet',
+    name: 'Richmond Ballet',
+    address: '407 East Canal Street',
+    city: 'Richmond',
     state: 'VA',
   },
 ];
@@ -188,6 +235,9 @@ export const mockCamps: readonly Camp[] = [
     categories: [Category.Sports],
     registrationInfo: { url: 'https://ramsbaseballcamps.com' },
   },
+  ...swimRvaCamps,
+  ...scorCamps,
+  ...richmondBalletCamps,
 ];
 
 const generalCampSessions: readonly Session[] = [
@@ -317,4 +367,7 @@ export const mockSessions: readonly Session[] = [
   ...juniorMiniTennisSessions,
   ...tournamentAllDaySessions,
   ...vcuSessions,
+  ...swimRvaSessions,
+  ...scorSessions,
+  ...richmondBalletSessions,
 ];
