@@ -40,14 +40,20 @@ describe('Category', () => {
 
 describe('mockProviders', () => {
   it('has one entry per organization in the source documents', () => {
-    expect(mockProviders).toHaveLength(2);
-    expect(mockProviders.map((provider) => provider.name).sort()).toEqual(['VCU Baseball', 'acac']);
+    expect(mockProviders).toHaveLength(5);
+    expect(mockProviders.map((provider) => provider.name).sort()).toEqual([
+      'Richmond Ballet',
+      'Sports Center of Richmond',
+      'SwimRVA',
+      'VCU Baseball',
+      'acac',
+    ]);
   });
 });
 
 describe('mockLocations', () => {
   it('has one entry per physical site in the source documents', () => {
-    expect(mockLocations).toHaveLength(4);
+    expect(mockLocations).toHaveLength(9);
     for (const location of mockLocations) {
       expect(location.state).toBe('VA');
       expect(location.address.length).toBeGreaterThan(0);
@@ -57,17 +63,19 @@ describe('mockLocations', () => {
 });
 
 describe('mockCamps', () => {
-  it('has one entry per acac general-camp week, tennis variant, and VCU program', () => {
-    // 12 acac weekly themes + 2 acac tennis variants + 1 VCU Baseball program.
-    expect(mockCamps).toHaveLength(15);
+  it('has one entry per camp or class in the source documents', () => {
+    // 12 acac weekly themes + 2 acac tennis variants + 1 VCU Baseball program
+    // + 6 SwimRVA camps + 2 SCOR camps + 4 Richmond Ballet camps and 6 classes.
+    expect(mockCamps).toHaveLength(33);
   });
 });
 
 describe('mockSessions', () => {
   it('fully transcribes every dated offering from both source documents', () => {
     // acac: 12 general weeks + 9 Junior Mini Tennis dates + 3 Tournament All Day
-    // dates = 24. VCU Baseball: 4 sessions. 28 total, not a representative sample.
-    expect(mockSessions).toHaveLength(28);
+    // dates = 24. VCU Baseball: 4. SwimRVA: 27. SCOR: 10 summer weeks + 17
+    // holiday days = 27. Richmond Ballet: 13. 95 total, not a representative sample.
+    expect(mockSessions).toHaveLength(95);
   });
 
   it("gives every general-camp week the enrollment page's hours, price, grades, categories, and registration link", () => {
@@ -174,4 +182,263 @@ describe('mockSessions', () => {
       expect(byId.get(id)).toMatchObject(expected);
     },
   );
+});
+
+function sessionsOf(campId: string) {
+  return mockSessions.filter((session) => session.campId === campId);
+}
+
+function datesOf(campId: string, locationId?: string) {
+  return sessionsOf(campId)
+    .filter((session) => locationId === undefined || session.locationId === locationId)
+    .map((session) => `${session.startDate}/${session.endDate}`);
+}
+
+describe('SwimRVA (swimrichmond.org, camps schedule and pricing)', () => {
+  it('lists the eleven CSAC and nine North weeks of the general summer camp', () => {
+    expect(datesOf('camp-swimrva-summer-swim', 'location-swimrva-csac')).toEqual([
+      '2026-06-01/2026-06-05',
+      '2026-06-08/2026-06-11',
+      '2026-06-15/2026-06-19',
+      '2026-06-22/2026-06-25',
+      '2026-06-29/2026-07-03',
+      '2026-07-06/2026-07-10',
+      '2026-07-13/2026-07-17',
+      '2026-07-21/2026-07-24',
+      '2026-07-27/2026-07-31',
+      '2026-08-03/2026-08-07',
+      '2026-08-10/2026-08-14',
+    ]);
+    expect(datesOf('camp-swimrva-summer-swim', 'location-swimrva-north')).toEqual([
+      '2026-06-08/2026-06-12',
+      '2026-06-15/2026-06-19',
+      '2026-06-22/2026-06-26',
+      '2026-06-29/2026-07-03',
+      '2026-07-06/2026-07-10',
+      '2026-07-13/2026-07-17',
+      '2026-07-20/2026-07-24',
+      '2026-07-27/2026-07-31',
+      '2026-08-03/2026-08-07',
+    ]);
+  });
+
+  it('prices a week at its regular price, and a 4-day week at $269, with the spring special in the note', () => {
+    const byId = new Map(mockSessions.map((session) => [session.id, session]));
+    expect(byId.get('session-swimrva-summer-swim-csac-2026-06-01')).toMatchObject({
+      startTime: '09:00',
+      endTime: '16:00',
+      priceCents: 33_900,
+      priceNote: '$329 if booked by May 31, 2026 (spring special)',
+      ageRange: { min: 6, max: 12 },
+    });
+    expect(byId.get('session-swimrva-summer-swim-csac-2026-06-08')).toMatchObject({
+      priceCents: 26_900,
+    });
+    expect(byId.get('session-swimrva-summer-swim-csac-2026-06-08')?.priceNote).toBeUndefined();
+    expect(byId.get('session-swimrva-summer-swim-csac-2026-06-22')).toMatchObject({
+      priceCents: 26_900,
+      priceNote: '$259 if booked by May 31, 2026 (spring special)',
+    });
+  });
+
+  it.each([
+    {
+      campId: 'camp-swimrva-spring-break',
+      dates: ['2026-03-30/2026-04-03'],
+      ages: { min: 6, max: 12 },
+    },
+    {
+      campId: 'camp-swimrva-summer-league-tune-up',
+      dates: ['2026-06-01/2026-06-05', '2026-06-15/2026-06-19'],
+      ages: { min: 9, max: 17 },
+    },
+    {
+      campId: 'camp-swimrva-junior-lifeguarding',
+      dates: ['2026-06-29/2026-07-03', '2026-08-03/2026-08-07'],
+      ages: { min: 11, max: 14 },
+    },
+    {
+      campId: 'camp-swimrva-water-sports',
+      dates: ['2026-06-22/2026-06-25'],
+      ages: { min: 10, max: 15 },
+    },
+    { campId: 'camp-swimrva-mermaid', dates: ['2026-08-10/2026-08-14'], ages: { min: 8, max: 15 } },
+  ])('gives $campId its dates and ages', ({ campId, dates, ages }) => {
+    expect(datesOf(campId)).toEqual(dates);
+    for (const session of sessionsOf(campId)) {
+      expect(session.ageRange).toEqual(ages);
+      expect(session.locationId).toBe('location-swimrva-csac');
+    }
+  });
+
+  it('runs spring break camp 8 am to 5 pm, not the summer 9 to 4', () => {
+    expect(sessionsOf('camp-swimrva-spring-break')[0]).toMatchObject({
+      startTime: '08:00',
+      endTime: '17:00',
+      priceCents: 33_900,
+    });
+  });
+});
+
+describe('Sports Center of Richmond (scor-richmond.com camps, and its DaySmart listing)', () => {
+  it('lists the ten dated 2027 summer weeks at the $90 the listing shows, ages 5-12', () => {
+    expect(datesOf('camp-scor-all-sports-summer')).toEqual([
+      '2027-05-31/2027-06-04',
+      '2027-06-07/2027-06-11',
+      '2027-06-14/2027-06-18',
+      '2027-06-21/2027-06-25',
+      '2027-06-28/2027-07-02',
+      '2027-07-05/2027-07-09',
+      '2027-07-12/2027-07-16',
+      '2027-07-19/2027-07-23',
+      '2027-07-26/2027-07-30',
+      '2027-08-02/2027-08-06',
+    ]);
+    for (const session of sessionsOf('camp-scor-all-sports-summer')) {
+      expect(session).toMatchObject({
+        locationId: 'location-scor',
+        startTime: '09:00',
+        endTime: '17:00',
+        priceCents: 9_000,
+        ageRange: { min: 5, max: 12 },
+      });
+    }
+  });
+
+  it('lists each 2026-27 school holiday camp day as its own one-day session', () => {
+    expect(datesOf('camp-scor-school-holiday').map((range) => range.split('/')[0])).toEqual([
+      '2026-09-04',
+      '2026-09-21',
+      '2026-09-28',
+      '2026-10-12',
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-09',
+      '2026-11-23',
+      '2026-11-24',
+      '2026-11-25',
+      '2026-12-21',
+      '2026-12-22',
+      '2026-12-23',
+      '2026-12-24',
+      '2026-12-28',
+      '2026-12-29',
+      '2026-12-31',
+    ]);
+    for (const session of sessionsOf('camp-scor-school-holiday')) {
+      expect(session.endDate).toBe(session.startDate);
+      expect(session).toMatchObject({ startTime: '09:00', endTime: '17:00', priceCents: 9_000 });
+    }
+  });
+});
+
+describe('Richmond Ballet (richmondballet.com, summer camps and classes)', () => {
+  it.each([
+    {
+      campId: 'camp-srb-invitation-to-the-dance-camp',
+      sessions: [
+        { startDate: '2026-06-15', endDate: '2026-06-18', priceCents: 18_000 },
+        { startDate: '2026-07-27', endDate: '2026-07-31', priceCents: 22_500 },
+      ],
+      startTime: '09:00',
+      endTime: '11:00',
+    },
+    {
+      campId: 'camp-srb-dance-camp',
+      sessions: [
+        { startDate: '2026-06-15', endDate: '2026-06-18', priceCents: 34_000 },
+        { startDate: '2026-07-27', endDate: '2026-07-31', priceCents: 42_000 },
+      ],
+      startTime: '09:00',
+      endTime: '14:00',
+    },
+    {
+      campId: 'camp-srb-minds-in-motion',
+      sessions: [
+        { startDate: '2026-07-27', endDate: '2026-07-31', priceCents: 35_000 },
+        { startDate: '2026-08-03', endDate: '2026-08-07', priceCents: 35_000 },
+      ],
+      startTime: '09:00',
+      endTime: '16:00',
+    },
+  ])(
+    'gives each $campId week its dates, hours, and tuition',
+    ({ campId, sessions, startTime, endTime }) => {
+      const actual = sessionsOf(campId);
+      expect(actual).toHaveLength(sessions.length);
+      sessions.forEach((expected, index) => {
+        expect(actual[index]).toMatchObject({ ...expected, startTime, endTime });
+      });
+    },
+  );
+
+  it('keeps age and grade apart: Minds In Motion states grades 5-8 and no ages', () => {
+    for (const session of sessionsOf('camp-srb-minds-in-motion')) {
+      expect(session.gradeRange).toEqual({ min: 5, max: 8 });
+      expect(session.ageRange).toBeUndefined();
+    }
+  });
+
+  it.each([
+    {
+      campId: 'camp-srb-lower-iii-mini-intensive',
+      startDate: '2026-06-23',
+      endDate: '2026-07-23',
+      startTime: '16:00',
+      endTime: '18:30',
+      priceCents: 51_500,
+    },
+    {
+      campId: 'camp-srb-invitation-to-the-dance-class',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '09:00',
+      endTime: '09:50',
+      priceCents: 15_000,
+    },
+    {
+      campId: 'camp-srb-primary-class',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '10:50',
+      endTime: '11:50',
+      priceCents: 15_500,
+    },
+    {
+      campId: 'camp-srb-lower-ballet',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '16:30',
+      endTime: '17:30',
+      priceCents: 25_000,
+    },
+    {
+      campId: 'camp-srb-lower-theatre-dance',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '17:30',
+      endTime: '18:30',
+      priceCents: 19_500,
+    },
+    {
+      campId: 'camp-srb-lower-character-dance',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '17:30',
+      endTime: '18:30',
+      priceCents: 19_500,
+    },
+    {
+      campId: 'camp-srb-lower-modern',
+      startDate: '2026-06-22',
+      endDate: '2026-07-25',
+      startTime: '17:30',
+      endTime: '18:30',
+      priceCents: 19_500,
+    },
+  ])('records $campId as one session spanning its whole term', ({ campId, ...expected }) => {
+    const actual = sessionsOf(campId);
+    expect(actual).toHaveLength(1);
+    expect(actual[0]).toMatchObject({ ...expected, locationId: 'location-richmond-ballet' });
+  });
 });

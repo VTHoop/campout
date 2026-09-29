@@ -51,18 +51,22 @@ describe('SummerWeeks', () => {
     renderAt('summer=2026&week=10');
     expect(tile(10)).toHaveAttribute('aria-pressed', 'true');
     expect(
-      screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' }),
+      screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' }),
     ).toBeInTheDocument();
     expect(campNames()).toEqual([
       'Game On!',
+      'Junior Lifeguarding Camp',
       'Junior Mini Tennis Camp',
+      'Minds In Motion Camp',
+      'SwimRVA Summer Swim Camp',
+      'SwimRVA Summer Swim Camp',
       'VCU Baseball Summer Youth Camps',
     ]);
   });
 
   it('labels the list of cards with its heading', () => {
     renderAt('week=10');
-    expect(screen.getByRole('list', { name: '3 camps, week of Aug 3' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: '7 camps, week of Aug 3' })).toBeInTheDocument();
   });
 
   it('gives each card its week number', () => {
@@ -74,7 +78,7 @@ describe('SummerWeeks', () => {
     renderAt('summer=2026');
     expect(tile(1)).toHaveAttribute('aria-pressed', 'true');
     expect(
-      screen.getByRole('heading', { level: 2, name: '2 camps, week of Jun 1' }),
+      screen.getByRole('heading', { level: 2, name: '4 camps, week of Jun 1' }),
     ).toBeInTheDocument();
   });
 

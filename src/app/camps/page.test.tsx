@@ -173,17 +173,19 @@ describe('CampsPage', () => {
     atUrl('summer=2026&week=10');
     renderSummer({ requested: '2026' });
     const picker = screen.getByRole('group', { name: 'Weeks of summer' });
-    const heading = screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' });
+    const heading = screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' });
     expect(picker.compareDocumentPosition(heading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
       screen.getByRole('heading', { level: 3, name: 'VCU Baseball Summer Youth Camps' }),
     ).toBeInTheDocument();
   });
 
-  it('lists no camps for a summer the mock catalog has none in', () => {
+  it('lists no camps for a week the mock catalog has none in', () => {
+    // Summer 2027's last two weeks: SCOR's listed weeks end with August 2.
+    atUrl('week=11');
     renderSummer();
     expect(
-      screen.getByRole('heading', { level: 2, name: 'No camps listed for week 1' }),
+      screen.getByRole('heading', { level: 2, name: 'No camps listed for week 11' }),
     ).toBeInTheDocument();
   });
 
@@ -194,7 +196,7 @@ describe('CampsPage', () => {
 
     render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026', week: '10' }) }));
     expect(
-      screen.getByRole('heading', { level: 2, name: '3 camps, week of Aug 3' }),
+      screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' }),
     ).toBeInTheDocument();
   });
 });
