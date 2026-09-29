@@ -281,7 +281,7 @@ describe('SwimRVA (swimrichmond.org, camps schedule and pricing)', () => {
 });
 
 describe('Sports Center of Richmond (scor-richmond.com camps, and its DaySmart listing)', () => {
-  it('lists the ten dated 2027 summer weeks at the $90 the listing shows, ages 5-12', () => {
+  it('lists the ten dated 2027 summer weeks at the week price, ages 5-12', () => {
     expect(datesOf('camp-scor-all-sports-summer')).toEqual([
       '2027-05-31/2027-06-04',
       '2027-06-07/2027-06-11',
