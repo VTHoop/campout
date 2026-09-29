@@ -72,7 +72,7 @@ The general rule this leaves behind: **if a policy depends on state a trigger cr
 
 ## Catalog provenance
 
-`camps` and `sessions` both carry `source_url`, `verified_at`, and `verified_by`, all `NOT NULL`.
+`providers`, `camps` and `sessions` each carry their evidence (`source_url` or `source_document_path`), `verified_at`, and `verified_by`, the last two `NOT NULL`.
 
 **A read model that can represent an unverified record is a bug.** Build types so a record without `verifiedAt` cannot be constructed, rather than checking for it at every render site — the check you have to remember is the one that gets missed. `verified_at` is shown to the parent on every session: stale data here is not cosmetic, because a parent who shows up to a camp that moved has lost a workday.
 
@@ -116,7 +116,11 @@ The boundary agents get wrong most often, so state it plainly:
 
 A finite set of internal values is a **TS string enum**, not a literal union — callers get a named symbol instead of a quoted string to typo.
 
-The exception is anything persisted. **Postgres owns the persisted domain** (an enum type or a `CHECK`), and `src/lib/db/types.ts` is *generated* from the schema by `pnpm db:types` — never hand-edited. Where a TS enum and a database domain describe the same set, tie them together with a compile-time `AssertEqual` guard so the two cannot drift.
+The exception is anything persisted. **Postgres owns the persisted domain** (an enum type or a `CHECK`), and `src/lib/db/types.ts` is *generated* from the schema by `pnpm db:types` — never hand-edited. Where a TS enum and a database domain describe the same set, tie them together with a compile-time guard so the two cannot drift. The planner's `SchoolDistrict`, `CalendarType` and `ClosureTag` are locked in `src/lib/db/enum-mirrors.ts`; add a line there for any new mirror.
+
+## `details` — one parser, one vocabulary
+
+Facts a parent reads but the app never computes with live in `details` `jsonb` on camps, sessions and options (ADR-0017 §5, CAM-27 decision 12). The database refuses a write outside the vocabulary; **the app reads `details` only through `parseCampDetails` / `parseSessionDetails` / `parseOptionDetails`** in `src/lib/db/details.ts`, which throw a `DetailsError` naming the path on anything that has drifted. Nothing else touches a raw key. The parser's readers mirror the migration's schema functions and change in the same commit. **A key becomes a column when the app needs to filter or sort by it.**
 
 ## Avoiding the object-injection finding
 

@@ -267,9 +267,9 @@ Camp registration forms want emergency contacts, insurance details, physician na
 ### Data shape
 Normalized relational, because the domain is relational and a human has to verify it by eye in Supabase's table editor.
 
-**A `camp` is an organization. A `session` is a dated offering.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
+**A `provider` is an organization, a `camp` is a program it runs, and a `session` is a dated offering of that program.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
 
-`camps → locations → sessions` with provenance (`source_url`, `verified_at`, `verified_by`) on camps and sessions. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
+`providers → camps → sessions → session_options`, each session at one standalone, shared `location`, with provenance (evidence, `verified_at`, `verified_by`) on providers, camps and sessions. The field-by-field rules are in `docs/data/camp-record-spec.md`. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
 
 ### Diagrams
 Prefer Mermaid (`flowchart`, `sequenceDiagram`, `erDiagram`, `stateDiagram-v2`). ASCII only for spatial wireframes.
