@@ -100,7 +100,6 @@ const fullWeek = (start: string, end: string): Week => ({ start, end });
 function sessions(
   campId: string,
   locationId: string,
-  locationKey: string,
   weeks: readonly Week[],
   ageRange: { min: number; max: number },
 ): Session[] {
@@ -108,7 +107,7 @@ function sessions(
     // A regular-price week carries the spring special; a 4-day week only its own.
     const priceNote = week.priceCents === undefined ? WEEK_SPECIAL : week.special;
     return {
-      id: `session-${campId.replace('camp-', '')}-${locationKey}-${week.start}`,
+      id: `session-${campId.replace('camp-', '')}-${locationId.replace('location-swimrva-', '')}-${week.start}`,
       campId,
       locationId,
       startDate: week.start,
@@ -128,7 +127,6 @@ export const swimRvaSessions: readonly Session[] = [
   ...sessions(
     'camp-swimrva-summer-swim',
     CSAC,
-    'csac',
     [
       fullWeek('2026-06-01', '2026-06-05'),
       // Mon–Thu: no camp Friday, June 12.
@@ -154,7 +152,6 @@ export const swimRvaSessions: readonly Session[] = [
   ...sessions(
     'camp-swimrva-summer-swim',
     NORTH,
-    'north',
     [
       fullWeek('2026-06-08', '2026-06-12'),
       fullWeek('2026-06-15', '2026-06-19'),
@@ -183,25 +180,22 @@ export const swimRvaSessions: readonly Session[] = [
   ...sessions(
     'camp-swimrva-summer-league-tune-up',
     CSAC,
-    'csac',
     [fullWeek('2026-06-01', '2026-06-05'), fullWeek('2026-06-15', '2026-06-19')],
     { min: 9, max: 17 },
   ),
   ...sessions(
     'camp-swimrva-junior-lifeguarding',
     CSAC,
-    'csac',
     [fullWeek('2026-06-29', '2026-07-03'), fullWeek('2026-08-03', '2026-08-07')],
     { min: 11, max: 14 },
   ),
   ...sessions(
     'camp-swimrva-water-sports',
     CSAC,
-    'csac',
     [{ start: '2026-06-22', end: '2026-06-25', priceCents: FOUR_DAY_PRICE }],
     { min: 10, max: 15 },
   ),
-  ...sessions('camp-swimrva-mermaid', CSAC, 'csac', [fullWeek('2026-08-10', '2026-08-14')], {
+  ...sessions('camp-swimrva-mermaid', CSAC, [fullWeek('2026-08-10', '2026-08-14')], {
     min: 8,
     max: 15,
   }),
