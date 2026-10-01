@@ -150,6 +150,30 @@ describe('findCatalogInconsistencies', () => {
     expect(findCatalogInconsistencies(snapshot)).toEqual([]);
   });
 
+  // Most camps run one week, occasionally two. Anything longer is flagged for a
+  // reviewer to confirm before approving (CAM-27): it is usually a weekly class
+  // or a mistyped end date, and either would read as weeks of daily coverage.
+  it('flags a session spanning more than two weeks for a reviewer to confirm', () => {
+    const snapshot: CatalogSnapshot = {
+      ...validSnapshot,
+      sessions: [{ ...session, startDate: '2027-06-07', endDate: '2027-06-21' }],
+    };
+    expect(findCatalogInconsistencies(snapshot)).toEqual([
+      'session session-1 spans 15 days (2027-06-07 to 2027-06-21), more than two weeks: confirm before approving',
+    ]);
+  });
+
+  it.each([
+    ['a Monday-to-Friday fortnight', '2027-06-07', '2027-06-18'],
+    ['exactly fourteen days', '2027-06-07', '2027-06-20'],
+  ])('does not flag %s', (_case, startDate, endDate) => {
+    const snapshot: CatalogSnapshot = {
+      ...validSnapshot,
+      sessions: [{ ...session, startDate, endDate }],
+    };
+    expect(findCatalogInconsistencies(snapshot)).toEqual([]);
+  });
+
   it('reports every violation in one pass rather than stopping at the first', () => {
     const snapshot: CatalogSnapshot = {
       ...validSnapshot,

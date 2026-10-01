@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { campRow, PROVENANCE, sessionRow, withCampAndLocation } from './catalog-fixtures';
 import type { TestUser } from './helpers';
 import { anonClient, createTestUser, deleteTestUsers, serviceClient } from './helpers';
 
@@ -14,30 +15,13 @@ import { anonClient, createTestUser, deleteTestUsers, serviceClient } from './he
  * exists, so a normal client cannot change the catalog at all — which is what
  * makes "every record is verified by a human before it goes live" true in the
  * database rather than only in the terms.
- */
-
-const CAMP = {
-  name: 'Fixture Day Camp',
-  website_url: 'https://example.test/camp',
-  source_url: 'https://example.test/camp/sessions',
-  verified_at: '2026-09-01T00:00:00Z',
-  verified_by: 'rls-suite',
-};
-
-/**
- * A camp with no web presence at all — the case the schema used to reject.
  *
- * source_document_path is an object key inside the camp-sources bucket, with no
- * bucket prefix. Nothing is uploaded here on purpose: the constraint checks only
- * that one evidence column is non-null, and a test that uploaded a real file
- * would be asserting something the database does not promise.
+ * The rows follow the provider → camp → session shape (CAM-27): a provider is
+ * the organization, a camp is a program it runs, and registration lives on the
+ * camp. The shape's own rules are pinned in catalog-shape.rls.test.ts.
  */
-const FLYER_ONLY_CAMP = {
-  name: 'Parish Hall Soccer Week',
-  source_document_path: 'parish-hall-2027-flyer.jpg',
-  verified_at: '2026-09-01T00:00:00Z',
-  verified_by: 'rls-suite',
-};
+
+const CAMP_NAME = 'Fixture Day Camp';
 
 /**
  * A school year far enough out that no real calendar will ever collide with it.
@@ -79,30 +63,18 @@ describe('catalog reads', () => {
   });
 });
 
-/**
- * Seed a camp as the service role, run an assertion against it, then remove it.
- *
- * The cleanup is in a `finally` so a failing assertion still leaves the table as
- * it found it — otherwise one bad run poisons every later one.
- */
-async function withSeededCamp(
-  assert: (campId: string, admin: SupabaseClient) => Promise<void>,
-): Promise<void> {
-  const admin = serviceClient();
-  const seeded = await admin.from('camps').insert(CAMP).select('id').single();
-  expect(seeded.error).toBeNull();
-  const campId = seeded.data?.id as string;
-
-  try {
-    await assert(campId, admin);
-  } finally {
-    await admin.from('camps').delete().eq('id', campId);
-  }
-}
-
 describe('catalog writes are closed to clients', () => {
   it('refuses an anonymous insert', async () => {
-    const { error } = await anonClient().from('camps').insert(CAMP);
+    await withCampAndLocation(async ({ providerId }) => {
+      const { error } = await anonClient().from('camps').insert(campRow(providerId));
+      expect(error).not.toBeNull();
+    });
+  });
+
+  it('refuses an anonymous insert of a provider', async () => {
+    const { error } = await anonClient()
+      .from('providers')
+      .insert({ name: 'Hijacked', ...PROVENANCE });
     expect(error).not.toBeNull();
   });
 
@@ -117,108 +89,83 @@ describe('catalog writes are closed to clients', () => {
     ],
     ['delete', (campId: string) => anonClient().from('camps').delete().eq('id', campId)],
   ])('leaves the record untouched after an anonymous %s', async (_verb, attempt) => {
-    await withSeededCamp(async (campId, admin) => {
+    // withCampAndLocation cleans up in a `finally`, so a failing assertion still
+    // leaves the tables as it found them.
+    await withCampAndLocation(async ({ campId }, admin) => {
       const { error } = await attempt(campId);
       expect(error).toBeNull();
 
       const after = await admin.from('camps').select('id, name').eq('id', campId);
-      expect(after.data).toEqual([{ id: campId, name: CAMP.name }]);
+      expect(after.data).toEqual([{ id: campId, name: CAMP_NAME }]);
     });
   });
 });
 
 describe('provenance is required, but need not be a URL', () => {
-  it('accepts a camp with no website and no source URL, evidenced by a stored document', async () => {
-    const admin = serviceClient();
-    const seeded = await admin.from('camps').insert(FLYER_ONLY_CAMP).select('id').single();
-
-    try {
-      expect(seeded.error).toBeNull();
-      expect(seeded.data?.id).toBeTruthy();
-    } finally {
-      if (seeded.data?.id) await admin.from('camps').delete().eq('id', seeded.data.id);
-    }
+  // A camp with no web presence at all — the case the schema used to reject.
+  // source_document_path is an object key inside the camp-sources bucket, with no
+  // bucket prefix. Nothing is uploaded here on purpose: the constraint checks only
+  // that one evidence column is non-null, and a test that uploaded a real file
+  // would be asserting something the database does not promise.
+  it('accepts a camp with no source URL, evidenced by a stored document', async () => {
+    await withCampAndLocation(async ({ providerId }, admin) => {
+      const { error } = await admin.from('camps').insert(
+        campRow(providerId, {
+          name: 'Parish Hall Soccer Week',
+          source_url: null,
+          source_document_path: 'parish-hall-2027-flyer.jpg',
+          registration_url: null,
+          registration_note: 'Paper form at the parish office',
+        }),
+      );
+      expect(error).toBeNull();
+    });
   });
 
   it('rejects a camp with neither a source URL nor a stored document', async () => {
-    const { error } = await serviceClient().from('camps').insert({
-      name: 'Unevidenced',
-      verified_at: '2026-09-01T00:00:00Z',
-      verified_by: 'rls-suite',
-    });
+    await withCampAndLocation(async ({ providerId }, admin) => {
+      const { error } = await admin
+        .from('camps')
+        .insert(campRow(providerId, { name: 'Unevidenced', source_url: null }));
 
-    // A claim with nothing behind it is not evidence. The check constraint makes
-    // that a shape rule rather than a habit somebody has to keep.
-    expect(error).not.toBeNull();
+      // A claim with nothing behind it is not evidence. The check constraint makes
+      // that a shape rule rather than a habit somebody has to keep.
+      expect(error?.code).toBe('23514');
+    });
   });
 
   it('rejects a camp with no verifier, however good its source', async () => {
-    const { error } = await serviceClient()
-      .from('camps')
-      .insert({ name: 'Unverified', source_url: 'https://example.test/camp' });
+    await withCampAndLocation(async ({ providerId }, admin) => {
+      const { error } = await admin
+        .from('camps')
+        .insert(campRow(providerId, { name: 'Unverified', verified_by: null }));
 
-    expect(error).not.toBeNull();
+      expect(error?.code).toBe('23502');
+    });
+  });
+
+  // A parent has to be told how to sign up, one way or the other. Registration
+  // moved from the session to the camp (CAM-27 decision 10).
+  it('rejects a camp with no registration link and no instructions', async () => {
+    await withCampAndLocation(async ({ providerId }, admin) => {
+      const { error } = await admin
+        .from('camps')
+        .insert(campRow(providerId, { registration_url: null }));
+
+      expect(error?.code).toBe('23514');
+    });
   });
 });
 
 describe('sessions carry their own provenance', () => {
-  /**
-   * A session needs a camp and a location to exist at all, so each test stands
-   * up the pair and tears it down afterwards. Sessions are removed before the
-   * camp because locations.on delete restrict guards a location that still has
-   * sessions hanging off it.
-   */
-  async function withCampAndLocation(
-    assert: (ids: { campId: string; locationId: string }, admin: SupabaseClient) => Promise<void>,
-  ): Promise<void> {
-    const admin = serviceClient();
-    const camp = await admin.from('camps').insert(CAMP).select('id').single();
-    expect(camp.error).toBeNull();
-    const campId = camp.data?.id as string;
-
-    try {
-      const location = await admin
-        .from('locations')
-        .insert({
-          camp_id: campId,
-          label: 'Main campus',
-          street: '100 Test Way',
-          city: 'Richmond',
-          postal_code: '23220',
-          point: 'SRID=4326;POINT(-77.4360 37.5407)',
-        })
-        .select('id')
-        .single();
-      expect(location.error).toBeNull();
-      const locationId = location.data?.id as string;
-
-      await assert({ campId, locationId }, admin);
-    } finally {
-      await admin.from('sessions').delete().eq('camp_id', campId);
-      await admin.from('camps').delete().eq('id', campId);
-    }
-  }
-
-  const baseSession = {
-    name: 'Week 3',
-    category: 'day_camp',
-    start_date: '2027-07-12',
-    end_date: '2027-07-16',
-    daily_start: '09:00',
-    daily_end: '15:00',
-    registration_note: 'Paper form, mail by March 1',
-    verified_at: '2026-09-01T00:00:00Z',
-    verified_by: 'rls-suite',
-  };
-
   it('accepts a session evidenced by a stored document', async () => {
     await withCampAndLocation(async ({ campId, locationId }, admin) => {
-      const { error } = await admin.from('sessions').insert({
-        ...baseSession,
-        camp_id: campId,
-        location_id: locationId,
-        source_document_path: 'parish-hall-2027-flyer.jpg',
-      });
+      const { error } = await admin.from('sessions').insert(
+        sessionRow(campId, locationId, {
+          source_url: null,
+          source_document_path: 'parish-hall-2027-flyer.jpg',
+        }),
+      );
 
       expect(error).toBeNull();
     });
@@ -228,24 +175,9 @@ describe('sessions carry their own provenance', () => {
     await withCampAndLocation(async ({ campId, locationId }, admin) => {
       const { error } = await admin
         .from('sessions')
-        .insert({ ...baseSession, camp_id: campId, location_id: locationId });
+        .insert(sessionRow(campId, locationId, { source_url: null }));
 
-      expect(error).not.toBeNull();
-    });
-  });
-
-  // A parent has to be told how to sign up, one way or the other.
-  it('rejects a session with no registration link and no instructions', async () => {
-    await withCampAndLocation(async ({ campId, locationId }, admin) => {
-      const { registration_note: _dropped, ...withoutRegistration } = baseSession;
-      const { error } = await admin.from('sessions').insert({
-        ...withoutRegistration,
-        camp_id: campId,
-        location_id: locationId,
-        source_url: 'https://example.test/camp/sessions',
-      });
-
-      expect(error).not.toBeNull();
+      expect(error?.code).toBe('23514');
     });
   });
 });

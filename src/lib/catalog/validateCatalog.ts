@@ -1,4 +1,4 @@
-import { assertCalendarDate, compareDates } from '@campout/planner';
+import { assertCalendarDate, compareDates, daysBetween } from '@campout/planner';
 import type { Camp, Location, Provider, Session } from './types';
 import { Category } from './types';
 
@@ -87,7 +87,28 @@ function findDateIssues(session: Session): string[] {
   if (endsBeforeItStarts(start, end)) {
     issues.push(`session ${session.id} ends (${end}) before it starts (${start})`);
   }
+  const days = spanInDays(start, end);
+  if (days > LONGEST_UNFLAGGED_SPAN_DAYS) {
+    issues.push(
+      `session ${session.id} spans ${days} days (${start} to ${end}), more than two weeks: confirm before approving`,
+    );
+  }
   return issues;
+}
+
+/**
+ * Most camps run one week, occasionally two (CAM-27). A longer session is
+ * usually a weekly class or a mistyped end date, and either would read as
+ * weeks of daily coverage, so a reviewer confirms it before approving.
+ */
+const LONGEST_UNFLAGGED_SPAN_DAYS = 14;
+
+/** Inclusive: a Monday-to-Friday week spans 5 days. Zero when a date is unusable. */
+function spanInDays(start: string | undefined, end: string | undefined): number {
+  if (start === undefined || end === undefined) {
+    return 0;
+  }
+  return daysBetween(start, end) + 1;
 }
 
 function endsBeforeItStarts(start: string | undefined, end: string | undefined): boolean {

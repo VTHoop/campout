@@ -20,24 +20,27 @@ See `docs/adr/` for the "why" behind each choice.
 
 ## The two shapes that matter
 
-**A camp is an organization. A session is a dated offering.** The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available.
+**A provider is an organization, a camp is a program it runs, and a session is a dated offering of that program** (ADR-0018). The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available. A session offers one to three time options (`session_options`: full day, morning, afternoon), each with its own price, hours and care times, and meets at one standalone location that any camp's sessions can share.
 
-**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
+**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `providers`, `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
 
 Everything else about evidence is a contract the verification workflow keeps, not a rule the database applies (ADR-0012):
 
 - `source_document_path` holds an **object key inside the private `camp-sources` bucket**, with no bucket prefix. The constraint does not parse it.
 - **Nothing verifies the object exists.** A path pointing at a file nobody uploaded satisfies the constraint. Keeping the two in step is the verifier's job, and a dangling path is a data-quality bug rather than something Postgres will catch.
 
-Together this is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `website_url` and `registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
+Together this is how "we list camps, we do not vet them" is made true in the data rather than merely stated in the terms. `providers.website_url` and `camps.registration_url` are deliberately nullable: plenty of camps have no site and take registration by paper or phone.
+
+**Facts the app computes with are columns; everything else is `details`** (ADR-0017 §5). `camps`, `sessions` and `session_options` each carry a `details` `jsonb` column checked on every write by `pg_jsonschema` against a fixed vocabulary, and read in the app only through `src/lib/db/details.ts`. The vocabulary is in `docs/data/camp-record-spec.md`.
 
 ## Data model
 
 ```mermaid
 erDiagram
-    camps ||--o{ locations : "runs at"
+    providers ||--o{ camps : runs
     camps ||--o{ sessions : offers
     locations ||--o{ sessions : hosts
+    sessions ||--o{ session_options : "attended as"
     households ||--o{ household_members : "has"
     households ||--o{ children : "has"
     households ||--o{ plan_entries : owns
@@ -49,7 +52,7 @@ erDiagram
 
 **Two halves with different rules:**
 
-- **Catalog** (`camps`, `locations`, `sessions`, `school_calendars`, `school_closures`) — world-readable, writable only by the service role. Keeping the public half out of the policy surface keeps the policies that matter small enough to reason about.
+- **Catalog** (`providers`, `camps`, `locations`, `sessions`, `session_options`, `school_calendars`, `school_closures`) — world-readable, writable only by the service role. Searched through one function, `search_sessions()`, which runs as the caller so RLS applies. (CAM-27's second PR limits the public to verified rows.) Keeping the public half out of the policy surface keeps the policies that matter small enough to reason about.
 - **Household** (`households`, `household_members`, `children`, `plan_entries`) — RLS-protected, resolved through `is_household_member()`. ADR-0004.
 
 `children` holds a display name, an integer age, and a grade. **Nothing else, by design and by schema** — read ADR-0006 before altering that table.
@@ -93,6 +96,11 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `docs/DESIGN.md` | Visual language — tokens, card anatomy, state signals, copy. Proposed, not locked. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, `school_closures`, PostGIS, `btree_gist`, catalog RLS |
+| `supabase/migrations/…_catalog_shape.sql` | The provider → camp → session shape (CAM-27): `providers`, `session_options`, standalone locations with `find_location_duplicates()`, the seven categories, `details` and its vocabulary (`pg_jsonschema`), `closed_dates`, and `search_sessions()` with its indexes |
+| `supabase/seed.sql` | An invented local catalog covering the shape. Loaded by `pnpm supabase:reset`. No real camps (ADR-0010). |
+| `src/lib/db/types.ts` | Generated from the local schema by `pnpm db:types`. Never hand-edited. |
+| `src/lib/db/details.ts` | The one typed reader of `details` (ADR-0017 §5). |
+| `src/lib/db/enum-mirrors.ts` | Compile-time locks between the planner's enums and the database domains they mirror. |
 | `supabase/migrations/…_source_documents.sql` | The private `camp-sources` bucket holding saved flyers, PDFs and screenshots (ADR-0012) |
 | `supabase/migrations/…_households.sql` | `households`, `household_members`, `children`, `plan_entries`, `is_household_member()`, household RLS, and `create_household()` — the only path to a household (ADR-0011) |
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |

@@ -1,40 +1,64 @@
 # Camp record spec
 
-The field-by-field definition of a catalog record, what counts as verified, and what must never be stored. **Read this before entering camp data or writing code that touches `camps`, `locations`, or `sessions`.**
+The field-by-field definition of a catalog record, what counts as verified, and what must never be stored. **Read this before entering camp data or writing code that touches `providers`, `camps`, `locations`, `sessions` or `session_options`.**
 
-The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it.
+The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`; the numbered decisions it cites are CAM-27's.
 
-> **This spec describes the real catalog schema** — the one in `supabase/migrations/20260914000100_catalog.sql`, not yet applied to a live Supabase project. It does **not** describe `src/lib/catalog/` (CAM-1), a separate, provisional TypeScript mock model built before this schema existed. Three concrete differences to know about until a schema-design ticket reconciles them:
->
-> - This spec says **a camp is an organization**. CAM-1 splits that into `Provider` (the organization) and `Camp` (a named program the provider runs, like "Junior Mini Tennis Camp") — the ticket's own AC asked for that shape.
-> - This spec's `sessions.category` uses the schema's nine-value `camp_category` enum. CAM-1's `Category` is a different, six-value enum (`sports`, `stem`, `arts`, `outdoors`, `academic`, `faith-based`), per its own AC.
-> - This spec requires `sessions.name`. CAM-1's `Session` has no `name` — a session's identity comes from its `Camp` instead.
->
-> CAM-1 also carries none of this spec's provenance fields (`source_url`, `verified_at`, …) — out of scope for that ticket by design. Read this spec as the target for the real schema, not as documentation of what's in `src/lib/catalog/` today.
+> **This spec does not describe `src/lib/catalog/`** (CAM-1, CAM-42), the provisional TypeScript mock the Find camps page still reads. The mock was the tool for making the decisions below and is not reshaped to match them: CAM-28 imports it as drafts and deletes it. Read this spec as the schema, not as documentation of the mock.
 
 ---
 
 ## The shape
 
-**A camp is an organization. A session is a dated offering.** A parent shops for "the week of July 12", not for an organization, so the directory searches sessions. One camp has many sessions, possibly at several locations.
+**A provider is an organization. A camp is a program it runs. A session is a dated offering of that program** (decision 8). A parent shops for "the week of July 12", not for an organization, so the directory searches sessions. acac's twelve themed weeks are one camp, "acac Summer Camp", with twelve sessions, each carrying its theme.
 
 ```
-camps ──< locations ──< sessions
-  └──────────────────────┘
+providers ──< camps ──< sessions ──< session_options
+                           >──
+                        locations   (shared: any camp's sessions can point at one)
 ```
 
-Entering a new provider means: one `camps` row, at least one `locations` row, then one `sessions` row per dated offering. A camp with eight weeks of day camp and a separate overnight week is **nine** session rows, not one.
+Entering a new organization means: one `providers` row, one `camps` row per program, a `locations` row for each site that doesn't exist yet, then one `sessions` row per dated offering with one to three `session_options`. A program with eight weeks of day camp is **eight** session rows, not one.
 
 ---
+
+## Scope: what gets listed
+
+**A session meets every weekday of its date range** (decision 1). Meeting days are not modelled.
+
+- An offering that meets on some weekdays only — a weekly class, Tue/Thu afternoons — is **split into sessions that do meet every weekday of their range, or not listed.** Entered as one long session it would show as weeks of daily coverage.
+- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. Today `findCatalogInconsistencies` flags it in the TypeScript mock only; the database's approval check gains the same flag with CAM-27's review gate. Until then, check it by eye.
+- Weekdays inside the range the camp is shut (a Juneteenth closure) go in `closed_dates`, not in a split.
+
+**A session falls inside the workday** (decision 11): a full day, a morning or an afternoon on a weekday.
+
+- **Evening and weekend offerings are not listed** (a Friday night out, evening clinics).
+- **On-demand days are not recorded at all** ("runs if five campers sign up", possible snow days).
+- **A camp can exist with no sessions**, so a reviewer can track it, but it doesn't appear on `/camps` until it has dated sessions.
+
+---
+
+## `providers`
+
+| Field | Required | Notes |
+|---|---|---|
+| `name` | yes | The organization's own name, spelled the way they spell it. |
+| `website_url` | no | The organization's home page, when it has one. Many small providers do not. |
+| `phone`, `email` | no | Only if published publicly. |
+| `source_url` / `source_document_path` | **one of these two** | Same rule as a camp. |
+| `verified_at`, `verified_by` | yes | Same rule as a camp. |
 
 ## `camps`
 
 | Field | Required | Notes |
 |---|---|---|
-| `name` | yes | The organization's own name, spelled the way they spell it. |
+| `provider_id` | yes | The organization that runs it. |
+| `name` | yes | The program's own name: "Junior Mini Tennis Camp", "acac Summer Camp". |
 | `summary` | no | **A short description we wrote.** ⛔ Never paste the camp's marketing copy — that is someone else's copyrighted text in a public repo (ADR-0010). Two sentences of plain fact is the target. |
-| `website_url` | no | The organization's home page, when it has one. Many small camps do not. |
-| `phone`, `email` | no | Only if published publicly by the camp. |
+| `categories` | yes | One or more of `day_camp`, `sports`, `arts`, `stem`, `outdoors`, `academic`, `faith_based` (decision 9). Every session of the program shares them. **`day_camp` is for a general program with varied activities, and stands alone.** A program whose point is a subject gets that subject. `arts` covers dance, theater and music. |
+| `registration_url` | **one of these two** | Where the parent goes to register, for every session of the program (decision 10). **Campout never handles registration or payment.** |
+| `registration_note` | **one of these two** | How to register when there is no link: "paper form, mail by March 1", "call the parish office". |
+| `details` | no | See **`details`** below. |
 | `source_url` | **one of these two** | The exact page the facts came from. Not the home page — the page with the sessions on it. |
 | `source_document_path` | **one of these two** | A file in the `camp-sources` bucket: a saved PDF, a photo of a paper flyer, a screenshot of a Facebook post. Use this whenever the facts did not come from a durable URL. |
 | `verified_at` | yes | When a human last confirmed these facts. |
@@ -44,12 +68,17 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 
 ## `locations`
 
+**A location belongs to no camp** (decision 7). acac Midlothian hosts fourteen camps, and a public park hosts several organizations: one row per site means one map pin, one "near me" result, and one place to fix an address.
+
 | Field | Required | Notes |
 |---|---|---|
-| `label` | yes | How the camp refers to the site ("Main campus", "Fall Line Park"). |
+| `label` | yes | The venue's own name ("Woodlake Community Center"). |
 | `street`, `city`, `state`, `postal_code` | yes | The physical site, not a mailing address. A PO box is not a location. |
 | `district` | no | The school district the site sits in, where it matters. |
 | `point` | yes | Geocoded **once, at verification time** (ADR-0007). |
+| `address_key` | derived | Street and postal code, lower-cased, punctuation collapsed. Generated; never written. |
+
+**Look for the site before adding it.** `find_location_duplicates(id)` lists other locations with the same `address_key` or a pin within about 30 m (decision 17). Duplicates are caught at review, not blocked: real venues share an address, so there is no unique index. Merge a true duplicate by pointing its sessions at the survivor.
 
 **Confirm the pin, not just the address.** A geocoder that lands on the wrong side of a highway produces a wrong distance, and distance is how parents filter. Look at the map before saving.
 
@@ -57,22 +86,60 @@ Entering a new provider means: one `camps` row, at least one `locations` row, th
 
 | Field | Required | Notes |
 |---|---|---|
-| `name` | yes | The camp's own name for the session ("Junior Explorers, Week 3"). |
-| `category` | yes | One of the `camp_category` enum values. Pick the one a parent would filter by. |
-| `start_date`, `end_date` | yes | **Calendar dates**, `YYYY-MM-DD`. Inclusive. A Monday–Friday week ends Friday, not Saturday. |
-| `daily_start`, `daily_end` | yes | Wall-clock. The core day, excluding extended care. |
-| `before_care_start`, `after_care_end` | no | Only when the camp actually offers it. Leaving these null means "not offered", which is different from "we did not check" — if you did not check, the record is not verified. |
-| `min_age`, `max_age` | no | Integer years, as the camp states them. |
-| `min_grade`, `max_grade` | no | `-1` is pre-K, `0` is kindergarten. |
-| `price_cents` | no | ⛔ **Integer cents, never a float.** $325 is `32500`. |
-| `price_note` | no | Everything the number cannot carry: member pricing, sibling discount, sliding scale, deposit terms. |
-| `registration_url` | **one of these two** | Where the parent goes to register. **Campout never handles registration or payment.** |
-| `registration_note` | **one of these two** | How to register when there is no link: "paper form, mail by March 1", "call the parish office". |
+| `camp_id` | yes | The program this is a dated offering of. |
+| `location_id` | yes | **One main location** (decision 6). Days elsewhere go in `details.other_days`. The planner's drop-off distance check uses this one only. |
+| `theme` | no | The week's theme, when the program has them ("Space Week"). |
+| `start_date`, `end_date` | yes | **Calendar dates**, `YYYY-MM-DD`. Inclusive. A Monday–Friday week ends Friday, not Saturday. The session meets every weekday in between (see **Scope**). |
+| `closed_dates` | no | Weekdays inside the range the camp is shut (decision 19). Each must fall within the range. Coverage subtracts them. |
+| `min_age`, `max_age` | no | Integer years: the child's age **on the session's first day** (decision 5). A different stated cutoff ("age by Sept 1") goes in the camp's `details`. |
+| `min_grade`, `max_grade` | no | `-1` is pre-K, `0` is kindergarten. The grade of the school year the session belongs to, **summer counting toward the coming year**: "rising 5th" and "entering Fall 2026, grade 5" are both 5 for summer 2026. A December holiday day uses the current grade. Convert other phrasings ("completed 4th") and keep the camp's wording in `details.eligibility_wording`. |
 | `capacity_note` | no | Waitlist status, "fills in January", lottery. |
-| `verified_at`, `verified_by` | yes | Per-session, because sessions change independently of the organization. |
+| `details` | no | See **`details`** below. |
+| `verified_at`, `verified_by` | yes | Per-session, because sessions change independently of the program. |
 | `source_url` / `source_document_path` | **one of these two** | Same rule as a camp. Per-session, because sessions change independently. |
 
-**Constraints the database enforces**, so you will hit them rather than silently storing something wrong: `end_date >= start_date`, `daily_end > daily_start`, `max_age >= min_age`, `price_cents >= 0`.
+**Age and grade are filter-only**, optional, and independent — never derive one from the other. Campout doesn't book camps, so a borderline match isn't hidden; the camp's own registration makes the final call.
+
+## `session_options`
+
+**One to three ways to attend a session** (decision 3): a `full_day`, a `morning` and/or an `afternoon`, at most one of each. A full day, or a morning plus an afternoon, covers the week.
+
+| Field | Required | Notes |
+|---|---|---|
+| `kind` | yes | `full_day`, `morning` or `afternoon`. |
+| `price_cents` | no | ⛔ **Integer cents, never a float.** $325 is `32500`. **The price of the session as dated** (decision 2): a week's price for a week, a day's for a day, four days' for a four-day week. There is no price unit. |
+| `price_note` | no | What the number can't carry. **A time-limited discount goes here**, never in the price ("$329 if booked by May 31"), so the shown price doesn't change when a deadline passes. |
+| `daily_start`, `daily_end` | no | Wall-clock. The option's day as the camp states it. **Both or neither.** Never filled with a default: unknown hours show as "Hours not stated". |
+| `earliest_dropoff`, `latest_pickup` | no | Care (decision 4), whether included (an 8–9 check-in) or charged (a $10 early drop-off). **Blank means none is offered — not "didn't check"**; if you didn't check, the record is not verified. Any fee goes in `details.care_fees`. A camp "open 7–6" records 7–6 as its day, with no drop-off or pickup. They may be filled while the hours are blank, when that's all the camp states. |
+| `details` | no | See **`details`** below. |
+
+**Constraints the database enforces**, so you will hit them rather than silently storing something wrong: `end_date >= start_date`, every closed date inside the range, `max_age >= min_age`, one option per kind, `price_cents >= 0`, hours in pairs with `daily_end > daily_start`, `earliest_dropoff < daily_start`, `latest_pickup > daily_end`, every camp with at least one category and `day_camp` alone, and every camp reachable for registration.
+
+## `details`
+
+Facts a parent reads but the app never computes with (decision 12, ADR-0017 §5). `jsonb`, checked on every write against a fixed vocabulary; **an unknown key is refused.** The app reads it through one typed parser, `src/lib/db/details.ts`. **Facts only, never the camp's own wording** — the one exception is `eligibility_wording`, kept so a reviewer can see what was converted.
+
+| On | Key | Shape |
+|---|---|---|
+| camp | `activities` | Short tags, up to 40 characters each: `["swimming", "field games"]`. |
+| camp | `discounts` | A list of `{kind, amount_cents or percent_off, deadline?}`. `kind` is `early_registration`, `sibling`, `multi_week` or `member`. Exactly one of the two amounts. |
+| camp | `membership_required` | `{name, price_cents?, period?}`, `period` being `month` or `year`. |
+| camp | `skill_required` | Our short summary: "Swims one length unassisted". |
+| camp | `eligibility_wording` | The camp's own phrasing when it was converted (decision 5): "completed 4th grade", "age by Sept 1". |
+| camp | `lunch` | `{provision, price_cents?}`: `included`, `sold_separately` (with its price) or `bring_own`. |
+| camp | `policies` | Our summaries of `cancellation`, `switching_weeks` and `payment`; at least one. |
+| camp | `financial_aid` | `true` or `false`. |
+| camp | `registration_opens` | A `YYYY-MM-DD` date. |
+| session | `field_trips` | A list of `{destination, min_grade?, max_grade?}`. |
+| session | `other_days` | A list of `{date, location}` for days away from the main location (decision 6), shown on the card: "Thu Jun 25 at SwimRVA Meadowbrook (3700 Cogbill Rd)". |
+| option | `daily_rate` | `{price_cents}`: a day rate beside a longer session's price (decision 2). |
+| option | `care_fees` | `{drop_off?, pickup?}`, each `{price_cents, per}` with `per` being `day` or `session`. |
+
+**Deliberately left out:** staff ratios and licensing, which read as quality or safety signals (we list camps, we don't vet them), and marketing touches like parent showings. **A key becomes a column as soon as the app filters or sorts by it.** Changing the vocabulary is a migration that replaces the schema function, with the parser changed in the same commit.
+
+## Searching
+
+`search_sessions(window_start, window_end, wanted_categories, max_price_cents)` is the directory's one search (decision 18). It returns one row per session overlapping the window, with `from_price_cents`: its lowest option price. A camp matches when it holds **any** wanted category; a session matches the price when **any** option is at or under it. Every argument is optional. It runs as the caller, so row-level security applies to everything it reads.
 
 ## `school_calendars` and `school_closures`
 

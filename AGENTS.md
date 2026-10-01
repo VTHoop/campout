@@ -142,7 +142,7 @@ How we write code, as distinct from the gates above that catch us not doing so.
   - The browser-only form-fill vault lives in `src/lib/vault/` and its types are **never imported by server code**; a `server-only` import guard makes a mistake a build error rather than a leak (ADR-0006).
   - A `Camp` read model with no `verifiedAt` cannot be constructed, so nothing unverified can reach a page (Product Rules → Data provenance).
 - **Refuse rather than guess.** A record that is internally inconsistent is a bug, not an input — throw. Never default past it, optional-chain around it, or substitute a placeholder. A camp session that renders but is wrong is worse than a loud failure, because a parent plans their summer around it and may pay a non-refundable deposit. A session whose `endDate` precedes its `startDate`, or whose district calendar is missing for the planning year, must throw rather than render. **The one sanctioned exception** is a summer whose following school year is unpublished: it resolves to an estimated first day back, marked `basis: estimated` with its rule, rather than throwing (ADR-0014). Dates past that estimate still throw.
-- **One layer owns a domain; every mirror is guard-locked.** The **database is the source of truth** for anything persisted — the generated types in `src/lib/db/types.ts` come from the schema, never hand-written. Where `packages/planner` needs one of those domains, tie its enum to the generated type with a compile-time `AssertEqual` guard so the two cannot drift.
+- **One layer owns a domain; every mirror is guard-locked.** The **database is the source of truth** for anything persisted — the generated types in `src/lib/db/types.ts` come from the schema, never hand-written. Where `packages/planner` needs one of those domains, tie its enum to the generated type with a compile-time `Locked<SameSet<…>>` line in `src/lib/db/enum-mirrors.ts` so the two cannot drift.
 - **Time is data, not ambient.** Every function that reasons about dates takes the date it needs as a parameter. **⛔ NEVER call `new Date()` with no argument inside `packages/planner`.** Related rules, all learned from this problem domain:
   - **Camp dates are calendar dates, not instants.** Store `date` in Postgres and handle as `YYYY-MM-DD` strings. A camp that runs June 15–19 runs those days in Richmond regardless of the reader's timezone; converting to a UTC instant moves it a day for half the country.
   - **Daily hours are wall-clock `time` values**, compared against the household's workday in the same wall-clock space. No timezone math.
@@ -254,7 +254,7 @@ Camp registration forms want emergency contacts, insurance details, physician na
 | Layer | Choice | Notes |
 |---|---|---|
 | App | **Next.js (App Router) + TypeScript** on **Vercel** | Server components fetch camp data with the anon key server-side; route handlers host admin and server-credentialed actions. ADR-0003 |
-| Database | **Supabase Postgres** | The relational core: camps, locations, sessions, school calendars, households, children, plan entries. ADR-0002 |
+| Database | **Supabase Postgres** | The relational core: providers, camps, sessions and their options, locations, school calendars, households, children, plan entries. ADR-0002, ADR-0018 |
 | Geo | **PostGIS** (`geography(Point,4326)`) + GiST index | "Camps within 10 miles of home" is one indexed `ST_DWithin`. ADR-0007 |
 | Auth | **Supabase Auth** (magic link) | No passwords to manage for a family beta. The JWT drives RLS. ADR-0004 |
 | Authorization | **Row Level Security** | The only boundary between households. Tested, not assumed. ADR-0004 |
@@ -267,9 +267,9 @@ Camp registration forms want emergency contacts, insurance details, physician na
 ### Data shape
 Normalized relational, because the domain is relational and a human has to verify it by eye in Supabase's table editor.
 
-**A `camp` is an organization. A `session` is a dated offering.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
+**A `provider` is an organization, a `camp` is a program it runs, and a `session` is a dated offering of that program.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
 
-`camps → locations → sessions` with provenance (`source_url`, `verified_at`, `verified_by`) on camps and sessions. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
+`providers → camps → sessions → session_options`, each session at one standalone, shared `location`, with provenance (evidence, `verified_at`, `verified_by`) on providers, camps and sessions. The field-by-field rules are in `docs/data/camp-record-spec.md`. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
 
 ### Diagrams
 Prefer Mermaid (`flowchart`, `sequenceDiagram`, `erDiagram`, `stateDiagram-v2`). ASCII only for spatial wireframes.
