@@ -312,8 +312,11 @@ alter table sessions
   -- Coverage subtracts them.
   add column closed_dates date[] not null default '{}',
   add column details jsonb not null default '{}',
+  -- The null test is its own clause: `x <= all ('{NULL}')` is NULL, and a
+  -- check constraint passes on NULL.
   add constraint sessions_closed_dates_within
-    check (start_date <= all (closed_dates) and end_date >= all (closed_dates)),
+    check (array_position(closed_dates, null) is null
+           and start_date <= all (closed_dates) and end_date >= all (closed_dates)),
   add constraint sessions_details_vocabulary
     check (jsonb_matches_schema(session_details_schema(), details));
 
