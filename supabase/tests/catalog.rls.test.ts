@@ -35,8 +35,6 @@ const CALENDAR = {
   last_instructional_day: '2100-06-11',
   covers_from: '2099-07-01',
   covers_to: '2100-06-30',
-  verified_at: '2026-09-01T00:00:00Z',
-  verified_by: 'rls-suite',
 };
 
 const CALENDAR_SOURCE = { source_url: 'https://example.test/calendar' };
@@ -134,13 +132,15 @@ describe('provenance is required, but need not be a URL', () => {
     });
   });
 
-  it('rejects a camp with no verifier, however good its source', async () => {
+  // A verifier is recorded by approve_record() alone (ADR-0017 §3). A row that
+  // claims one on its way in is refused, even from the secret key.
+  it('rejects a camp that names its own verifier, however good its source', async () => {
     await withCampAndLocation(async ({ providerId }, admin) => {
       const { error } = await admin
         .from('camps')
-        .insert(campRow(providerId, { name: 'Unverified', verified_by: null }));
+        .insert(campRow(providerId, { name: 'Self-verified', verified_by: 'rls-suite' }));
 
-      expect(error?.code).toBe('23502');
+      expect(error?.code).toBe('42501');
     });
   });
 
@@ -213,15 +213,19 @@ describe('school calendars carry their own provenance', () => {
   });
 
   // The district calendar drives every coverage gap for every family in it, so it
-  // is held to the same verifier requirement as a camp.
-  it('rejects a calendar with no verifier', async () => {
+  // is held to the same verifier rule as a camp: only approval records one.
+  it('rejects a calendar that names its own verifier', async () => {
     try {
-      const { verified_by: _dropped, ...withoutVerifier } = CALENDAR;
       const { error } = await serviceClient()
         .from('school_calendars')
-        .insert({ ...withoutVerifier, source_url: 'https://example.test/calendar' });
+        .insert({
+          ...CALENDAR,
+          ...CALENDAR_SOURCE,
+          verified_at: '2026-09-01T00:00:00Z',
+          verified_by: 'rls-suite',
+        });
 
-      expect(error).not.toBeNull();
+      expect(error?.code).toBe('42501');
     } finally {
       await cleanUpCalendar();
     }

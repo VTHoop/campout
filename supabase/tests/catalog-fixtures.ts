@@ -1,16 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { serviceClient } from './helpers';
+import type { TestUser } from './helpers';
+import { createTestUser, serviceClient } from './helpers';
 
 /**
  * Invented catalog rows for the RLS suite, in the provider → camp → session
  * shape (CAM-27). Each builder takes the ids of the rows it hangs off and any
  * overrides a test needs, so a test states only the one fact it is about.
+ *
+ * Every row is written as a DRAFT: evidence, but no status and no verified_*.
+ * Only approve_record() can make a row verified (ADR-0017 §3); a test that
+ * needs a verified row approves it as a reviewer, through approveChain().
  */
 
 export const PROVENANCE = {
   source_url: 'https://example.test/camp/sessions',
-  verified_at: '2026-09-01T00:00:00Z',
-  verified_by: 'rls-suite',
 };
 
 export const PROVIDER = {
@@ -25,6 +28,7 @@ export const LOCATION = {
   city: 'Richmond',
   postal_code: '23220',
   point: 'SRID=4326;POINT(-77.4360 37.5407)',
+  ...PROVENANCE,
 };
 
 export function campRow(providerId: string, overrides: Record<string, unknown> = {}) {
@@ -108,4 +112,47 @@ export async function withSeededSession(
     const sessionId = await insertId(admin, 'sessions', sessionRow(ids.campId, ids.locationId));
     await assert({ ...ids, sessionId }, admin);
   });
+}
+
+/** A signed-in user listed in `reviewers`, so is_reviewer() is true for their client. */
+export async function createReviewer(label: string): Promise<TestUser> {
+  const user = await createTestUser(label);
+  const { error } = await serviceClient()
+    .from('reviewers')
+    .insert({ user_id: user.id, display_name: `Reviewer ${label}` });
+  if (error) throw new Error(`Could not list ${label} as a reviewer: ${error.message}`);
+  return user;
+}
+
+/** Approve one row as `reviewer`, failing loudly: setup, not the thing under test. */
+export async function approve(
+  reviewer: TestUser,
+  kind: string,
+  id: string,
+  confirmLongSpan = false,
+): Promise<void> {
+  const { error } = await reviewer.client.rpc('approve_record', {
+    record_kind: kind,
+    record_id: id,
+    confirm_long_span: confirmLongSpan,
+  });
+  if (error) throw new Error(`Could not approve ${kind} ${id}: ${error.message}`);
+}
+
+/**
+ * Give the session one option, then approve the whole chain in the only order
+ * the approval function accepts: provider and location, then the camp, then
+ * the session. Returns the option's id.
+ */
+export async function approveChain(
+  reviewer: TestUser,
+  ids: SeededSession,
+  admin: SupabaseClient,
+): Promise<string> {
+  const optionId = await insertId(admin, 'session_options', optionRow(ids.sessionId));
+  await approve(reviewer, 'provider', ids.providerId);
+  await approve(reviewer, 'location', ids.locationId);
+  await approve(reviewer, 'camp', ids.campId);
+  await approve(reviewer, 'session', ids.sessionId);
+  return optionId;
 }

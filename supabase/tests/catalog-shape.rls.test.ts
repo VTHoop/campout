@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   campRow,
+  createReviewer,
   insertId,
   LOCATION,
   optionRow,
@@ -46,13 +47,17 @@ describe('providers', () => {
  * delete matches no rows and reports no error, so the row is read back.
  */
 let parent: TestUser;
+// Every fixture row is a draft, which only a reviewer can read (ADR-0017 §2).
+// Tests about search and duplicate logic, not visibility, run as one.
+let reviewer: TestUser;
 
 beforeAll(async () => {
   parent = await createTestUser('catalog-shape-parent');
+  reviewer = await createReviewer('catalog-shape-reviewer');
 });
 
 afterAll(async () => {
-  await deleteTestUsers([parent]);
+  await deleteTestUsers([parent, reviewer]);
 });
 
 describe.each([
@@ -213,15 +218,16 @@ async function withExtraLocations(
   });
 }
 
-async function duplicatesOf(admin: SupabaseClient, target: string): Promise<string[]> {
-  const { data, error } = await admin.rpc('find_location_duplicates', { target_id: target });
+async function duplicatesOf(_admin: SupabaseClient, target: string): Promise<string[]> {
+  const { data, error } = await reviewer.client.rpc('find_location_duplicates', {
+    target_id: target,
+  });
   expect(error).toBeNull();
   return ((data ?? []) as { id: string }[]).map((row) => row.id);
 }
 
 describe('find_location_duplicates', () => {
-  // A reviewer's tool: signed-in users may call it (PR 2 narrows that to
-  // reviewers), anonymous visitors may not. 42501 is insufficient_privilege.
+  // A reviewer's tool, refused to everyone else. 42501 is insufficient_privilege.
   it('refuses an anonymous caller', async () => {
     await withCampAndLocation(async ({ locationId }) => {
       const { error } = await anonClient().rpc('find_location_duplicates', {
@@ -231,9 +237,18 @@ describe('find_location_duplicates', () => {
     });
   });
 
-  it('lets a signed-in user call it', async () => {
+  it('refuses a signed-in user who is not a reviewer', async () => {
     await withCampAndLocation(async ({ locationId }) => {
       const { error } = await parent.client.rpc('find_location_duplicates', {
+        target_id: locationId,
+      });
+      expect(error?.code).toBe('42501');
+    });
+  });
+
+  it('lets a reviewer call it', async () => {
+    await withCampAndLocation(async ({ locationId }) => {
+      const { error } = await reviewer.client.rpc('find_location_duplicates', {
         target_id: locationId,
       });
       expect(error).toBeNull();
@@ -518,7 +533,7 @@ interface SearchRow {
 }
 
 async function search(args: Record<string, unknown>): Promise<SearchRow[]> {
-  const { data, error } = await anonClient().rpc('search_sessions', {
+  const { data, error } = await reviewer.client.rpc('search_sessions', {
     window_start: '2099-06-01',
     window_end: '2099-08-31',
     ...args,
