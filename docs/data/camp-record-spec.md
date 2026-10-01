@@ -2,7 +2,7 @@
 
 The field-by-field definition of a catalog record, what counts as verified, and what must never be stored. **Read this before entering camp data or writing code that touches `providers`, `camps`, `locations`, `sessions` or `session_options`.**
 
-The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27) on top of `20260914000100_catalog.sql`; the numbered decisions it cites are CAM-27's.
+The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`; the numbered decisions it cites are CAM-27's.
 
 > **This spec does not describe `src/lib/catalog/`** (CAM-1, CAM-42), the provisional TypeScript mock the Find camps page still reads. The mock was the tool for making the decisions below and is not reshaped to match them: CAM-28 imports it as drafts and deletes it. Read this spec as the schema, not as documentation of the mock.
 
@@ -27,7 +27,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 **A session meets every weekday of its date range** (decision 1). Meeting days are not modelled.
 
 - An offering that meets on some weekdays only — a weekly class, Tue/Thu afternoons — is **split into sessions that do meet every weekday of their range, or not listed.** Entered as one long session it would show as weeks of daily coverage.
-- A session **spanning more than two weeks** is flagged by `findCatalogInconsistencies` for the reviewer to confirm before approving. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date.
+- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. Today `findCatalogInconsistencies` flags it in the TypeScript mock only; the database's approval check gains the same flag with CAM-27's review gate. Until then, check it by eye.
 - Weekdays inside the range the camp is shut (a Juneteenth closure) go in `closed_dates`, not in a split.
 
 **A session falls inside the workday** (decision 11): a full day, a morning or an afternoon on a weekday.
@@ -110,7 +110,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 | `price_cents` | no | ⛔ **Integer cents, never a float.** $325 is `32500`. **The price of the session as dated** (decision 2): a week's price for a week, a day's for a day, four days' for a four-day week. There is no price unit. |
 | `price_note` | no | What the number can't carry. **A time-limited discount goes here**, never in the price ("$329 if booked by May 31"), so the shown price doesn't change when a deadline passes. |
 | `daily_start`, `daily_end` | no | Wall-clock. The option's day as the camp states it. **Both or neither.** Never filled with a default: unknown hours show as "Hours not stated". |
-| `earliest_dropoff`, `latest_pickup` | no | Care (decision 4), whether included (an 8–9 check-in) or charged (a $10 early drop-off). **Blank means none is offered — not "didn't check"**; if you didn't check, the record is not verified. Any fee goes in `details.care_fees`. A camp "open 7–6" records 7–6 as its day, with no drop-off or pickup. |
+| `earliest_dropoff`, `latest_pickup` | no | Care (decision 4), whether included (an 8–9 check-in) or charged (a $10 early drop-off). **Blank means none is offered — not "didn't check"**; if you didn't check, the record is not verified. Any fee goes in `details.care_fees`. A camp "open 7–6" records 7–6 as its day, with no drop-off or pickup. They may be filled while the hours are blank, when that's all the camp states. |
 | `details` | no | See **`details`** below. |
 
 **Constraints the database enforces**, so you will hit them rather than silently storing something wrong: `end_date >= start_date`, every closed date inside the range, `max_age >= min_age`, one option per kind, `price_cents >= 0`, hours in pairs with `daily_end > daily_start`, `earliest_dropoff < daily_start`, `latest_pickup > daily_end`, every camp with at least one category and `day_camp` alone, and every camp reachable for registration.

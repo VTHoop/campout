@@ -20,7 +20,7 @@ See `docs/adr/` for the "why" behind each choice.
 
 ## The two shapes that matter
 
-**A provider is an organization, a camp is a program it runs, and a session is a dated offering of that program** (CAM-27). The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available. A session offers one to three time options (`session_options`: full day, morning, afternoon), each with its own price, hours and care times, and meets at one standalone location that any camp's sessions can share.
+**A provider is an organization, a camp is a program it runs, and a session is a dated offering of that program** (ADR-0018). The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available. A session offers one to three time options (`session_options`: full day, morning, afternoon), each with its own price, hours and care times, and meets at one standalone location that any camp's sessions can share.
 
 **Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `providers`, `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
 

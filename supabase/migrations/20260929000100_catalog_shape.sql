@@ -1,8 +1,8 @@
 -- The catalog's shape (CAM-27, PR 1 of 2).
 --
 -- Reshapes 20260914000100_catalog.sql around what real camps turned out to
--- need (acac, SwimRVA, SCOR, Richmond Ballet — CAM-42). Each change names the
--- CAM-27 decision it records; the ticket carries the reasoning in full.
+-- need (acac, SwimRVA, SCOR, Richmond Ballet — CAM-42). ADR-0018 records the
+-- shape and why; each change below names the CAM-27 decision it records.
 --
 --   provider → camp → session (decision 8). A PROVIDER is the organization, a
 --   CAMP is a program it runs, a SESSION is a dated offering of that program.
@@ -335,6 +335,11 @@ create index sessions_dates_idx on sessions
 -- Care (decision 4): earliest drop-off and latest pickup, whether the camp
 -- includes it or charges for it. Null means none is offered — not "didn't
 -- check". Any fee goes in details.care_fees.
+--
+-- Drop-off and pickup may be stated while the hours are not ("early drop-off
+-- from 7:30", day unstated), on purpose: each is recorded as the camp states
+-- it. The ordering checks apply only once the hours are known; against a null
+-- hour they pass.
 create table session_options (
   id            uuid primary key default gen_random_uuid(),
   session_id    uuid        not null references sessions (id) on delete cascade,
