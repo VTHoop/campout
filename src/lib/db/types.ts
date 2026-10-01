@@ -1092,8 +1092,12 @@ export type Database = {
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
       provider_is_public: { Args: { target: string }; Returns: boolean }
-      refuse_if_verified_parent: {
-        Args: { parent_id: string; parent_table: string }
+      refuse_if_calendar_verified: {
+        Args: { target: string }
+        Returns: undefined
+      }
+      refuse_if_session_verified: {
+        Args: { target: string }
         Returns: undefined
       }
       reviewer_edit: {
