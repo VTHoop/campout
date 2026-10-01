@@ -122,6 +122,45 @@ async function withDraftCalendar(
   }
 }
 
+type ApprovedSession = SeededSession & { optionId: string };
+
+/** A session with one option, approved up its whole chain by the reviewer. */
+async function withApprovedSession(
+  assert: (ids: ApprovedSession, admin: SupabaseClient) => Promise<void>,
+): Promise<void> {
+  await withSeededSession(async (ids, admin) => {
+    const optionId = await approveChain(reviewer, ids, admin);
+    await assert({ ...ids, optionId }, admin);
+  });
+}
+
+type CalendarIds = { calendarId: string; closureId: string };
+
+/** A calendar with one closure, approved by the reviewer. */
+async function withApprovedCalendar(
+  assert: (ids: CalendarIds, admin: SupabaseClient) => Promise<void>,
+): Promise<void> {
+  await withDraftCalendar(async (ids, admin) => {
+    await approve(reviewer, 'school_calendar', ids.calendarId);
+    await assert(ids, admin);
+  });
+}
+
+/** reviewer_edit as the reviewer, returning the error (or null). */
+async function editAsReviewer(kind: string, id: string, changes: Record<string, unknown>) {
+  const { error } = await reviewer.client.rpc('reviewer_edit', {
+    record_kind: kind,
+    record_id: id,
+    changes,
+  });
+  return error;
+}
+
+async function readRow(admin: SupabaseClient, table: string, id: string) {
+  const { data } = await admin.from(table).select('*').eq('id', id).single();
+  return data as Record<string, unknown> | null;
+}
+
 // ---------------------------------------------------------------- visibility
 
 describe.each(NON_REVIEWERS)('drafts are invisible to %s', (_who, clientFor) => {
@@ -175,9 +214,8 @@ describe('reviewers', () => {
 
 describe('the verified chain', () => {
   it('shows a fully approved session and its option to an anonymous visitor', async () => {
-    await withSeededSession(async (ids, admin) => {
-      const optionId = await approveChain(reviewer, ids, admin);
-      for (const [table, id] of chainRows(ids, optionId)) {
+    await withApprovedSession(async (ids) => {
+      for (const [table, id] of chainRows(ids, ids.optionId)) {
         expect(await isVisible(anonClient(), table, id), table).toBe(true);
       }
     });
@@ -190,13 +228,12 @@ describe('the verified chain', () => {
     ['provider', 'providers', 'providerId'],
     ['location', 'locations', 'locationId'],
   ] as const)('hides a verified session whose %s is back in draft', async (_kind, table, key) => {
-    await withSeededSession(async (ids, admin) => {
-      const optionId = await approveChain(reviewer, ids, admin);
+    await withApprovedSession(async (ids, admin) => {
       const { error } = await admin.from(table).update({ status: 'draft' }).eq('id', ids[key]);
       expect(error).toBeNull();
 
       expect(await isVisible(anonClient(), 'sessions', ids.sessionId)).toBe(false);
-      expect(await isVisible(anonClient(), 'session_options', optionId)).toBe(false);
+      expect(await isVisible(anonClient(), 'session_options', ids.optionId)).toBe(false);
     });
   });
 
@@ -204,15 +241,13 @@ describe('the verified chain', () => {
   // its date and category indexes work); these keep it in step with the
   // policies.
   it('finds a fully approved session through search, as an anonymous visitor', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
+    await withApprovedSession(async (ids) => {
       expect(await searchHits(anonClient(), ids.sessionId)).toBe(true);
     });
   });
 
   it('drops a session from search once its camp is back in draft', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
+    await withApprovedSession(async (ids, admin) => {
       await admin.from('camps').update({ status: 'draft' }).eq('id', ids.campId);
       expect(await searchHits(anonClient(), ids.sessionId)).toBe(false);
     });
@@ -388,75 +423,58 @@ describe('the guard trigger', () => {
     });
   });
 
-  it('refuses a direct edit to a verified session’s facts', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await admin
-        .from('sessions')
-        .update({ end_date: '2027-07-15' })
-        .eq('id', ids.sessionId);
-      expect(error?.code).toBe('42501');
-    });
-  });
-
+  // Every direct secret-key write that would change what parents see of a
+  // verified session. Archive, don't delete: a delete unpublishes as surely as
+  // an edit.
   it.each([
     [
+      'an edit to its facts',
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('sessions').update({ end_date: '2027-07-15' }).eq('id', ids.sessionId),
+    ],
+    [
       'an edit to one of its options',
-      (admin: SupabaseClient, optionId: string) =>
-        admin.from('session_options').update({ price_cents: 1 }).eq('id', optionId),
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('session_options').update({ price_cents: 1 }).eq('id', ids.optionId),
     ],
     [
       'removing one of its options',
-      (admin: SupabaseClient, optionId: string) =>
-        admin.from('session_options').delete().eq('id', optionId),
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('session_options').delete().eq('id', ids.optionId),
+    ],
+    [
+      'a new option',
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('session_options').insert(optionRow(ids.sessionId, { kind: 'afternoon' })),
+    ],
+    [
+      'deleting it',
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('sessions').delete().eq('id', ids.sessionId),
+    ],
+    [
+      'deleting its provider',
+      (admin: SupabaseClient, ids: ApprovedSession) =>
+        admin.from('providers').delete().eq('id', ids.providerId),
     ],
   ])('refuses %s once a session is verified', async (_case, attempt) => {
-    await withSeededSession(async (ids, admin) => {
-      const optionId = await approveChain(reviewer, ids, admin);
-      const { error } = await attempt(admin, optionId);
-      expect(error?.code).toBe('42501');
-    });
-  });
-
-  it('refuses a new option on a verified session', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await admin
-        .from('session_options')
-        .insert(optionRow(ids.sessionId, { kind: 'afternoon' }));
-      expect(error?.code).toBe('42501');
-    });
-  });
-
-  it('refuses a direct edit to a closure of a verified calendar', async () => {
-    await withDraftCalendar(async ({ calendarId, closureId }, admin) => {
-      await approve(reviewer, 'school_calendar', calendarId);
-      const { error } = await admin
-        .from('school_closures')
-        .update({ end_date: '2098-09-08' })
-        .eq('id', closureId);
-      expect(error?.code).toBe('42501');
-    });
-  });
-
-  // Archive, don't delete: a delete unpublishes as surely as an edit.
-  it.each([
-    ['session', 'sessions', 'sessionId'],
-    ['provider', 'providers', 'providerId'],
-  ] as const)('refuses a secret-key delete of a verified %s', async (_kind, table, key) => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await admin.from(table).delete().eq('id', ids[key]);
+    await withApprovedSession(async (ids, admin) => {
+      const { error } = await attempt(admin, ids);
       expect(error?.code).toBe('42501');
     });
   });
 
   it.each([
     [
+      'an edit to a closure',
+      (admin: SupabaseClient, ids: CalendarIds) =>
+        admin.from('school_closures').update({ end_date: '2098-09-08' }).eq('id', ids.closureId),
+    ],
+    [
       'a new closure',
-      (admin: SupabaseClient, calendarId: string) =>
+      (admin: SupabaseClient, ids: CalendarIds) =>
         admin.from('school_closures').insert({
-          calendar_id: calendarId,
+          calendar_id: ids.calendarId,
           start_date: '2098-11-26',
           end_date: '2098-11-26',
           source_label: 'Holiday',
@@ -464,24 +482,22 @@ describe('the guard trigger', () => {
     ],
     [
       'removing a closure',
-      (admin: SupabaseClient, _calendarId: string, closureId: string) =>
-        admin.from('school_closures').delete().eq('id', closureId),
+      (admin: SupabaseClient, ids: CalendarIds) =>
+        admin.from('school_closures').delete().eq('id', ids.closureId),
     ],
   ])('refuses %s on a verified calendar', async (_case, attempt) => {
-    await withDraftCalendar(async ({ calendarId, closureId }, admin) => {
-      await approve(reviewer, 'school_calendar', calendarId);
-      const { error } = await attempt(admin, calendarId, closureId);
+    await withApprovedCalendar(async (ids, admin) => {
+      const { error } = await attempt(admin, ids);
       expect(error?.code).toBe('42501');
     });
   });
 
   it('lets a verified row be archived', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
+    await withApprovedSession(async ({ sessionId }, admin) => {
       const { error } = await admin
         .from('sessions')
         .update({ status: 'archived' })
-        .eq('id', ids.sessionId);
+        .eq('id', sessionId);
       expect(error).toBeNull();
     });
   });
@@ -505,78 +521,37 @@ describe('the guard trigger', () => {
 // ------------------------------------------------------------- reviewer edit
 
 describe('reviewer_edit', () => {
-  it('applies a fact edit to a verified session and keeps it verified', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: 'session',
-        record_id: ids.sessionId,
-        changes: { theme: 'Ocean Week', end_date: '2027-07-15' },
-      });
-      expect(error).toBeNull();
-
-      const { data } = await admin
-        .from('sessions')
-        .select('theme, end_date, status')
-        .eq('id', ids.sessionId)
-        .single();
-      expect(data).toEqual({ theme: 'Ocean Week', end_date: '2027-07-15', status: 'verified' });
-    });
-  });
-
-  it('edits an option of a verified session', async () => {
-    await withSeededSession(async (ids, admin) => {
-      const optionId = await approveChain(reviewer, ids, admin);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: 'session_option',
-        record_id: optionId,
-        changes: { price_cents: 30000 },
-      });
-      expect(error).toBeNull();
-
-      const { data } = await admin
-        .from('session_options')
-        .select('price_cents')
-        .eq('id', optionId)
-        .single();
-      expect(data?.price_cents).toBe(30000);
-    });
-  });
-
+  // Each edit lands and the row stays verified (decision 13). Options have no
+  // status of their own; their session stays verified.
   it.each([
+    ['session', 'sessions', 'sessionId', { theme: 'Ocean Week', end_date: '2027-07-15' }],
+    ['session_option', 'session_options', 'optionId', { price_cents: 30000 }],
     ['provider', 'providers', 'providerId', { phone: '804-555-0199' }],
     ['camp', 'camps', 'campId', { summary: 'Corrected summary.' }],
     ['location', 'locations', 'locationId', { label: 'Fixture Community Center, east gym' }],
-  ] as const)('edits a verified %s', async (kind, table, key, changes) => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: kind,
-        record_id: ids[key],
-        changes,
+  ] as const)(
+    'edits a verified %s and keeps the chain verified',
+    async (kind, table, key, changes) => {
+      await withApprovedSession(async (ids, admin) => {
+        expect(await editAsReviewer(kind, ids[key], changes)).toBeNull();
+        expect(await readRow(admin, table, ids[key])).toMatchObject(changes);
+        expect(await readRow(admin, 'sessions', ids.sessionId)).toMatchObject({
+          status: 'verified',
+        });
       });
-      expect(error).toBeNull();
-
-      const { data } = await admin.from(table).select('*').eq('id', ids[key]).single();
-      expect(data).toMatchObject({ ...changes, status: 'verified' });
-    });
-  });
+    },
+  );
 
   it.each([
     ['school_calendar', 'school_calendars', 'calendarId', { label: '2098-99b' }],
     ['school_closure', 'school_closures', 'closureId', { common_name: 'Labor Day' }],
   ] as const)('edits a verified calendar’s %s', async (kind, table, key, changes) => {
-    await withDraftCalendar(async (ids, admin) => {
-      await approve(reviewer, 'school_calendar', ids.calendarId);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: kind,
-        record_id: ids[key],
-        changes,
+    await withApprovedCalendar(async (ids, admin) => {
+      expect(await editAsReviewer(kind, ids[key], changes)).toBeNull();
+      expect(await readRow(admin, table, ids[key])).toMatchObject(changes);
+      expect(await readRow(admin, 'school_calendars', ids.calendarId)).toMatchObject({
+        status: 'verified',
       });
-      expect(error).toBeNull();
-
-      const { data } = await admin.from(table).select('*').eq('id', ids[key]).single();
-      expect(data).toMatchObject(changes);
     });
   });
 
@@ -610,8 +585,7 @@ describe('reviewer_edit', () => {
   });
 
   it('refuses a non-reviewer', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
+    await withApprovedSession(async (ids) => {
       const { error } = await parent.client.rpc('reviewer_edit', {
         record_kind: 'session',
         record_id: ids.sessionId,
@@ -627,25 +601,14 @@ describe('reviewer_edit', () => {
     ['its id', { id: '00000000-0000-4000-8000-000000000999' }],
     ['a column it does not have', { colour: 'red' }],
   ])('refuses an edit to %s', async (_case, changes) => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: 'session',
-        record_id: ids.sessionId,
-        changes,
-      });
-      expect(error?.code).toBe('22023');
+    await withApprovedSession(async (ids) => {
+      expect((await editAsReviewer('session', ids.sessionId, changes))?.code).toBe('22023');
     });
   });
 
   it('still applies every check constraint', async () => {
-    await withSeededSession(async (ids, admin) => {
-      await approveChain(reviewer, ids, admin);
-      const { error } = await reviewer.client.rpc('reviewer_edit', {
-        record_kind: 'session',
-        record_id: ids.sessionId,
-        changes: { end_date: '2027-07-01' },
-      });
+    await withApprovedSession(async (ids) => {
+      const error = await editAsReviewer('session', ids.sessionId, { end_date: '2027-07-01' });
       expect(error?.code).toBe('23514');
     });
   });
@@ -733,12 +696,11 @@ let otherFamily: Family;
  * otherwise refuse.
  */
 async function withPlannableSession(
-  assert: (ids: SeededSession & { optionId: string }, admin: SupabaseClient) => Promise<void>,
+  assert: (ids: ApprovedSession, admin: SupabaseClient) => Promise<void>,
 ): Promise<void> {
-  await withSeededSession(async (ids, admin) => {
-    const optionId = await approveChain(reviewer, ids, admin);
+  await withApprovedSession(async (ids, admin) => {
     try {
-      await assert({ ...ids, optionId }, admin);
+      await assert(ids, admin);
     } finally {
       await admin.from('plan_entries').delete().eq('session_id', ids.sessionId);
     }
