@@ -195,6 +195,17 @@ describe('sessions', () => {
     });
   });
 
+  // `start_date <= all ('{NULL}')` is NULL, which a check constraint lets
+  // through, so a blank closed date has to be refused on its own.
+  it('rejects a blank closed date', async () => {
+    await withCampAndLocation(async ({ campId, locationId }, admin) => {
+      const { error } = await admin
+        .from('sessions')
+        .insert(sessionRow(campId, locationId, { closed_dates: ['2027-07-14', null] }));
+      expect(error?.code).toBe('23514');
+    });
+  });
+
   it('defaults to no closed dates', async () => {
     await withSeededSession(async ({ sessionId }, admin) => {
       const { data } = await admin
