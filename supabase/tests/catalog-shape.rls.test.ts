@@ -218,7 +218,7 @@ async function withExtraLocations(
   });
 }
 
-async function duplicatesOf(_admin: SupabaseClient, target: string): Promise<string[]> {
+async function duplicatesOf(target: string): Promise<string[]> {
   const { data, error } = await reviewer.client.rpc('find_location_duplicates', {
     target_id: target,
   });
@@ -262,8 +262,8 @@ describe('find_location_duplicates', () => {
       street: '100  TEST way.',
       point: 'SRID=4326;POINT(-77.4400 37.5500)',
     };
-    await withExtraLocations([respelled], async ({ target, extras }, admin) => {
-      expect(await duplicatesOf(admin, target)).toEqual(extras);
+    await withExtraLocations([respelled], async ({ target, extras }) => {
+      expect(await duplicatesOf(target)).toEqual(extras);
     });
   });
 
@@ -274,8 +274,8 @@ describe('find_location_duplicates', () => {
       street: '102 Test Way',
       point: 'SRID=4326;POINT(-77.4360 37.5409)',
     };
-    await withExtraLocations([nextDoor], async ({ target, extras }, admin) => {
-      expect(await duplicatesOf(admin, target)).toEqual(extras);
+    await withExtraLocations([nextDoor], async ({ target, extras }) => {
+      expect(await duplicatesOf(target)).toEqual(extras);
     });
   });
 
@@ -286,8 +286,8 @@ describe('find_location_duplicates', () => {
       street: '120 Test Way',
       point: 'SRID=4326;POINT(-77.4360 37.5417)',
     };
-    await withExtraLocations([downTheRoad], async ({ target }, admin) => {
-      expect(await duplicatesOf(admin, target)).toEqual([]);
+    await withExtraLocations([downTheRoad], async ({ target }) => {
+      expect(await duplicatesOf(target)).toEqual([]);
     });
   });
 });

@@ -19,6 +19,7 @@ import {
   createHousehold,
   createTestUser,
   deleteTestUsers,
+  isLiveProject,
   runSql,
   serviceClient,
 } from './helpers';
@@ -68,6 +69,16 @@ async function isVisible(client: SupabaseClient, table: string, id: string): Pro
   return (data ?? []).length === 1;
 }
 
+/** Whether search_sessions, over the fixture session's week, returns it to `client`. */
+async function searchHits(client: SupabaseClient, sessionId: string): Promise<boolean> {
+  const { data, error } = await client.rpc('search_sessions', {
+    window_start: '2027-07-12',
+    window_end: '2027-07-16',
+  });
+  expect(error).toBeNull();
+  return (data as { session_id: string }[]).some((row) => row.session_id === sessionId);
+}
+
 /** The chain's rows by table, for a test that checks each one. */
 function chainRows(ids: SeededSession, optionId: string): [string, string][] {
   return [
@@ -105,6 +116,8 @@ async function withDraftCalendar(
     });
     await assert({ calendarId, closureId }, admin);
   } finally {
+    // A verified calendar can't be deleted; put it back to draft first.
+    await admin.from('school_calendars').update({ status: 'draft' }).eq('id', calendarId);
     await admin.from('school_calendars').delete().eq('id', calendarId);
   }
 }
@@ -187,6 +200,24 @@ describe('the verified chain', () => {
     });
   });
 
+  // search_sessions applies the same chain rule itself (it runs as definer, so
+  // its date and category indexes work); these keep it in step with the
+  // policies.
+  it('finds a fully approved session through search, as an anonymous visitor', async () => {
+    await withSeededSession(async (ids, admin) => {
+      await approveChain(reviewer, ids, admin);
+      expect(await searchHits(anonClient(), ids.sessionId)).toBe(true);
+    });
+  });
+
+  it('drops a session from search once its camp is back in draft', async () => {
+    await withSeededSession(async (ids, admin) => {
+      await approveChain(reviewer, ids, admin);
+      await admin.from('camps').update({ status: 'draft' }).eq('id', ids.campId);
+      expect(await searchHits(anonClient(), ids.sessionId)).toBe(false);
+    });
+  });
+
   it('shows an approved calendar and its closures', async () => {
     await withDraftCalendar(async ({ calendarId, closureId }) => {
       await approve(reviewer, 'school_calendar', calendarId);
@@ -226,6 +257,29 @@ describe('approve_record', () => {
       expect(data?.verified_by).toBe('Reviewer catalog-review-reviewer');
     });
   });
+
+  it.each([
+    ['camp', 'P0002'],
+    ['session', 'P0002'],
+    ['provider', 'P0002'],
+  ])('reports a %s that does not exist as missing', async (kind, code) => {
+    const { error } = await reviewer.client.rpc('approve_record', {
+      record_kind: kind,
+      record_id: '00000000-0000-4000-8000-00000000dead',
+    });
+    expect(error?.code).toBe(code);
+  });
+
+  it.each(['session_option', 'school_closure'])(
+    'refuses to approve a %s, which follows its parent',
+    async (kind) => {
+      const { error } = await reviewer.client.rpc('approve_record', {
+        record_kind: kind,
+        record_id: '00000000-0000-4000-8000-00000000dead',
+      });
+      expect(error?.code).toBe('22023');
+    },
+  );
 
   it('refuses a camp whose provider is a draft', async () => {
     await withCampAndLocation(async ({ campId }) => {
@@ -385,6 +439,42 @@ describe('the guard trigger', () => {
     });
   });
 
+  // Archive, don't delete: a delete unpublishes as surely as an edit.
+  it.each([
+    ['session', 'sessions', 'sessionId'],
+    ['provider', 'providers', 'providerId'],
+  ] as const)('refuses a secret-key delete of a verified %s', async (_kind, table, key) => {
+    await withSeededSession(async (ids, admin) => {
+      await approveChain(reviewer, ids, admin);
+      const { error } = await admin.from(table).delete().eq('id', ids[key]);
+      expect(error?.code).toBe('42501');
+    });
+  });
+
+  it.each([
+    [
+      'a new closure',
+      (admin: SupabaseClient, calendarId: string) =>
+        admin.from('school_closures').insert({
+          calendar_id: calendarId,
+          start_date: '2098-11-26',
+          end_date: '2098-11-26',
+          source_label: 'Holiday',
+        }),
+    ],
+    [
+      'removing a closure',
+      (admin: SupabaseClient, _calendarId: string, closureId: string) =>
+        admin.from('school_closures').delete().eq('id', closureId),
+    ],
+  ])('refuses %s on a verified calendar', async (_case, attempt) => {
+    await withDraftCalendar(async ({ calendarId, closureId }, admin) => {
+      await approve(reviewer, 'school_calendar', calendarId);
+      const { error } = await attempt(admin, calendarId, closureId);
+      expect(error?.code).toBe('42501');
+    });
+  });
+
   it('lets a verified row be archived', async () => {
     await withSeededSession(async (ids, admin) => {
       await approveChain(reviewer, ids, admin);
@@ -396,17 +486,20 @@ describe('the guard trigger', () => {
     });
   });
 
-  it('refuses a verified row without its verifier, even with the gate open', () => {
-    expect(() =>
-      runSql(`
+  it.skipIf(isLiveProject())(
+    'refuses a verified row without its verifier, even with the gate open',
+    () => {
+      expect(() =>
+        runSql(`
         begin;
         select set_config('campout.catalog_gate', 'on', true);
         insert into providers (name, source_url, status)
           values ('No verifier', 'https://example.test', 'verified');
         rollback;
       `),
-    ).toThrow(/providers_verified_recorded/);
-  });
+      ).toThrow(/providers_verified_recorded/);
+    },
+  );
 });
 
 // ------------------------------------------------------------- reviewer edit
@@ -448,6 +541,72 @@ describe('reviewer_edit', () => {
         .single();
       expect(data?.price_cents).toBe(30000);
     });
+  });
+
+  it.each([
+    ['provider', 'providers', 'providerId', { phone: '804-555-0199' }],
+    ['camp', 'camps', 'campId', { summary: 'Corrected summary.' }],
+    ['location', 'locations', 'locationId', { label: 'Fixture Community Center, east gym' }],
+  ] as const)('edits a verified %s', async (kind, table, key, changes) => {
+    await withSeededSession(async (ids, admin) => {
+      await approveChain(reviewer, ids, admin);
+      const { error } = await reviewer.client.rpc('reviewer_edit', {
+        record_kind: kind,
+        record_id: ids[key],
+        changes,
+      });
+      expect(error).toBeNull();
+
+      const { data } = await admin.from(table).select('*').eq('id', ids[key]).single();
+      expect(data).toMatchObject({ ...changes, status: 'verified' });
+    });
+  });
+
+  it.each([
+    ['school_calendar', 'school_calendars', 'calendarId', { label: '2098-99b' }],
+    ['school_closure', 'school_closures', 'closureId', { common_name: 'Labor Day' }],
+  ] as const)('edits a verified calendar’s %s', async (kind, table, key, changes) => {
+    await withDraftCalendar(async (ids, admin) => {
+      await approve(reviewer, 'school_calendar', ids.calendarId);
+      const { error } = await reviewer.client.rpc('reviewer_edit', {
+        record_kind: kind,
+        record_id: ids[key],
+        changes,
+      });
+      expect(error).toBeNull();
+
+      const { data } = await admin.from(table).select('*').eq('id', ids[key]).single();
+      expect(data).toMatchObject(changes);
+    });
+  });
+
+  // Each kind's fact columns are written three times in the migration: the
+  // editable_columns() list and reviewer_edit()'s SET and SELECT lists. This
+  // ties the list to the table, so a new column can't be quietly left out.
+  it.skipIf(isLiveProject())('lists every column of each table as a fact, or as maintained', () => {
+    const out = runSql(`
+      with kinds(kind, tbl, maintained) as (values
+        ('provider', 'providers', '{id,status,verified_at,verified_by,created_at,updated_at}'),
+        ('camp', 'camps', '{id,status,verified_at,verified_by,created_at,updated_at}'),
+        ('location', 'locations', '{id,status,verified_at,verified_by,created_at,address_key}'),
+        ('session', 'sessions', '{id,status,verified_at,verified_by,created_at,updated_at}'),
+        ('session_option', 'session_options', '{id,session_id,created_at,updated_at}'),
+        ('school_calendar', 'school_calendars', '{id,status,verified_at,verified_by}'),
+        ('school_closure', 'school_closures', '{id,calendar_id}'))
+      select k.kind || ':' || coalesce(string_agg(c.column_name, ',' order by c.column_name), '')
+      from kinds k
+      left join information_schema.columns c
+        on c.table_schema = 'public' and c.table_name = k.tbl
+       and c.column_name <> all (k.maintained::text[])
+       and c.column_name <> all (editable_columns(k.kind::catalog_record_kind))
+      group by k.kind order by k.kind;
+    `);
+    // Every kind prints "kind:" with nothing after it: no column left unlisted.
+    const unlisted = out
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.includes(':') && !line.endsWith(':'));
+    expect(unlisted).toEqual([]);
   });
 
   it('refuses a non-reviewer', async () => {
@@ -534,9 +693,14 @@ describe('catalog_history', () => {
     });
   });
 
-  it('is readable by reviewers and nobody else', async () => {
+  it.each(NON_REVIEWERS)('shows %s no history at all', async (_who, clientFor) => {
     await withCampAndLocation(async ({ providerId }) => {
-      expect(await historyOf(parent.client, providerId)).toEqual([]);
+      expect(await historyOf(clientFor(), providerId)).toEqual([]);
+    });
+  });
+
+  it('is readable by reviewers', async () => {
+    await withCampAndLocation(async ({ providerId }) => {
       expect((await historyOf(reviewer.client, providerId)).length).toBeGreaterThan(0);
     });
   });
@@ -655,6 +819,16 @@ describe('plans', () => {
         expect(await isVisible(otherParent.client, table, id), `${table} to others`).toBe(false);
         expect(await isVisible(anonClient(), table, id), `${table} to anon`).toBe(false);
       }
+    });
+  });
+
+  // Decision 15's "no longer listed" read is for the family's grid, not the
+  // directory: an archived session they planned is not a search result.
+  it('leaves an archived planned session out of the planner’s search', async () => {
+    await withPlannableSession(async ({ sessionId, optionId }, admin) => {
+      await parent.client.from('plan_entries').insert(planEntry(family, sessionId, optionId));
+      await admin.from('sessions').update({ status: 'archived' }).eq('id', sessionId);
+      expect(await searchHits(parent.client, sessionId)).toBe(false);
     });
   });
 

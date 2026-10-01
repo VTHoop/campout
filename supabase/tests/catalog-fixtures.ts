@@ -79,9 +79,28 @@ export interface SeededCamp {
 }
 
 /**
+ * Put every row a test may have verified back to draft, so it can be deleted:
+ * the guard refuses to delete a verified row (archive, don't delete). A
+ * status-only change is allowed outside the gate.
+ */
+export async function unpublish(
+  admin: SupabaseClient,
+  providerId: string,
+  locationId: string,
+): Promise<void> {
+  const { data: camps } = await admin.from('camps').select('id').eq('provider_id', providerId);
+  const campIds = (camps ?? []).map((camp: { id: string }) => camp.id);
+  await admin.from('sessions').update({ status: 'draft' }).in('camp_id', campIds);
+  await admin.from('camps').update({ status: 'draft' }).in('id', campIds);
+  await admin.from('providers').update({ status: 'draft' }).eq('id', providerId);
+  await admin.from('locations').update({ status: 'draft' }).eq('id', locationId);
+}
+
+/**
  * Stand up a provider, one of its camps and a location, run the assertion, then
- * remove them. Deleting the provider cascades to its camps and their sessions
- * and options, which frees the location to be deleted after them.
+ * remove them. Anything approved goes back to draft first; deleting the
+ * provider then cascades to its camps and their sessions and options, which
+ * frees the location to be deleted after them.
  */
 export async function withCampAndLocation(
   assert: (ids: SeededCamp, admin: SupabaseClient) => Promise<void>,
@@ -95,6 +114,7 @@ export async function withCampAndLocation(
     locationId = await insertId(admin, 'locations', LOCATION);
     await assert({ providerId, campId, locationId }, admin);
   } finally {
+    if (locationId) await unpublish(admin, providerId, locationId);
     await admin.from('providers').delete().eq('id', providerId);
     if (locationId) await admin.from('locations').delete().eq('id', locationId);
   }

@@ -7,9 +7,11 @@ import { anonClient, createTestUser, deleteTestUsers, serviceClient } from './he
 /**
  * Catalog RLS (ADR-0004).
  *
- * The catalog is the public half: world-readable, writable only by the service
- * role. RLS is enabled on these tables anyway, so the permissive read is an
- * explicit policy somebody reviewed rather than an absence nobody noticed.
+ * The catalog is the public half: the public reads verified rows only (the
+ * whole chain, for a session), reviewers read drafts, and writes belong to the
+ * service role and the two reviewer functions. Visibility and the review gate
+ * are pinned in catalog-review.rls.test.ts; this file pins that clients can't
+ * write, and the shape of calendars and closures.
  *
  * What these tests pin is the *write* side. No insert, update, or delete policy
  * exists, so a normal client cannot change the catalog at all — which is what
