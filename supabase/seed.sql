@@ -9,7 +9,16 @@
 -- It covers the shape rather than a realistic summer: a provider with two
 -- programs, a location two providers share, all three time options, care
 -- times, a closed day, a day away from the main site, and every details key.
--- PR 2 adds draft rows and a school calendar alongside.
+-- Beside the verified rows sit drafts a reviewer hasn't approved — a camp, its
+-- session, a location and a calendar — and an invented school calendar.
+--
+-- Verified rows can only be written with the review gate open (ADR-0017 §3,
+-- 20260930000100_catalog_review_gate.sql). The seed is trusted local setup, so
+-- it opens the gate for its own transaction, and marks the rows verified by
+-- 'seed' the way approve_record() would.
+
+begin;
+select set_config('campout.catalog_gate', 'on', true);
 
 -- Fixed ids, so a local query or a screenshot can name a row.
 insert into providers (id, name, website_url, phone, source_url, verified_at, verified_by) values
@@ -18,12 +27,14 @@ insert into providers (id, name, website_url, phone, source_url, verified_at, ve
   ('00000000-0000-4000-8000-000000000002', 'Riverbend Arts Collective', null,
    null, 'https://riverbend.example.test/camps', '2026-09-01T12:00:00Z', 'seed');
 
-insert into locations (id, label, street, city, state, postal_code, district, point) values
+insert into locations (id, label, street, city, state, postal_code, district, point, source_url) values
   -- Shared: both providers run sessions here (decision 7).
   ('00000000-0000-4000-8000-000000000101', 'Cedar Run Community Center', '4100 Cedar Run Pkwy',
-   'Midlothian', 'VA', '23112', 'chesterfield', 'SRID=4326;POINT(-77.6490 37.4920)'),
+   'Midlothian', 'VA', '23112', 'chesterfield', 'SRID=4326;POINT(-77.6490 37.4920)',
+   'https://maple-hollow.example.test/summer'),
   ('00000000-0000-4000-8000-000000000102', 'Maple Hollow Pool', '250 Hollow Brook Rd',
-   'Henrico', 'VA', '23233', 'henrico', 'SRID=4326;POINT(-77.5980 37.6320)');
+   'Henrico', 'VA', '23233', 'henrico', 'SRID=4326;POINT(-77.5980 37.6320)',
+   'https://maple-hollow.example.test/summer');
 
 insert into camps (id, provider_id, name, summary, categories, registration_url, registration_note,
                    details, source_url, verified_at, verified_by) values
@@ -97,3 +108,52 @@ insert into session_options (session_id, kind, price_cents, price_note, daily_st
   ('00000000-0000-4000-8000-000000000303', 'morning', 21000, '$200 if registered by March 31',
    null, null, null, null, '{}'),
   ('00000000-0000-4000-8000-000000000304', 'full_day', 29500, null, '09:30', '15:30', null, null, '{}');
+
+-- Everything above is verified, as approve_record() would leave it.
+update providers set status = 'verified';
+update locations set status = 'verified', verified_at = '2026-09-01T12:00:00Z', verified_by = 'seed';
+update camps     set status = 'verified';
+update sessions  set status = 'verified';
+
+-- ------------------------------------------------------------------ drafts
+-- A reviewer's queue: a new program from a verified provider, at a location
+-- nobody has checked yet. Invisible to everyone but reviewers.
+insert into locations (id, label, street, city, state, postal_code, district, point, source_url) values
+  ('00000000-0000-4000-8000-000000000103', 'Riverbend Clay Barn', '18 Kiln Hill Ln',
+   'Ashland', 'VA', '23005', 'hanover', 'SRID=4326;POINT(-77.4790 37.7590)',
+   'https://riverbend.example.test/clay');
+
+insert into camps (id, provider_id, name, summary, categories, registration_url, source_url) values
+  ('00000000-0000-4000-8000-000000000204', '00000000-0000-4000-8000-000000000002',
+   'Riverbend Clay Week', 'Wheel throwing and hand building for older kids.',
+   '{arts}', 'https://riverbend.example.test/register', 'https://riverbend.example.test/clay');
+
+insert into sessions (id, camp_id, location_id, start_date, end_date, min_grade, max_grade, source_url) values
+  ('00000000-0000-4000-8000-000000000305', '00000000-0000-4000-8000-000000000204',
+   '00000000-0000-4000-8000-000000000103', '2027-08-02', '2027-08-06', 4, 8,
+   'https://riverbend.example.test/clay');
+
+insert into session_options (session_id, kind, price_cents, daily_start, daily_end) values
+  ('00000000-0000-4000-8000-000000000305', 'morning', 24000, '09:00', '12:00');
+
+-- ---------------------------------------------------------------- calendars
+-- Invented school years, far enough out that they read as fixtures, not as a
+-- real district's calendar. One verified, the next still a draft.
+insert into school_calendars (id, district, type, label, first_instructional_day,
+                              last_instructional_day, covers_from, covers_to, source_url,
+                              status, verified_at, verified_by) values
+  ('00000000-0000-4000-8000-000000000401', 'richmond_city', 'traditional', '2096-97',
+   '2096-08-27', '2097-06-14', '2096-07-01', '2097-06-30',
+   'https://district.example.test/calendar-2096-97', 'verified', '2026-09-01T12:00:00Z', 'seed'),
+  ('00000000-0000-4000-8000-000000000402', 'richmond_city', 'traditional', '2097-98',
+   '2097-08-26', '2098-06-13', '2097-07-01', '2098-06-30',
+   'https://district.example.test/calendar-2097-98', 'draft', null, null);
+
+insert into school_closures (calendar_id, start_date, end_date, tags, source_label, common_name) values
+  ('00000000-0000-4000-8000-000000000401', '2096-09-03', '2096-09-03', '{holiday}', 'Holiday', 'Labor Day'),
+  ('00000000-0000-4000-8000-000000000401', '2096-11-21', '2096-11-23', '{holiday,break}',
+   'Thanksgiving Break', null),
+  ('00000000-0000-4000-8000-000000000401', '2096-12-24', '2097-01-04', '{break}', 'Winter Break', null),
+  ('00000000-0000-4000-8000-000000000402', '2097-09-02', '2097-09-02', '{holiday}', 'Holiday', 'Labor Day');
+
+commit;

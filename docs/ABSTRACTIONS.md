@@ -72,11 +72,22 @@ The general rule this leaves behind: **if a policy depends on state a trigger cr
 
 ## Catalog provenance
 
-`providers`, `camps` and `sessions` each carry their evidence (`source_url` or `source_document_path`), `verified_at`, and `verified_by`, the last two `NOT NULL`.
+`providers`, `camps`, `locations`, `sessions` and `school_calendars` each carry their evidence (`source_url` or `source_document_path`), a `status`, and `verified_at`/`verified_by`, which are required once the row is verified.
 
 **A read model that can represent an unverified record is a bug.** Build types so a record without `verifiedAt` cannot be constructed, rather than checking for it at every render site — the check you have to remember is the one that gets missed. `verified_at` is shown to the parent on every session: stale data here is not cosmetic, because a parent who shows up to a camp that moved has lost a workday.
 
 **The one open exception is `SessionCardView`** (`src/lib/catalog/session-cards.ts`, CAM-32), which has no `verifiedAt` yet because it is built on the unverified mock catalog. CAM-28, which moves it onto Supabase, adds `verifiedAt` as a required field and the card's verified line with it.
+
+## The catalog review gate
+
+Nothing reaches a parent until a reviewer approves it (ADR-0017). Four pieces, all in the database:
+
+- **`is_reviewer()`** — the reviewer counterpart of `is_household_member()`: `SECURITY DEFINER`, pinned `search_path`, reads `reviewers` for `auth.uid()`. Every catalog read policy is *verified (whole chain) **or** `is_reviewer()` **or** in my own plan*. The chain checks are definer predicates too (`camp_is_public()`, `session_is_public()`, …), so a policy can ask about a parent row without that row's policy recursing.
+- **`approve_record(kind, id)`** — the only way to `verified`. It checks `is_reviewer()` itself and refuses anything not ready (unverified parents, no options, an unconfirmed long span).
+- **`reviewer_edit(kind, id, changes)`** — the only way to change a verified row's facts. It names its columns statically and merges `changes` with `jsonb_populate_record`, so there is no dynamic SQL. An unknown or non-fact key is refused, not ignored.
+- **The gate flag.** Both functions set the transaction-local `campout.catalog_gate` around their own writes. The guard triggers let a write through only while it's on, which is why the secret key can't publish by accident. It stops mistakes, not a key holder who disables the trigger.
+
+**The general rule:** anything that changes what a parent sees goes through one of the two functions. A new reviewer action (adding an option to a verified session, say) is a new function that opens the gate, never a loosened trigger.
 
 ## Session cards come from one service
 

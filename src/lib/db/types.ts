@@ -46,10 +46,11 @@ export type Database = {
           registration_url: string | null
           source_document_path: string | null
           source_url: string | null
+          status: Database["public"]["Enums"]["record_status"]
           summary: string | null
           updated_at: string
-          verified_at: string
-          verified_by: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           categories: Database["public"]["Enums"]["camp_category"][]
@@ -62,10 +63,11 @@ export type Database = {
           registration_url?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           summary?: string | null
           updated_at?: string
-          verified_at: string
-          verified_by: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           categories?: Database["public"]["Enums"]["camp_category"][]
@@ -78,10 +80,11 @@ export type Database = {
           registration_url?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           summary?: string | null
           updated_at?: string
-          verified_at?: string
-          verified_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -92,6 +95,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      catalog_history: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          changed_by_role: string
+          id: number
+          new_row: Json | null
+          old_row: Json | null
+          row_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_role: string
+          id?: never
+          new_row?: Json | null
+          old_row?: Json | null
+          row_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          changed_by_role?: string
+          id?: never
+          new_row?: Json | null
+          old_row?: Json | null
+          row_id?: string
+          table_name?: string
+        }
+        Relationships: []
       }
       children: {
         Row: {
@@ -197,8 +236,13 @@ export type Database = {
           label: string
           point: unknown
           postal_code: string
+          source_document_path: string | null
+          source_url: string | null
           state: string
+          status: Database["public"]["Enums"]["record_status"]
           street: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           address_key?: string | null
@@ -209,8 +253,13 @@ export type Database = {
           label: string
           point: unknown
           postal_code: string
+          source_document_path?: string | null
+          source_url?: string | null
           state?: string
+          status?: Database["public"]["Enums"]["record_status"]
           street: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           address_key?: string | null
@@ -221,8 +270,13 @@ export type Database = {
           label?: string
           point?: unknown
           postal_code?: string
+          source_document_path?: string | null
+          source_url?: string | null
           state?: string
+          status?: Database["public"]["Enums"]["record_status"]
           street?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: []
       }
@@ -232,6 +286,7 @@ export type Database = {
           created_at: string
           household_id: string
           id: string
+          option_id: string
           session_id: string
         }
         Insert: {
@@ -239,6 +294,7 @@ export type Database = {
           created_at?: string
           household_id: string
           id?: string
+          option_id: string
           session_id: string
         }
         Update: {
@@ -246,6 +302,7 @@ export type Database = {
           created_at?: string
           household_id?: string
           id?: string
+          option_id?: string
           session_id?: string
         }
         Relationships: [
@@ -262,6 +319,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "households"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_entries_option_fkey"
+            columns: ["option_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "session_options"
+            referencedColumns: ["id", "session_id"]
           },
           {
             foreignKeyName: "plan_entries_session_id_fkey"
@@ -281,9 +345,10 @@ export type Database = {
           phone: string | null
           source_document_path: string | null
           source_url: string | null
+          status: Database["public"]["Enums"]["record_status"]
           updated_at: string
-          verified_at: string
-          verified_by: string
+          verified_at: string | null
+          verified_by: string | null
           website_url: string | null
         }
         Insert: {
@@ -294,9 +359,10 @@ export type Database = {
           phone?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           updated_at?: string
-          verified_at: string
-          verified_by: string
+          verified_at?: string | null
+          verified_by?: string | null
           website_url?: string | null
         }
         Update: {
@@ -307,10 +373,29 @@ export type Database = {
           phone?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           updated_at?: string
-          verified_at?: string
-          verified_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      reviewers: {
+        Row: {
+          created_at: string
+          display_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -326,9 +411,10 @@ export type Database = {
           school: string | null
           source_document_path: string | null
           source_url: string | null
+          status: Database["public"]["Enums"]["record_status"]
           type: Database["public"]["Enums"]["calendar_type"]
-          verified_at: string
-          verified_by: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           covers_from: string
@@ -341,9 +427,10 @@ export type Database = {
           school?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           type: Database["public"]["Enums"]["calendar_type"]
-          verified_at: string
-          verified_by: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           covers_from?: string
@@ -356,9 +443,10 @@ export type Database = {
           school?: string | null
           source_document_path?: string | null
           source_url?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
           type?: Database["public"]["Enums"]["calendar_type"]
-          verified_at?: string
-          verified_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: []
       }
@@ -470,10 +558,11 @@ export type Database = {
           source_document_path: string | null
           source_url: string | null
           start_date: string
+          status: Database["public"]["Enums"]["record_status"]
           theme: string | null
           updated_at: string
-          verified_at: string
-          verified_by: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           camp_id: string
@@ -491,10 +580,11 @@ export type Database = {
           source_document_path?: string | null
           source_url?: string | null
           start_date: string
+          status?: Database["public"]["Enums"]["record_status"]
           theme?: string | null
           updated_at?: string
-          verified_at: string
-          verified_by: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           camp_id?: string
@@ -512,10 +602,11 @@ export type Database = {
           source_document_path?: string | null
           source_url?: string | null
           start_date?: string
+          status?: Database["public"]["Enums"]["record_status"]
           theme?: string | null
           updated_at?: string
-          verified_at?: string
-          verified_by?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -731,7 +822,25 @@ export type Database = {
             }
             Returns: string
           }
+      approve_record: {
+        Args: {
+          confirm_long_span?: boolean
+          record_id: string
+          record_kind: Database["public"]["Enums"]["catalog_record_kind"]
+        }
+        Returns: undefined
+      }
+      assert_approvable: {
+        Args: {
+          confirm_long_span: boolean
+          record_id: string
+          record_kind: Database["public"]["Enums"]["catalog_record_kind"]
+        }
+        Returns: undefined
+      }
       camp_details_schema: { Args: never; Returns: Json }
+      camp_is_public: { Args: { target: string }; Returns: boolean }
+      catalog_gate_is_open: { Args: never; Returns: boolean }
       create_household: {
         Args: {
           household_district: Database["public"]["Enums"]["school_district"]
@@ -784,6 +893,12 @@ export type Database = {
           }
         | { Args: { schema_name: string; table_name: string }; Returns: string }
         | { Args: { table_name: string }; Returns: string }
+      editable_columns: {
+        Args: {
+          record_kind: Database["public"]["Enums"]["catalog_record_kind"]
+        }
+        Returns: string[]
+      }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       find_location_duplicates: {
@@ -797,8 +912,13 @@ export type Database = {
           label: string
           point: unknown
           postal_code: string
+          source_document_path: string | null
+          source_url: string | null
           state: string
+          status: Database["public"]["Enums"]["record_status"]
           street: string
+          verified_at: string | null
+          verified_by: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -907,6 +1027,7 @@ export type Database = {
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       gettransactionid: { Args: never; Returns: unknown }
       is_household_member: { Args: { target: string }; Returns: boolean }
+      is_reviewer: { Args: never; Returns: boolean }
       json_matches_schema: {
         Args: { instance: Json; schema: Json }
         Returns: boolean
@@ -920,8 +1041,16 @@ export type Database = {
         Args: { instance: Json; schema: Json }
         Returns: string[]
       }
+      location_is_public: { Args: { target: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       option_details_schema: { Args: never; Returns: Json }
+      plan_references: {
+        Args: {
+          kind: Database["public"]["Enums"]["catalog_record_kind"]
+          target: string
+        }
+        Returns: boolean
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -962,6 +1091,19 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      provider_is_public: { Args: { target: string }; Returns: boolean }
+      refuse_if_verified_parent: {
+        Args: { parent_id: string; parent_table: string }
+        Returns: undefined
+      }
+      reviewer_edit: {
+        Args: {
+          changes: Json
+          record_id: string
+          record_kind: Database["public"]["Enums"]["catalog_record_kind"]
+        }
+        Returns: undefined
+      }
       search_sessions: {
         Args: {
           max_price_cents?: number
@@ -980,6 +1122,7 @@ export type Database = {
         }[]
       }
       session_details_schema: { Args: never; Returns: Json }
+      session_is_public: { Args: { target: string }; Returns: boolean }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -1583,7 +1726,16 @@ export type Database = {
         | "outdoors"
         | "academic"
         | "faith_based"
+      catalog_record_kind:
+        | "provider"
+        | "camp"
+        | "location"
+        | "session"
+        | "session_option"
+        | "school_calendar"
+        | "school_closure"
       closure_tag: "holiday" | "teacher_workday" | "conference_day" | "break"
+      record_status: "draft" | "verified" | "archived"
       school_district: "richmond_city" | "chesterfield" | "henrico" | "hanover"
       session_option_kind: "full_day" | "morning" | "afternoon"
     }
@@ -1734,7 +1886,17 @@ export const Constants = {
         "academic",
         "faith_based",
       ],
+      catalog_record_kind: [
+        "provider",
+        "camp",
+        "location",
+        "session",
+        "session_option",
+        "school_calendar",
+        "school_closure",
+      ],
       closure_tag: ["holiday", "teacher_workday", "conference_day", "break"],
+      record_status: ["draft", "verified", "archived"],
       school_district: ["richmond_city", "chesterfield", "henrico", "hanover"],
       session_option_kind: ["full_day", "morning", "afternoon"],
     },

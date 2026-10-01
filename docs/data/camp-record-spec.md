@@ -27,7 +27,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 **A session meets every weekday of its date range** (decision 1). Meeting days are not modelled.
 
 - An offering that meets on some weekdays only — a weekly class, Tue/Thu afternoons — is **split into sessions that do meet every weekday of their range, or not listed.** Entered as one long session it would show as weeks of daily coverage.
-- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. Today `findCatalogInconsistencies` flags it in the TypeScript mock only; the database's approval check gains the same flag with CAM-27's review gate. Until then, check it by eye.
+- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. `approve_record()` refuses such a session until the reviewer passes `confirm_long_span`, and `findCatalogInconsistencies` flags the same thing in the TypeScript mock.
 - Weekdays inside the range the camp is shut (a Juneteenth closure) go in `closed_dates`, not in a split.
 
 **A session falls inside the workday** (decision 11): a full day, a morning or an afternoon on a weekday.
@@ -46,7 +46,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 | `website_url` | no | The organization's home page, when it has one. Many small providers do not. |
 | `phone`, `email` | no | Only if published publicly. |
 | `source_url` / `source_document_path` | **one of these two** | Same rule as a camp. |
-| `verified_at`, `verified_by` | yes | Same rule as a camp. |
+| `status`, `verified_at`, `verified_by` | set by approval | Same rule as a camp. |
 
 ## `camps`
 
@@ -61,8 +61,9 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 | `details` | no | See **`details`** below. |
 | `source_url` | **one of these two** | The exact page the facts came from. Not the home page — the page with the sessions on it. |
 | `source_document_path` | **one of these two** | A file in the `camp-sources` bucket: a saved PDF, a photo of a paper flyer, a screenshot of a Facebook post. Use this whenever the facts did not come from a durable URL. |
-| `verified_at` | yes | When a human last confirmed these facts. |
-| `verified_by` | yes | Who. A name or initials is enough. |
+| `status` | set by approval | `draft` until a reviewer approves it, then `verified`; `archived` once it's no longer offered. See **Review and approval**. |
+| `verified_at` | set by approval | When a human last confirmed these facts. Required once verified; blank on a draft. |
+| `verified_by` | set by approval | Who: the reviewer's display name. |
 
 **Every record needs evidence, and it does not have to be a link.** The database enforces `source_url OR source_document_path` — a record with neither cannot be inserted. A camp whose only published information is a flyer on a parish noticeboard is perfectly listable; somebody just has to keep a copy of the flyer (ADR-0012).
 
@@ -77,6 +78,8 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 | `district` | no | The school district the site sits in, where it matters. |
 | `point` | yes | Geocoded **once, at verification time** (ADR-0007). |
 | `address_key` | derived | Street and postal code, lower-cased, punctuation collapsed. Generated; never written. |
+| `source_url` / `source_document_path` | **one of these two** | Where the address came from: usually the camp's page. |
+| `status`, `verified_at`, `verified_by` | set by approval | A location has its own status (decision 16): a draft location is invisible to the public, since it can be a private host's home. |
 
 **Look for the site before adding it.** `find_location_duplicates(id)` lists other locations with the same `address_key` or a pin within about 30 m (decision 17). Duplicates are caught at review, not blocked: real venues share an address, so there is no unique index. Merge a true duplicate by pointing its sessions at the survivor.
 
@@ -95,7 +98,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 | `min_grade`, `max_grade` | no | `-1` is pre-K, `0` is kindergarten. The grade of the school year the session belongs to, **summer counting toward the coming year**: "rising 5th" and "entering Fall 2026, grade 5" are both 5 for summer 2026. A December holiday day uses the current grade. Convert other phrasings ("completed 4th") and keep the camp's wording in `details.eligibility_wording`. |
 | `capacity_note` | no | Waitlist status, "fills in January", lottery. |
 | `details` | no | See **`details`** below. |
-| `verified_at`, `verified_by` | yes | Per-session, because sessions change independently of the program. |
+| `status`, `verified_at`, `verified_by` | set by approval | Per-session, because sessions change independently of the program. |
 | `source_url` / `source_document_path` | **one of these two** | Same rule as a camp. Per-session, because sessions change independently. |
 
 **Age and grade are filter-only**, optional, and independent — never derive one from the other. Campout doesn't book camps, so a borderline match isn't hidden; the camp's own registration makes the final call.
@@ -152,7 +155,7 @@ One `school_calendars` row per school year per district — or per school, when 
 | `school` | no | Set only for a school on its own calendar. |
 | `first_instructional_day`, `last_instructional_day` | yes | Copied from the published calendar. The earlier date when grades start on different days. |
 | `covers_from`, `covers_to` | yes | The window this record speaks for. It must contain the school year (first to last instructional day). It does **not** need to reach across summer: the summer is derived from the next year's calendar. |
-| `verified_at`, `verified_by` | yes | Same rule as a camp. |
+| `status`, `verified_at`, `verified_by` | set by approval | Same rule as a camp. |
 | `source_url` / `source_document_path` | **one of these two** | Districts usually publish a PDF, and saving a copy is worth the ten seconds: they get replaced in place when the calendar changes. |
 
 Each `school_closures` row is a run of days school is shut, inclusive at both ends. A single day repeats `start_date` as `end_date`.
@@ -178,7 +181,7 @@ This is the reference data every closed day is derived from. A wrong date here s
 
 ## What "verified" means
 
-`verified_at` means: **a human looked at the evidence on that date and confirmed every fact in the record against it.** The evidence is whichever of `source_url` or `source_document_path` the record carries — a live page, or a saved copy of a flyer, PDF, or post. `verified_by` records who did it, and both stay mandatory whichever form the evidence takes.
+`verified_at` means: **a human looked at the evidence on that date and confirmed every fact in the record against it.** The evidence is whichever of `source_url` or `source_document_path` the record carries — a live page, or a saved copy of a flyer, PDF, or post. `verified_by` records who did it. Both are blank on a draft and required once a record is verified.
 
 It does **not** mean, and must never be presented as meaning, that Campout inspected the camp, checked its licensing or staffing, endorsed it, or judged its quality. We list camps; we do not vet them (AGENTS.md §2).
 
@@ -188,13 +191,30 @@ A record is ready to go live when:
 2. Evidence is attached: `source_url` points at the page carrying the session facts, **or** `source_document_path` points at a saved copy of what the camp said. A written claim with nothing behind it does not count.
 3. The geocoded pin has been looked at on a map.
 4. Dates, ages, and hours have been read twice — these are the three fields a parent acts on.
-5. `verified_at` and `verified_by` are set.
+5. A reviewer approves it with `approve_record()`, which sets `status`, `verified_at` and `verified_by`.
 
 **If you could not confirm a fact, leave the field null.** A null means "not offered" or "not stated", and the UI can say so honestly. A guess renders as fact, and a parent plans a workday around it.
 
 **Never mark a record verified because it looks plausible.** A wrong drop-off time costs a parent a workday, and that is the failure this whole discipline exists to prevent.
 
 ---
+
+## Review and approval
+
+Every record starts as a **draft**, written by a script or by hand with the secret key (ADR-0017). A draft is invisible to everyone but reviewers. Users listed in `reviewers` read every draft, along with `catalog_history`.
+
+- **`approve_record(kind, id)` is the only way to `verified`.** It's for providers, camps, locations, sessions and calendars, and records the reviewer and the time. It refuses:
+  - a camp whose provider isn't verified;
+  - a session whose camp, provider or location isn't verified;
+  - a session with no options;
+  - a session over two weeks, until the reviewer passes `confirm_long_span`.
+
+  Approve from the top down: the provider and the location, then the camp, then the session.
+- **A session is public only when its whole chain is verified** (decision 16). Putting a camp back to draft hides all its sessions.
+- **A verified record's facts change only through `reviewer_edit(kind, id, changes)`** (decision 13). It applies the edit, keeps the record verified, and leaves `verified_at` alone, since only the changed facts were checked. Re-approve to re-date the record. A direct write is refused, even with the secret key. That covers a verified session's options and a verified calendar's closures. Drafts stay freely editable.
+- **Changing only the `status` is allowed:** to `archived` when a session is no longer offered, or back to `draft`. It unpublishes, and never publishes.
+- **Archive, don't delete.** A session or option in any family's plan can't be deleted. The household that planned an archived session still sees it, so its grid can say "no longer listed".
+- **Every write is in `catalog_history`:** the table, the row, who, when, and the row before and after.
 
 ## Re-verification
 
