@@ -832,15 +832,18 @@ describe('plans', () => {
     });
   });
 
+  // Archived first, so the guard (which refuses deleting a verified row) lets
+  // the delete through to the foreign key.
   it('refuses to delete a session a plan references', async () => {
     await withPlannableSession(async ({ sessionId, optionId }, admin) => {
       await parent.client.from('plan_entries').insert(planEntry(family, sessionId, optionId));
+      await admin.from('sessions').update({ status: 'archived' }).eq('id', sessionId);
       const { error } = await admin.from('sessions').delete().eq('id', sessionId);
       expect(error?.code).toBe('23503');
     });
   });
 
-  // Archived first, so the guard lets the delete through to the foreign key.
+  // Archived first, as above.
   it('refuses to delete an option a plan references', async () => {
     await withPlannableSession(async ({ sessionId, optionId }, admin) => {
       await parent.client.from('plan_entries').insert(planEntry(family, sessionId, optionId));
