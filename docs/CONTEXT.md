@@ -43,7 +43,7 @@ These are the four an agent is most likely to break, and the ones most expensive
 1. **Child data minimization (ADR-0006).** A first name, an integer age, a grade. Nothing else — no last name, no birth date, no health information, and **no free-text note on a child**. Enforced by the schema and by `.claude/hooks/privacy-guard.sh`, not by anyone remembering.
 2. **The vault stays in the browser (ADR-0006).** Emergency contacts, insurance, medical history for form-filling live in browser storage only. They never reach the server. Cross-device sync needs a new ADR and a conversation with the humans.
 3. **Row Level Security is the only boundary between families (ADR-0004).** Every user-data table enables it in the migration that creates it, and every policy ships with a negative-case test. The service-role key never appears in application code.
-4. **We list camps; we do not vet them (AGENTS.md §2).** Every record carries `source_url` and `verified_at`, both required. No UI copy, ordering, or badge may imply endorsement, safety screening, or a quality ranking.
+4. **We list camps; we do not vet them (AGENTS.md §2).** Every record carries its evidence (`source_url` or a stored document), and nothing reaches a parent until a reviewer approves it, which records `verified_at`. No UI copy, ordering, or badge may imply endorsement, safety screening, or a quality ranking.
 
 ## Guards that will stop you
 

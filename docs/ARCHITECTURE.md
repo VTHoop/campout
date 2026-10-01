@@ -22,7 +22,7 @@ See `docs/adr/` for the "why" behind each choice.
 
 **A provider is an organization, a camp is a program it runs, and a session is a dated offering of that program** (ADR-0018). The directory searches *sessions* — a parent shops for "the week of July 12", not for an organization. A camp page lists its sessions. Nearly every planner query starts at `sessions`, and getting this wrong would be the most expensive schema mistake available. A session offers one to three time options (`session_options`: full day, morning, afternoon), each with its own price, hours and care times, and meets at one standalone location that any camp's sessions can share.
 
-**Every catalog record carries provenance.** `verified_at` and `verified_by` are `NOT NULL` on `providers`, `camps`, `sessions`, and `school_calendars`. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
+**Every catalog record carries provenance, and only a reviewer publishes it** (ADR-0017). `providers`, `camps`, `locations`, `sessions` and `school_calendars` each carry a `status` (`draft`, `verified`, `archived`). `verified_at` and `verified_by` are required once a row is verified (`*_verified_recorded`) and are set only by `approve_record()`, which a guard trigger enforces even against the secret key. A check constraint — `*_provenance_present` — requires that **at least one of `source_url` and `source_document_path` is non-NULL**. That is the whole of what the database enforces: neither column being set is impossible, and nothing more is checked.
 
 Everything else about evidence is a contract the verification workflow keeps, not a rule the database applies (ADR-0012):
 
@@ -46,13 +46,14 @@ erDiagram
     households ||--o{ plan_entries : owns
     children ||--o{ plan_entries : "scheduled into"
     sessions ||--o{ plan_entries : "booked by"
+    session_options ||--o{ plan_entries : "chosen as"
     school_calendars ||--o{ school_closures : "lists"
     school_calendars ||--o{ households : "shares a district with"
 ```
 
 **Two halves with different rules:**
 
-- **Catalog** (`providers`, `camps`, `locations`, `sessions`, `session_options`, `school_calendars`, `school_closures`) — world-readable, writable only by the service role. Searched through one function, `search_sessions()`, which runs as the caller so RLS applies. (CAM-27's second PR limits the public to verified rows.) Keeping the public half out of the policy surface keeps the policies that matter small enough to reason about.
+- **Catalog** (`providers`, `camps`, `locations`, `sessions`, `session_options`, `school_calendars`, `school_closures`) — **the public reads verified rows only**, and a session only when its camp, provider and location are verified too. Reviewers (`reviewers`, `is_reviewer()`) read drafts. A household reads whatever its own plan references, even once archived. Writes go through the service role (drafts), `approve_record()` and `reviewer_edit()`. Every write lands in `catalog_history`. Searched through one function, `search_sessions()`, which runs as definer and applies the same chain rule itself, so its date and category indexes work (under RLS they can't: the overlap operators aren't leakproof). The gate's RLS tests are release-blocking, like the household ones (ADR-0017).
 - **Household** (`households`, `household_members`, `children`, `plan_entries`) — RLS-protected, resolved through `is_household_member()`. ADR-0004.
 
 `children` holds a display name, an integer age, and a grade. **Nothing else, by design and by schema** — read ADR-0006 before altering that table.
@@ -96,6 +97,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/data/camp-record-spec.md` | Field-by-field catalog spec and the verification rules. |
 | `docs/DESIGN.md` | Visual language — tokens, card anatomy, state signals, copy. Proposed, not locked. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, `school_closures`, PostGIS, `btree_gist`, catalog RLS |
+| `supabase/migrations/…_catalog_review_gate.sql`, `…_plan_entries_options.sql` | The review gate (CAM-27, ADR-0017): `status` and the verified chain, `reviewers`/`is_reviewer()`, `approve_record()`, `reviewer_edit()`, the guard triggers and gate flag, `catalog_history`, and `plan_entries.option_id` with restrict deletes and the tightened insert policy |
 | `supabase/migrations/…_catalog_shape.sql` | The provider → camp → session shape (CAM-27): `providers`, `session_options`, standalone locations with `find_location_duplicates()`, the seven categories, `details` and its vocabulary (`pg_jsonschema`), `closed_dates`, and `search_sessions()` with its indexes |
 | `supabase/seed.sql` | An invented local catalog covering the shape. Loaded by `pnpm supabase:reset`. No real camps (ADR-0010). |
 | `src/lib/db/types.ts` | Generated from the local schema by `pnpm db:types`. Never hand-edited. |

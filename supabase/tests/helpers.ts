@@ -171,6 +171,30 @@ export async function createHousehold(user: TestUser, name: string): Promise<str
   return id;
 }
 
+/** True when the suite is pointed at a live project rather than local Docker (CAM-25). */
+export function isLiveProject(): boolean {
+  return envKeys() !== null;
+}
+
+/**
+ * Run SQL as the local database's superuser, through `docker exec`, and return
+ * psql's output. A failing statement throws, with Postgres' message in the error.
+ *
+ * Only for what no client can reach: a check constraint behind a guard trigger,
+ * say. Everything else goes through a client, so RLS applies. Local only — the
+ * container is the CLI's `supabase_db_<project>`, overridable with
+ * SUPABASE_DB_CONTAINER.
+ */
+export function runSql(sql: string): string {
+  if (isLiveProject()) throw new Error('runSql reaches only the local stack; skip this test live');
+  const container = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_campout';
+  return execFileSync(
+    'docker',
+    ['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+}
+
 /** Remove every user this suite created, along with the rows that cascade from them. */
 export async function deleteTestUsers(users: readonly TestUser[]): Promise<void> {
   const admin = serviceClient();

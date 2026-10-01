@@ -5,7 +5,10 @@ pre-commit:
   jobs:
     - name: lint
       glob: "**/*.{js,ts,jsx,tsx,json,jsonc,css}"
-      run: pnpm exec biome check {staged_files}
+      # --no-errors-on-unmatched: a commit whose only staged code is a file biome
+      # ignores (the generated src/lib/db/types.ts) has nothing to check. Every
+      # file biome does check is still checked.
+      run: pnpm exec biome check --no-errors-on-unmatched {staged_files}
     - name: typecheck
       run: pnpm typecheck
 

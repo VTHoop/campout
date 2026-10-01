@@ -2,9 +2,9 @@ import type { SchoolYearCalendar } from '@campout/planner';
 import { describe, orderedCalendars } from '@campout/planner';
 
 /**
- * A school-year calendar a skill has drafted for human review — not yet a
- * `school_calendars` row, because that table requires `verified_at`/
- * `verified_by` on every row (ADR-0012) and cannot hold an unverified one.
+ * A school-year calendar a skill has drafted for human review, as a file. The
+ * database can now hold it as a `school_calendars` row with `status = 'draft'`
+ * (ADR-0017); the file is the stopgap until CAM-4 moves calendars there.
  */
 export interface CalendarDraft {
   readonly calendar: SchoolYearCalendar;
