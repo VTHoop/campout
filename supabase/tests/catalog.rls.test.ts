@@ -63,19 +63,6 @@ describe('catalog reads', () => {
   });
 });
 
-/**
- * Seed a camp as the service role, run an assertion against it, then remove it.
- *
- * The cleanup lives in withCampAndLocation's `finally`, so a failing assertion
- * still leaves the tables as it found them — otherwise one bad run poisons every
- * later one.
- */
-async function withSeededCamp(
-  assert: (campId: string, admin: SupabaseClient) => Promise<void>,
-): Promise<void> {
-  await withCampAndLocation(({ campId }, admin) => assert(campId, admin));
-}
-
 describe('catalog writes are closed to clients', () => {
   it('refuses an anonymous insert', async () => {
     await withCampAndLocation(async ({ providerId }) => {
@@ -102,7 +89,9 @@ describe('catalog writes are closed to clients', () => {
     ],
     ['delete', (campId: string) => anonClient().from('camps').delete().eq('id', campId)],
   ])('leaves the record untouched after an anonymous %s', async (_verb, attempt) => {
-    await withSeededCamp(async (campId, admin) => {
+    // withCampAndLocation cleans up in a `finally`, so a failing assertion still
+    // leaves the tables as it found them.
+    await withCampAndLocation(async ({ campId }, admin) => {
       const { error } = await attempt(campId);
       expect(error).toBeNull();
 
