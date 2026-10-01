@@ -206,6 +206,9 @@ as $$
 $$;
 
 -- --------------------------------------------------------------- policies
+-- `(select is_reviewer())`, not a bare call: it takes no row argument, so the
+-- subquery runs once per statement instead of once per row.
+--
 -- Replaces every "catalog is world readable" policy (20260914000100,
 -- 20260929000100). Still no write policy anywhere: writes are the secret key's,
 -- or the two reviewer functions'.
@@ -220,35 +223,35 @@ drop policy "catalog is world readable" on school_closures;
 
 create policy "verified, or a reviewer, or in my plan" on providers
   for select using (
-    status = 'verified' or is_reviewer() or plan_references('provider', id)
+    status = 'verified' or (select is_reviewer()) or plan_references('provider', id)
   );
 
 create policy "verified chain, or a reviewer, or in my plan" on camps
   for select using (
     (status = 'verified' and provider_is_public(provider_id))
-    or is_reviewer()
+    or (select is_reviewer())
     or plan_references('camp', id)
   );
 
 create policy "verified, or a reviewer, or in my plan" on locations
   for select using (
-    status = 'verified' or is_reviewer() or plan_references('location', id)
+    status = 'verified' or (select is_reviewer()) or plan_references('location', id)
   );
 
 create policy "verified chain, or a reviewer, or in my plan" on sessions
   for select using (
     (status = 'verified' and camp_is_public(camp_id) and location_is_public(location_id))
-    or is_reviewer()
+    or (select is_reviewer())
     or plan_references('session', id)
   );
 
 create policy "its session is public, or a reviewer, or in my plan" on session_options
   for select using (
-    session_is_public(session_id) or is_reviewer() or plan_references('session_option', id)
+    session_is_public(session_id) or (select is_reviewer()) or plan_references('session_option', id)
   );
 
 create policy "verified, or a reviewer" on school_calendars
-  for select using (status = 'verified' or is_reviewer());
+  for select using (status = 'verified' or (select is_reviewer()));
 
 -- Through the calendar's own policy: a closure is visible when its calendar is.
 create policy "its calendar is visible" on school_closures
@@ -260,7 +263,9 @@ create policy "its calendar is visible" on school_closures
 -- Refuses, outside the gate:
 --   · an insert that is verified or names a verifier;
 --   · an update that makes a row verified or touches verified_at/by;
---   · an update to a verified row's facts — everything but its status.
+--   · an update to a verified row's facts — everything but its status;
+--   · a delete of a verified row: archive it, or put it back to draft first.
+--     A delete unpublishes as surely as an edit, and cascades.
 -- A status-only change away from verified is allowed: it unpublishes, never
 -- publishes, and it is how a row is archived or put back to draft.
 --
@@ -280,7 +285,15 @@ language plpgsql
 as $$
 begin
   if catalog_gate_is_open() then
-    return new;
+    return coalesce(new, old);
+  end if;
+
+  if tg_op = 'DELETE' then
+    if old.status = 'verified' then
+      raise exception 'a verified % row can''t be deleted; archive it instead', tg_table_name
+        using errcode = '42501';
+    end if;
+    return old;
   end if;
 
   if tg_op = 'INSERT' then
@@ -310,37 +323,41 @@ begin
 end;
 $$;
 
-create trigger guard_catalog_write before insert or update on providers
+create trigger guard_catalog_write before insert or update or delete on providers
   for each row execute function guard_catalog_write();
-create trigger guard_catalog_write before insert or update on camps
+create trigger guard_catalog_write before insert or update or delete on camps
   for each row execute function guard_catalog_write();
-create trigger guard_catalog_write before insert or update on locations
+create trigger guard_catalog_write before insert or update or delete on locations
   for each row execute function guard_catalog_write();
-create trigger guard_catalog_write before insert or update on sessions
+create trigger guard_catalog_write before insert or update or delete on sessions
   for each row execute function guard_catalog_write();
-create trigger guard_catalog_write before insert or update on school_calendars
+create trigger guard_catalog_write before insert or update or delete on school_calendars
   for each row execute function guard_catalog_write();
 
 -- Options and closures have no status: they are facts of their parent. Any
 -- insert, update or delete touching a verified session's options, or a
 -- verified calendar's closures, is refused outside the gate. SECURITY DEFINER
 -- so the parent's status is read past RLS.
-create function refuse_if_verified_parent(parent_table text, parent_id uuid)
+create function refuse_if_session_verified(target uuid)
 returns void
 language plpgsql stable security definer set search_path = public
 as $$
-declare
-  verified boolean;
 begin
-  if parent_table = 'sessions' then
-    select status = 'verified' into verified from sessions where id = parent_id;
-  else
-    select status = 'verified' into verified from school_calendars where id = parent_id;
+  -- A session already gone is a cascade from its own delete: nothing to guard.
+  if exists (select 1 from sessions where id = target and status = 'verified') then
+    raise exception 'a verified session''s options change only through reviewer_edit()'
+      using errcode = '42501';
   end if;
-  -- A parent already gone is a cascade from its own delete: nothing to guard.
-  if coalesce(verified, false) then
-    raise exception 'a verified %''s % change only through reviewer_edit()',
-      parent_table, case parent_table when 'sessions' then 'options' else 'closures' end
+end;
+$$;
+
+create function refuse_if_calendar_verified(target uuid)
+returns void
+language plpgsql stable security definer set search_path = public
+as $$
+begin
+  if exists (select 1 from school_calendars where id = target and status = 'verified') then
+    raise exception 'a verified calendar''s closures change only through reviewer_edit()'
       using errcode = '42501';
   end if;
 end;
@@ -353,10 +370,10 @@ as $$
 begin
   if not catalog_gate_is_open() then
     if tg_op in ('UPDATE', 'DELETE') then
-      perform refuse_if_verified_parent('sessions', old.session_id);
+      perform refuse_if_session_verified(old.session_id);
     end if;
     if tg_op in ('INSERT', 'UPDATE') then
-      perform refuse_if_verified_parent('sessions', new.session_id);
+      perform refuse_if_session_verified(new.session_id);
     end if;
   end if;
   if tg_op = 'DELETE' then
@@ -373,10 +390,10 @@ as $$
 begin
   if not catalog_gate_is_open() then
     if tg_op in ('UPDATE', 'DELETE') then
-      perform refuse_if_verified_parent('school_calendars', old.calendar_id);
+      perform refuse_if_calendar_verified(old.calendar_id);
     end if;
     if tg_op in ('INSERT', 'UPDATE') then
-      perform refuse_if_verified_parent('school_calendars', new.calendar_id);
+      perform refuse_if_calendar_verified(new.calendar_id);
     end if;
   end if;
   if tg_op = 'DELETE' then
@@ -411,10 +428,11 @@ declare
   target sessions;
   span   integer;
 begin
+  -- A missing row falls through to approve_record(), which reports it.
   if record_kind = 'camp'
-     and not exists (
+     and exists (
        select 1 from camps
-       where id = record_id and provider_is_public(provider_id)
+       where id = record_id and not provider_is_public(provider_id)
      ) then
     raise exception 'approve the camp''s provider first' using errcode = '55000';
   end if;
@@ -508,6 +526,9 @@ $$;
 -- verified_at and verified_by are left alone: the reviewer checked the changed
 -- facts, not the whole record. Re-approve to re-date it.
 
+-- ⛔ Each kind's facts are written three times: here, and in reviewer_edit()'s
+-- SET and SELECT lists. Change all three together when a table gains a column;
+-- catalog-review.rls.test.ts fails if a column is in none of them.
 create function editable_columns(record_kind catalog_record_kind)
 returns text[]
 language sql immutable
@@ -652,6 +673,63 @@ begin
 end;
 $$;
 
+-- ------------------------------------------------------------------- search
+-- search_sessions() (20260929000100) ran as the caller, so RLS applied. Two
+-- reasons it now runs as definer and applies the chain itself:
+--
+--   · Speed. RLS must be evaluated before a caller's non-leakproof filters,
+--     and range && and array && are not leakproof, so under these policies
+--     the date and category filters could no longer use sessions_dates_idx
+--     or camps_categories_idx: every search scanned every session.
+--   · Scope. Decision 15's "in my plan" read is for a family's own grid. In
+--     search it would list a session the family planned that is no longer
+--     listed.
+--
+-- So: the verified chain, or a reviewer (who previews drafts through the
+-- same query a parent uses, ADR-0017). Nothing else. catalog-review.rls.test.ts
+-- holds this in step with the table policies.
+create or replace function search_sessions(
+  window_start      date            default null,
+  window_end        date            default null,
+  wanted_categories camp_category[] default null,
+  max_price_cents   integer         default null
+)
+returns table (
+  session_id       uuid,
+  camp_id          uuid,
+  location_id      uuid,
+  start_date       date,
+  end_date         date,
+  theme            text,
+  from_price_cents integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    s.id, s.camp_id, s.location_id, s.start_date, s.end_date, s.theme,
+    (select min(o.price_cents) from session_options o where o.session_id = s.id)
+  from sessions s
+  join camps c     on c.id = s.camp_id
+  join providers p on p.id = c.provider_id
+  join locations l on l.id = s.location_id
+  -- A null bound makes the range open on that side.
+  where daterange(s.start_date, s.end_date, '[]') && daterange(window_start, window_end, '[]')
+    and (wanted_categories is null or c.categories && wanted_categories)
+    and (max_price_cents is null or exists (
+      select 1 from session_options o
+      where o.session_id = s.id and o.price_cents <= max_price_cents
+    ))
+    and (
+      (s.status = 'verified' and c.status = 'verified'
+       and p.status = 'verified' and l.status = 'verified')
+      or (select is_reviewer())
+    )
+  order by s.start_date, s.id;
+$$;
+
 -- ------------------------------------------------------------------ history
 -- Every insert, update and delete on the catalog and calendar tables (ADR-0017
 -- §4). This replaces the PR diff as the record of what changed and who did it.
@@ -676,7 +754,7 @@ create index catalog_history_row_idx on catalog_history (row_id, id);
 alter table catalog_history enable row level security;
 
 create policy "reviewers read history" on catalog_history
-  for select to authenticated using (is_reviewer());
+  for select using ((select is_reviewer()));
 
 -- SECURITY DEFINER so the row is written whoever made the change; no client
 -- has a write grant on catalog_history.
@@ -744,9 +822,12 @@ grant execute on function reviewer_edit(catalog_record_kind, uuid, jsonb)
 -- Internal: called only from the functions and triggers above.
 revoke all on function assert_approvable(catalog_record_kind, uuid, boolean)
   from public, anon, authenticated;
-revoke all on function refuse_if_verified_parent(text, uuid) from public, anon, authenticated;
+revoke all on function refuse_if_session_verified(uuid) from public, anon, authenticated;
+revoke all on function refuse_if_calendar_verified(uuid) from public, anon, authenticated;
 revoke all on function editable_columns(catalog_record_kind) from public, anon, authenticated;
 
 grant select, insert, update, delete on reviewers to service_role;
-grant select on catalog_history to authenticated;
+-- anon too, so a refused read is zero rows rather than a table-level error,
+-- as for the household tables (20260923000200).
+grant select on catalog_history to anon, authenticated;
 grant select, insert, update, delete on catalog_history to service_role;

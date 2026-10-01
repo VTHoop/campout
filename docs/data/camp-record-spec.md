@@ -2,7 +2,7 @@
 
 The field-by-field definition of a catalog record, what counts as verified, and what must never be stored. **Read this before entering camp data or writing code that touches `providers`, `camps`, `locations`, `sessions` or `session_options`.**
 
-The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`; the numbered decisions it cites are CAM-27's.
+The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`, and the review gate is `20260930000100_catalog_review_gate.sql` (ADR-0017); the numbered decisions it cites are CAM-27's.
 
 > **This spec does not describe `src/lib/catalog/`** (CAM-1, CAM-42), the provisional TypeScript mock the Find camps page still reads. The mock was the tool for making the decisions below and is not reshaped to match them: CAM-28 imports it as drafts and deletes it. Read this spec as the schema, not as documentation of the mock.
 
@@ -142,7 +142,7 @@ Facts a parent reads but the app never computes with (decision 12, ADR-0017 §5)
 
 ## Searching
 
-`search_sessions(window_start, window_end, wanted_categories, max_price_cents)` is the directory's one search (decision 18). It returns one row per session overlapping the window, with `from_price_cents`: its lowest option price. A camp matches when it holds **any** wanted category; a session matches the price when **any** option is at or under it. Every argument is optional. It runs as the caller, so row-level security applies to everything it reads.
+`search_sessions(window_start, window_end, wanted_categories, max_price_cents)` is the directory's one search (decision 18). It returns one row per session overlapping the window, with `from_price_cents`: its lowest option price. A camp matches when it holds **any** wanted category; a session matches the price when **any** option is at or under it. Every argument is optional. It returns only sessions whose whole chain is verified, or drafts too for a reviewer. It applies that rule itself rather than through row-level security, so its indexes stay usable; a session a family planned but that is no longer listed is not a search result.
 
 ## `school_calendars` and `school_closures`
 

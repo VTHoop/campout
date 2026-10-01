@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: proposed 2026-09-28, accepted 2026-09-30 (CAM-27). Amended before acceptance by CAM-27's decisions 13 and 16 and ADR-0018, as noted in §1, §2, §3 and §5.
-- Supersedes, once accepted: [ADR-0012](./0012-provenance-url-or-stored-document.md)'s *"`verified_at`, `verified_by` — still `NOT NULL`, always"*, and [ADR-0002](./0002-database-platform-supabase.md)'s *"The Supabase table editor is the camp verification tool."* The rest of both stands, including that provenance evidence is a URL or a stored document and never neither.
+- Supersedes: [ADR-0012](./0012-provenance-url-or-stored-document.md)'s *"`verified_at`, `verified_by` — still `NOT NULL`, always"*; [ADR-0002](./0002-database-platform-supabase.md)'s *"The Supabase table editor is the camp verification tool."*; [ADR-0004](./0004-authorization-row-level-security.md)'s *"Reference data … is world-readable and writable only by the service role"*; and [ADR-0013](./0013-school-closures-as-the-coverage-primitive.md)'s *"world-readable, `service_role` writes only"* for calendars and closures. The public now reads verified rows only (§2). The rest of each stands, including that provenance evidence is a URL or a stored document and never neither.
 
 ## Context
 Catalog and calendar data do not live in the database yet. The camp catalog is a TypeScript mock (`src/lib/catalog/mock-data.ts`, CAM-1), and the school calendars are parser drafts (`docs/data/school-calendars/*.draft.ts`, CAM-23) that the Summer page reads directly. The live Supabase project has the schema and no rows.

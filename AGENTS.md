@@ -265,11 +265,11 @@ Camp registration forms want emergency contacts, insurance details, physician na
 | Package manager | **pnpm 11**, Node 24 | `pnpm-workspace.yaml` for the planner package. |
 
 ### Data shape
-Normalized relational, because the domain is relational and a human has to verify it by eye in Supabase's table editor.
+Normalized relational, because the domain is relational and a human has to verify every record before it is published (ADR-0017).
 
 **A `provider` is an organization, a `camp` is a program it runs, and a `session` is a dated offering of that program.** The directory searches *sessions* — a parent is shopping for "the week of July 13", not for an organization. A camp page lists its sessions. This distinction is the single most important thing to get right in the schema; nearly every planner query starts from `sessions`.
 
-`providers → camps → sessions → session_options`, each session at one standalone, shared `location`, with provenance (evidence, `verified_at`, `verified_by`) on providers, camps and sessions. The field-by-field rules are in `docs/data/camp-record-spec.md`. `households → children`, `households → plan_entries → sessions`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
+`providers → camps → sessions → session_options`, each session at one standalone, shared `location`, with provenance (evidence, `status`, `verified_at`, `verified_by`) on providers, camps, locations, sessions and calendars. Rows start as drafts; only a reviewer's `approve_record()` publishes one, and `verified_at` is required once it does. The field-by-field rules are in `docs/data/camp-record-spec.md`. `households → children`, `households → plan_entries → sessions / session_options`. `school_calendars` is reference data — one row per school year per district, or per school — with its dated closures in `school_closures`, and it drives the entire coverage model.
 
 ### Diagrams
 Prefer Mermaid (`flowchart`, `sequenceDiagram`, `erDiagram`, `stateDiagram-v2`). ASCII only for spatial wireframes.
