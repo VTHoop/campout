@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   campRow,
   insertId,
@@ -10,7 +10,8 @@ import {
   withCampAndLocation,
   withSeededSession,
 } from './catalog-fixtures';
-import { anonClient, serviceClient } from './helpers';
+import type { TestUser } from './helpers';
+import { anonClient, createTestUser, deleteTestUsers, serviceClient } from './helpers';
 
 /**
  * The catalog's shape (CAM-27, PR 1): provider → camp → session, one to three
@@ -33,6 +34,89 @@ describe('providers', () => {
       .from('providers')
       .insert({ name: 'Unevidenced', ...PROVENANCE, source_url: null });
     expect(error?.code).toBe('23514');
+  });
+});
+
+/**
+ * The new tables grant insert, update and delete to anon and authenticated, as
+ * the other catalog tables do, so a refused write surfaces as RLS rather than a
+ * table-level permission error. That makes RLS the only barrier, so each write
+ * is tried as both kinds of client. An insert is refused outright; an update or
+ * delete matches no rows and reports no error, so the row is read back.
+ */
+let parent: TestUser;
+
+beforeAll(async () => {
+  parent = await createTestUser('catalog-shape-parent');
+});
+
+afterAll(async () => {
+  await deleteTestUsers([parent]);
+});
+
+describe.each([
+  ['an anonymous visitor', () => anonClient()],
+  ['a signed-in user', () => parent.client],
+])('providers and session options are closed to %s', (_who, clientFor) => {
+  it('refuses an insert of a provider', async () => {
+    const { error } = await clientFor()
+      .from('providers')
+      .insert({ name: 'Hijacked', ...PROVENANCE });
+    expect(error).not.toBeNull();
+  });
+
+  it('refuses an insert of an option', async () => {
+    await withSeededSession(async ({ sessionId }) => {
+      const { error } = await clientFor()
+        .from('session_options')
+        .insert(optionRow(sessionId, { kind: 'morning' }));
+      expect(error).not.toBeNull();
+    });
+  });
+
+  it.each([
+    [
+      'update',
+      (client: SupabaseClient, id: string) =>
+        client.from('providers').update({ name: 'Hijacked' }).eq('id', id),
+    ],
+    [
+      'delete',
+      (client: SupabaseClient, id: string) => client.from('providers').delete().eq('id', id),
+    ],
+  ])('leaves a provider untouched after an %s', async (_verb, attempt) => {
+    await withCampAndLocation(async ({ providerId }, admin) => {
+      const { error } = await attempt(clientFor(), providerId);
+      expect(error).toBeNull();
+
+      const after = await admin.from('providers').select('id, name').eq('id', providerId);
+      expect(after.data).toEqual([{ id: providerId, name: 'Fixture Rec League' }]);
+    });
+  });
+
+  it.each([
+    [
+      'update',
+      (client: SupabaseClient, id: string) =>
+        client.from('session_options').update({ price_cents: 1 }).eq('id', id),
+    ],
+    [
+      'delete',
+      (client: SupabaseClient, id: string) => client.from('session_options').delete().eq('id', id),
+    ],
+  ])('leaves an option untouched after an %s', async (_verb, attempt) => {
+    await withSeededSession(async ({ sessionId }, admin) => {
+      const optionId = await insertId(admin, 'session_options', optionRow(sessionId));
+
+      const { error } = await attempt(clientFor(), optionId);
+      expect(error).toBeNull();
+
+      const after = await admin
+        .from('session_options')
+        .select('id, price_cents')
+        .eq('id', optionId);
+      expect(after.data).toEqual([{ id: optionId, price_cents: 32500 }]);
+    });
   });
 });
 
@@ -135,6 +219,26 @@ async function duplicatesOf(admin: SupabaseClient, target: string): Promise<stri
 }
 
 describe('find_location_duplicates', () => {
+  // A reviewer's tool: signed-in users may call it (PR 2 narrows that to
+  // reviewers), anonymous visitors may not. 42501 is insufficient_privilege.
+  it('refuses an anonymous caller', async () => {
+    await withCampAndLocation(async ({ locationId }) => {
+      const { error } = await anonClient().rpc('find_location_duplicates', {
+        target_id: locationId,
+      });
+      expect(error?.code).toBe('42501');
+    });
+  });
+
+  it('lets a signed-in user call it', async () => {
+    await withCampAndLocation(async ({ locationId }) => {
+      const { error } = await parent.client.rpc('find_location_duplicates', {
+        target_id: locationId,
+      });
+      expect(error).toBeNull();
+    });
+  });
+
   it('flags the same address written differently', async () => {
     const respelled = {
       ...LOCATION,
@@ -377,7 +481,11 @@ describe('details', () => {
     ['camps', { financial_aid: 'yes' }],
     ['camps', { discounts: [{ kind: 'sibling', percent_off: 10, amount_cents: 500 }] }],
     ['camps', { lunch: { provision: 'catered' } }],
+    // Unknown keys are refused at every level, not just the top.
+    ['camps', { lunch: { provision: 'included', menu: 'pizza Fridays' } }],
+    ['camps', { policies: {} }],
     ['sessions', { field_trips: [{ min_grade: 3 }] }],
+    ['sessions', { field_trips: [{ destination: 'Zoo', bus: true }] }],
     ['sessions', { description: 'A week of fun!' }],
   ])('rejects %s details of %j', async (table, details) => {
     await withSeededSession(async ({ campId, sessionId }, admin) => {
@@ -390,6 +498,8 @@ describe('details', () => {
   it.each([
     [{ daily_rate: 9000 }],
     [{ care_fees: { drop_off: { price_cents: 1000, per: 'hour' } } }],
+    [{ care_fees: {} }],
+    [{ care_fees: { pickup: { price_cents: 1000, per: 'day', note: 'cash only' } } }],
     [{ price_unit: 'week' }],
   ])('rejects option details of %j', async (details) => {
     await withSeededSession(async ({ sessionId }, admin) => {
@@ -449,6 +559,15 @@ function ids(rows: SearchRow[]): string[] {
 }
 
 describe('search_sessions', () => {
+  // A null bound leaves the window open on that side. The seed's sessions come
+  // back too, so this checks only that the fixture weeks are among them.
+  it('searches every date when the window is left open', async () => {
+    await withSearchableSessions(async ({ dayCampWeek, sportsWeek }) => {
+      const rows = await search({ window_start: null, window_end: null });
+      expect(ids(rows)).toEqual(expect.arrayContaining([dayCampWeek, sportsWeek]));
+    });
+  });
+
   it('returns one row per session overlapping the window, with its lowest option price', async () => {
     await withSearchableSessions(async ({ dayCampWeek, sportsWeek }) => {
       const rows = await search({});
