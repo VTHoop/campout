@@ -20,7 +20,8 @@ import { anonClient, createTestUser, deleteTestUsers, serviceClient } from './he
  * test fails if the row was refused for some other reason:
  *
  *   23502 not_null_violation · 23505 unique_violation · 23514 check_violation ·
- *   22P02 invalid_text_representation (a value outside an enum)
+ *   22P02 invalid_text_representation (a value outside an enum) ·
+ *   42501 insufficient_privilege (refused by RLS or a missing grant)
  */
 
 describe('providers', () => {
@@ -62,7 +63,7 @@ describe.each([
     const { error } = await clientFor()
       .from('providers')
       .insert({ name: 'Hijacked', ...PROVENANCE });
-    expect(error).not.toBeNull();
+    expect(error?.code).toBe('42501');
   });
 
   it('refuses an insert of an option', async () => {
@@ -70,7 +71,7 @@ describe.each([
       const { error } = await clientFor()
         .from('session_options')
         .insert(optionRow(sessionId, { kind: 'morning' }));
-      expect(error).not.toBeNull();
+      expect(error?.code).toBe('42501');
     });
   });
 
