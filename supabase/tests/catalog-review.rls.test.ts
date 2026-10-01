@@ -521,8 +521,9 @@ describe('the guard trigger', () => {
 // ------------------------------------------------------------- reviewer edit
 
 describe('reviewer_edit', () => {
-  // Each edit lands and the row stays verified (decision 13). Options have no
-  // status of their own; their session stays verified.
+  // Each edit lands, and nothing is unpublished by it (decision 13): the
+  // session is still public, which needs it, its camp, its provider and its
+  // location all still verified. Options have no status of their own.
   it.each([
     ['session', 'sessions', 'sessionId', { theme: 'Ocean Week', end_date: '2027-07-15' }],
     ['session_option', 'session_options', 'optionId', { price_cents: 30000 }],
@@ -535,9 +536,7 @@ describe('reviewer_edit', () => {
       await withApprovedSession(async (ids, admin) => {
         expect(await editAsReviewer(kind, ids[key], changes)).toBeNull();
         expect(await readRow(admin, table, ids[key])).toMatchObject(changes);
-        expect(await readRow(admin, 'sessions', ids.sessionId)).toMatchObject({
-          status: 'verified',
-        });
+        expect(await isVisible(anonClient(), 'sessions', ids.sessionId)).toBe(true);
       });
     },
   );
@@ -549,9 +548,8 @@ describe('reviewer_edit', () => {
     await withApprovedCalendar(async (ids, admin) => {
       expect(await editAsReviewer(kind, ids[key], changes)).toBeNull();
       expect(await readRow(admin, table, ids[key])).toMatchObject(changes);
-      expect(await readRow(admin, 'school_calendars', ids.calendarId)).toMatchObject({
-        status: 'verified',
-      });
+      expect(await isVisible(anonClient(), 'school_calendars', ids.calendarId)).toBe(true);
+      expect(await isVisible(anonClient(), 'school_closures', ids.closureId)).toBe(true);
     });
   });
 
