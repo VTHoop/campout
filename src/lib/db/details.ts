@@ -124,8 +124,8 @@ type Reader<T> = (value: unknown, path: string) => T;
 type Shape = Readonly<Record<string, Reader<unknown>>>;
 type Read<S extends Shape> = { readonly [K in keyof S]: ReturnType<S[K]> };
 
-function fail(path: string, problem: string): never {
-  throw new DetailsError(`${path}: ${problem}`);
+function fail(path: string, problem: string, cause?: unknown): never {
+  throw new DetailsError(`${path}: ${problem}`, { cause });
 }
 
 function text(maxLength: number): Reader<string> {
@@ -160,7 +160,7 @@ const calendarDate: Reader<CalendarDate> = (value, path) => {
   try {
     return assertCalendarDate(value, path);
   } catch (error) {
-    return fail(path, (error as Error).message);
+    return fail(path, 'expected a real YYYY-MM-DD date', error);
   }
 };
 
