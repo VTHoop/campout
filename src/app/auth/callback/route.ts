@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { safeNextPath } from '@/lib/auth/safe-next';
+import { siteUrl } from '@/lib/auth/site-url';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -18,9 +19,9 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(new URL(safeNextPath(searchParams.get('next')), request.url));
+      return NextResponse.redirect(siteUrl(safeNextPath(searchParams.get('next')), request));
     }
   }
 
-  return NextResponse.redirect(new URL('/sign-in?error=link', request.url));
+  return NextResponse.redirect(siteUrl('/sign-in?error=link', request));
 }
