@@ -72,9 +72,24 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e:smoke
+      - run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+      # Sign-in (CAM-41) needs auth and a mail catcher, so the smoke lane runs
+      # against a local stack instead of the hosted project. Mailpit stays in;
+      # the rest of what the RLS job skips stays out.
+      - run: supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ''
+      - name: Point the app at the local stack
+        run: |
+          supabase status -o json | jq -r '"NEXT_PUBLIC_SUPABASE_URL=\(.API_URL)", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=\(.ANON_KEY)"' >> "$GITHUB_ENV"
+      - run: pnpm e2e:smoke
+      - if: always()
+        run: supabase stop

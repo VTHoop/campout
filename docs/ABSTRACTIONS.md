@@ -114,6 +114,16 @@ Format dates for display through `src/lib/dates.ts`, never with `new Date(date).
 
 Components live in `src/components/ui/`, restyled on Campout tokens (ADR-0015). Join classes with `cn` from `src/lib/utils.ts`: it knows our `text-*` type roles, which plain tailwind-merge would mistake for colours and drop. Style a pressed or selected state from its ARIA attribute (`aria-pressed:bg-ink`), as the week picker does, so the colour cannot drift from what a screen reader hears.
 
+## Sign-in: one page, one callback, one check
+
+Sign-in is a magic link (ADR-0003), and nothing in the app decides who a reviewer is: RLS and `is_reviewer()` do.
+
+- **`createClient()` comes in two flavours.** `@/lib/supabase/server` for Server Components and route handlers, `@/lib/supabase/browser` for Client Components. Both hold the publishable key and the user's own session. The secret key never appears in `src/`.
+- **`src/proxy.ts` keeps the session alive.** A Server Component cannot set cookies, so the proxy refreshes the token on each page request. Do not call `getSession()` to ask "who is this?" on the server; call `getUser()`, which checks the token with Supabase.
+- **`safeNextPath(value)` is the only way to use a `?next=`.** It lets through a path on this site and sends everything else (a full URL, `//host`, `/\host`, a missing value) to `/`. The callback applies it again, so the form's own check is a convenience, not the boundary.
+- **A link that does not work always ends the same way:** `/sign-in?error=link`, signed out.
+- **Sign out is a POST** to `/auth/sign-out`, so another site cannot sign anyone out with a link.
+
 ## Server vs. Client Components
 
 The boundary agents get wrong most often, so state it plainly:
