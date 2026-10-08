@@ -54,7 +54,9 @@ describe('SignInForm', () => {
     submit('  pat@example.com  ');
 
     await screen.findByText('Check your email');
-    expect(signInWithOtp.mock.calls[0][0].email).toBe('pat@example.com');
+    expect(signInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'pat@example.com' }),
+    );
   });
 
   it('replaces the form with "Check your email" and the address it went to', async () => {
