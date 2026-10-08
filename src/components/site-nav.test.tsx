@@ -5,9 +5,9 @@ import { SiteNav } from './site-nav';
 
 vi.mock('next/navigation', () => ({ usePathname: vi.fn() }));
 
-function renderAt(pathname: string) {
+function renderAt(pathname: string, signedIn = false) {
   vi.mocked(usePathname).mockReturnValue(pathname);
-  render(<SiteNav />);
+  render(<SiteNav signedIn={signedIn} />);
 }
 
 describe('SiteNav', () => {
@@ -55,5 +55,26 @@ describe('SiteNav', () => {
     expect(screen.getByRole('link', { name: 'Summer' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Days off' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Find camps' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('shows no auth controls to a signed-out visitor', () => {
+    renderAt('/summer');
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
+  it('shows a Sign out button to a signed-in user, which posts to the sign-out route', () => {
+    renderAt('/summer', true);
+    const button = screen.getByRole('button', { name: 'Sign out' });
+    const form = button.closest('form');
+    expect(form).toHaveAttribute('action', '/auth/sign-out');
+    expect(form).toHaveAttribute('method', 'post');
+    expect(button).toHaveAttribute('type', 'submit');
+  });
+
+  it('keeps the tabs the same for a signed-in user', () => {
+    renderAt('/summer', true);
+    const tabs = screen.getAllByRole('listitem').map((item) => item.textContent);
+    expect(tabs).toEqual(['Summer', 'Days off', 'Find camps']);
   });
 });
