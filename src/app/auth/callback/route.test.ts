@@ -62,4 +62,14 @@ describe('GET /auth/callback', () => {
     expect(to.pathname).toBe('/sign-in');
     expect(to.searchParams.get('error')).toBe('link');
   });
+
+  it('returns to the host the user is on, not the one the server believes it has', async () => {
+    const response = await GET(
+      new Request('http://localhost:3000/auth/callback?code=abc&next=%2Fcamps', {
+        headers: { host: '127.0.0.1:3000' },
+      }),
+    );
+
+    expect(response.headers.get('location')).toBe('http://127.0.0.1:3000/camps');
+  });
 });

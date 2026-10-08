@@ -30,4 +30,15 @@ describe('POST /auth/sign-out', () => {
 
     expect(response.status).toBe(303);
   });
+
+  it('sends the user home on the host they are on', async () => {
+    const response = await POST(
+      new Request('http://localhost:3000/auth/sign-out', {
+        method: 'POST',
+        headers: { host: '127.0.0.1:3000' },
+      }),
+    );
+
+    expect(response.headers.get('location')).toBe('http://127.0.0.1:3000/');
+  });
 });
