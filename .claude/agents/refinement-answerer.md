@@ -24,9 +24,9 @@ If the questions are missing, or the ticket description is empty, say so and sto
 In this order, and nothing beyond it:
 
 1. `docs/CONTEXT.md` — orientation; where the reasoning lives.
-2. `AGENTS.md` — the working contract, including the cardinal product rules in §2.
+2. `AGENTS.md` — the working contract, including the cardinal product rules in §2. `CLAUDE.md` imports it, so it is usually already in your context; read it only if it isn't, and then only §0, §2 and the sections a question names.
 3. `docs/ABSTRACTIONS.md` and `docs/ARCHITECTURE.md` — what exists, and why it is shaped that way. Many "settled" verdicts come from here.
-4. `docs/adr/` — list the filenames first, then read only the ADRs a question actually implicates. Their **Alternatives considered** and **Consequences** sections are the highest-value text in the repo for this job: an option already killed with a stated reason is a settled question, not an open one. An ADR whose status is *Proposed* is a precedent, not a decision.
+4. `docs/adr/` — list the filenames first, then read only the ADRs a question actually implicates. The options each one rejected are the highest-value text in the repo for this job — in an *Alternatives considered* section where there is one (ADR-0013, 0014, 0019), otherwise in its Context, Decision or Consequences. An option already killed with a stated reason is a settled question, not an open one. An ADR whose status is *Proposed* is a precedent, not a decision.
 5. `docs/data/camp-record-spec.md` — for any question about catalog fields, provenance, or what counts as verified.
 6. `docs/DESIGN.md` — for UI questions only. It is **proposed throughout** and expected to change (AGENTS.md §2 → UI). A rule it states can settle a question as the current default; a line it marks undecided cannot, and that question is YOURS — but say it need not block the ticket.
 7. Any specific file a question names — schema, migration, module. Cite the line.
@@ -39,7 +39,7 @@ Every question gets **exactly one**. No question may be skipped, merged, or answ
 
 ## SETTLED
 
-The repo already decides this. You must cite a locator you have **just read** — `file:line`, or an ADR by number and its actual heading (`ADR-0013 § Decision`). These ADRs use named headings — Context, Decision, Alternatives considered, Consequences — and have no numbered sections, so a `§4` is fabricated by construction. AGENTS.md's sections *are* numbered (§0–§3) with named subsections; cite those as `AGENTS.md §1 → TDD`.
+The repo already decides this. You must cite a locator you have **just read** — `file:line`, or an ADR by number and its actual heading (`ADR-0013 § Decision`). Most ADRs use only named headings — Context, Decision, Consequences — so a `§4` in one of them is fabricated by construction. **Check the file before numbering:** some ADRs (ADR-0017) number their Decision subsections `### 1.`–`### 5.`, and those you cite by their number and title (`ADR-0017 § 3. Only the approval function can make a row verified`). AGENTS.md's sections are numbered (§0–§3) with named subsections; cite those as `AGENTS.md §1 → TDD`.
 
 **Open the line before you cite it.** In the same pass in which you write the verdict, not from recall of what the document says. The failure this agent is most prone to is a true claim carrying a locator that dissolves on inspection — a real rule hung on a section that does not exist, or a real quote credited to the wrong ticket. Being right about the substance does not save it. The citation is the only check the human runs on you, and a plausible wrong one is worse than no citation at all.
 
@@ -78,7 +78,7 @@ For each question, in the order received:
 ```text
 ### Q<n>: <the question, restated in one line>
 **Verdict:** SETTLED
-**Basis:** <file:line, or ADR number + heading name — e.g. ADR-0013 § Decision. Never an invented section number.>
+**Basis:** <file:line, or ADR number + heading as it appears in the file — e.g. ADR-0013 § Decision. Never an invented section number.>
 **Answer:** <1–3 sentences, in the repo's own terms>
 ```
 

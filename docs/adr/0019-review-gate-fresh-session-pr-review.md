@@ -18,7 +18,7 @@ The handoff around the real review was manual too: the owner pasted `/pr-review`
 ## Decision
 - **The required review is `/pr-review`, run from a session that did not write the code**, once the PR is open with checks green. It reviews the whole diff against the Linear issue across six lenses, validates every Blocker and Major against the diff before reporting it, and posts its result to the PR.
 - **The implementing session answers the review from the PR, not from pasted text** (`/address-review`). A finding that survived validation is presumed valid: fix it test-first, or dismiss it with evidence — a passing test, a query result, a cited line — in a PR reply. A dismissal without evidence is not a dismissal. Work outside the issue is deferred to the owner, not absorbed.
-- **Fixes are re-reviewed.** `/pr-review` runs again after them. A PR merges when the latest review is Approved, or every remaining finding is dismissed with evidence the owner accepts. **The owner arbitrates contested dismissals; neither agent does.**
+- **Fixes are re-reviewed.** `/pr-review` runs again after them. A PR merges when the latest review is Approved, or every remaining finding is either dismissed with evidence the owner accepts or deferred to a follow-up issue the owner has created. **The owner arbitrates contested dismissals and deferrals; neither agent does.**
 - **The per-turn challenger is removed.** The two `PostToolUse` hooks remain the per-edit checks: they are deterministic, which is the property a per-edit check needs.
 - **The AC are the assertions.** ADR-0005 says the human owns the assertions. That is made concrete: every refined AC bullet maps to a test, the owner approves the map before the first red test (`/start-ticket`), and the PR body carries it for review.
 
@@ -31,4 +31,4 @@ The handoff around the real review was manual too: the owner pasted `/pr-review`
 - **+** No context grades its own work, and no dismissal leaves the PR without evidence the owner can check.
 - **+** One review per PR round instead of one per turn, and no copy-paste between sessions.
 - **−** Nothing reviews mid-task, so a wrong direction is caught at PR time rather than at the turn that took it. The approved AC → test map, the committed red tests and the hooks are what narrow that window.
-- **−** `/pr-review` is a user-level skill (`~/.claude/skills/`), not in this repo. A second contributor installs it as an onboarding step; that is not a reason to keep a weaker gate in-repo.
+- **−** `/pr-review` and `/refine-ticket` are user-level skills (`~/.claude/skills/`), not in this repo. A second contributor installs them as an onboarding step; that is not a reason to keep a weaker gate in-repo.

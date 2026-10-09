@@ -21,8 +21,8 @@ Use the Linear MCP server's `get_issue`, `list_comments`, `save_comment`, `save_
 3. Decide where to branch from:
    - **On `main`, or on a branch with no commits beyond `origin/main`** (`git rev-list --count origin/main..HEAD` is `0`) — continue to step 4.
    - **On a branch with its own commits** — this may be a resumed ticket. Stop and ask whether to resume it or start fresh. Do not move it.
-4. Name the branch `<prefix>/cam-<n>-<slug>` — prefix `feat`, `fix` or `refactor` from the issue's labels and title (ask if it is genuinely unclear), slug from the title, lowercase kebab, at most five words. It must contain `cam-<n>` so Linear links the PR.
-5. If that branch already exists locally or on `origin`, stop and ask — it is a resume or a collision. Otherwise `git switch -c <branch> origin/main`.
+4. Name the branch per AGENTS.md §1 → *Branches & PRs*: `<prefix>/cam-<n>-<slug>`, prefix from the issue's labels and title (ask if it is genuinely unclear).
+5. If that branch already exists locally or on `origin`, stop and ask — it is a resume or a collision. Otherwise `git switch -c <branch> --no-track origin/main`. `--no-track` matters: without it the branch tracks `origin/main`, and the first `git push` fails. Push the first time with `git push -u origin HEAD`.
 
 ## 2. The contract
 6. AGENTS.md is imported by `CLAUDE.md`, so it should already be in context. **Check, don't assume:** if you cannot quote its §1 → *Review gate* heading, read `AGENTS.md` in full now.

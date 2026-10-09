@@ -31,7 +31,7 @@ It does mean one thing about technical choices: **boring beats clever.** When tw
 - Post a Linear comment: `🚀 Starting: <brief approach>` (`mcp__linear__save_comment`).
 
 ### Branches & PRs (light PR flow)
-- One short-lived branch per task: `feat/…`, `fix/…`, `refactor/…`. Branch off `main`.
+- One short-lived branch per task, off `origin/main`: `<prefix>/cam-<n>-<slug>` — prefix `feat`, `fix` or `refactor`; slug from the issue title, lowercase kebab, at most five words. The `cam-<n>` is what links the PR to its Linear issue. A change with no issue drops it (`refactor/agent-review-workflow`).
 - Open a **PR** for every change, even solo. Keep PRs small and single-purpose — the PR is the visible record of review discipline.
 - The PR must show: passing check suite, a `/pr-review` pass from a session that did not write the code, with every finding answered (the Review gate below, ADR-0019), and green Codacy + CodeScene checks.
 - Squash-merge to `main`. Delete the branch.
@@ -181,6 +181,8 @@ The writer and the reviewer must never be the same context, and neither may be t
 | Answer the review | `/address-review <n>` | the implementing session |
 | Merge | — | owner |
 
+`/pr-review` and `/refine-ticket` are user-level skills (`~/.claude/skills/`), not in this repo; the other three, and the `refinement-answerer` agent `/refine-ticket` calls, live in `.claude/`.
+
 Subagents cannot spawn subagents, so `/pr-review` (which fans out to six reviewers) must run as a top-level session, never from inside another agent. Background loops are assistants, **not** a substitute for fixing your own regressions before merge.
 
 ### Review gate
@@ -196,7 +198,7 @@ Subagents cannot spawn subagents, so `/pr-review` (which fans out to six reviewe
 
    Modernization recommendations are optional. A red Codacy or CodeScene check counts as a Blocker.
 4. **Re-review.** `/pr-review <n>` again from a fresh session. It reviews the fix commits and marks any earlier finding still present as open; the owner reads those against the dismissal evidence in the reply.
-5. **Merge** when the latest review is Approved, or every remaining finding is dismissed with evidence the owner accepts. **The owner arbitrates every contested dismissal** — neither agent does.
+5. **Merge** when the latest review is Approved, or every remaining finding is either dismissed with evidence the owner accepts or deferred to a follow-up issue the owner has created. **The owner arbitrates every contested dismissal and every deferral** — neither agent does — and resolves the review's conversations.
 
 ---
 
