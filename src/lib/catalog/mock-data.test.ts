@@ -53,7 +53,7 @@ describe('mockProviders', () => {
 
 describe('mockLocations', () => {
   it('has one entry per physical site in the source documents', () => {
-    expect(mockLocations).toHaveLength(9);
+    expect(mockLocations).toHaveLength(8);
     for (const location of mockLocations) {
       expect(location.state).toBe('VA');
       expect(location.address.length).toBeGreaterThan(0);
