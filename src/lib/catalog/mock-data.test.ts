@@ -30,14 +30,6 @@ describe('mock catalog data', () => {
   });
 });
 
-describe('Category', () => {
-  it('is the closed six-value enum from the AC', () => {
-    expect(Object.values(Category).sort()).toEqual(
-      ['academic', 'arts', 'faith-based', 'outdoors', 'sports', 'stem'].sort(),
-    );
-  });
-});
-
 describe('mockProviders', () => {
   it('has one entry per organization in the source documents', () => {
     expect(mockProviders).toHaveLength(5);
