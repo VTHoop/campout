@@ -1,189 +1,229 @@
 import { describe, expect, it } from 'vitest';
-import { mockSessions } from './mock-data';
 import {
-  type Catalog,
-  listSessionCards,
   RegistrationKind,
+  type SessionCardRow,
   type SessionCardView,
-  sessionCardsFrom,
+  sessionCardsFromRows,
+  VerificationKind,
 } from './session-cards';
 import { Category } from './types';
 
 /**
- * The data-access service behind the session cards (CAM-32). The page and the
- * card read only its view objects, so CAM-28 can swap the mock catalog for
- * Supabase behind it.
+ * The data-access service behind the session cards (CAM-32, CAM-28): database
+ * rows in, `SessionCardView` out. Rows are invented; the real query, and what
+ * RLS lets each kind of visitor see, are in `supabase/tests/session-cards.rls.test.ts`.
  */
 
-const CATALOG: Catalog = {
-  providers: [
-    { id: 'provider-a', name: 'Provider A', website: 'https://provider-a.example' },
-    { id: 'provider-b', name: 'Provider B' },
-  ],
-  locations: [
-    { id: 'location-a', name: 'Park A', address: '1 Main St', city: 'Chester', state: 'VA' },
-  ],
-  camps: [
-    {
-      id: 'camp-url',
-      name: 'Registers online',
-      description: 'A camp.',
-      providerId: 'provider-a',
-      categories: [Category.Sports, Category.STEM],
-      registrationInfo: {
-        url: 'https://camp.example/register',
-        phone: '804-555-0100',
-        notes: 'Opens March 1.',
-      },
-    },
-    {
-      id: 'camp-phone',
-      name: 'Registers by phone',
-      description: 'A camp.',
-      providerId: 'provider-a',
-      categories: [Category.Arts],
-      registrationInfo: { phone: '804-555-0100' },
-    },
-    {
-      id: 'camp-provider-site',
-      name: 'Only a provider site',
-      description: 'A camp.',
-      providerId: 'provider-a',
-      categories: [Category.Outdoors],
-    },
-    {
-      id: 'camp-nothing',
-      name: 'No way to register',
-      description: 'A camp.',
-      providerId: 'provider-b',
-      categories: [Category.Academic],
-      registrationInfo: { notes: 'Ask at the front desk.' },
-    },
-  ],
-  sessions: [
-    {
-      id: 'session-url',
-      campId: 'camp-url',
-      locationId: 'location-a',
-      startDate: '2026-08-03',
-      endDate: '2026-08-05',
-      startTime: '09:00',
-      endTime: '12:00',
-      priceCents: 29_900,
-      priceNote: 'Sibling discount available.',
-      ageRange: { min: 5, max: 15 },
-      gradeRange: { min: 0, max: 5 },
-    },
-    {
-      id: 'session-phone',
-      campId: 'camp-phone',
-      locationId: 'location-a',
-      startDate: '2026-08-03',
-      endDate: '2026-08-07',
-    },
-    {
-      id: 'session-provider-site',
-      campId: 'camp-provider-site',
-      locationId: 'location-a',
-      startDate: '2026-08-03',
-      endDate: '2026-08-07',
-    },
-    {
-      id: 'session-nothing',
-      campId: 'camp-nothing',
-      locationId: 'location-a',
-      startDate: '2026-08-03',
-      endDate: '2026-08-07',
-    },
-  ],
+const FULL_DAY = {
+  kind: 'full_day',
+  daily_start: '09:00',
+  daily_end: '16:00',
+  price_cents: 32_500,
+  price_note: 'Sibling discount available.',
+} as const;
+
+const MORNING = {
+  kind: 'morning',
+  daily_start: '09:00',
+  daily_end: '12:30',
+  price_cents: 19_500,
+  price_note: null,
+} as const;
+
+const AFTERNOON = {
+  kind: 'afternoon',
+  daily_start: '13:00',
+  daily_end: '16:00',
+  price_cents: 19_500,
+  price_note: null,
+} as const;
+
+const VERIFIED_ROW: SessionCardRow = {
+  id: 'session-1',
+  start_date: '2027-06-21',
+  end_date: '2027-06-25',
+  status: 'verified',
+  min_age: 5,
+  max_age: 12,
+  min_grade: 0,
+  max_grade: 6,
+  source_url: 'https://example.test/summer',
+  verified_at: '2026-09-01T12:00:00Z',
+  camps: {
+    name: 'Fixture Day Camp',
+    categories: ['day_camp', 'sports'],
+    registration_url: 'https://example.test/register',
+    registration_note: 'Opens March 1.',
+    providers: { name: 'Fixture Rec League', website_url: 'https://example.test' },
+  },
+  locations: { label: 'Fixture Community Center', city: 'Midlothian' },
+  session_options: [FULL_DAY],
 };
 
-function card(id: string): SessionCardView {
-  const found = sessionCardsFrom(CATALOG).find((view) => view.id === id);
-  if (!found) throw new Error(`No card ${id}`);
-  return found;
+function cardFor(overrides: Partial<SessionCardRow> = {}): SessionCardView {
+  const [card] = sessionCardsFromRows([{ ...VERIFIED_ROW, ...overrides }]);
+  if (!card) throw new Error('No card');
+  return card;
 }
 
-describe('sessionCardsFrom', () => {
-  it('joins a session to its camp, provider and location', () => {
-    expect(card('session-url')).toEqual({
-      id: 'session-url',
-      campName: 'Registers online',
-      providerName: 'Provider A',
-      locationName: 'Park A',
-      city: 'Chester',
-      startDate: '2026-08-03',
-      endDate: '2026-08-05',
+function withCamp(camp: Partial<NonNullable<SessionCardRow['camps']>>): SessionCardView {
+  if (!VERIFIED_ROW.camps) throw new Error('No camp');
+  return cardFor({ camps: { ...VERIFIED_ROW.camps, ...camp } });
+}
+
+describe('sessionCardsFromRows', () => {
+  it('joins a session to its camp, provider, location and option', () => {
+    expect(cardFor()).toEqual({
+      id: 'session-1',
+      campName: 'Fixture Day Camp',
+      providerName: 'Fixture Rec League',
+      locationName: 'Fixture Community Center',
+      city: 'Midlothian',
+      startDate: '2027-06-21',
+      endDate: '2027-06-25',
       startTime: '09:00',
-      endTime: '12:00',
-      priceCents: 29_900,
+      endTime: '16:00',
+      priceCents: 32_500,
       priceNote: 'Sibling discount available.',
-      ageRange: { min: 5, max: 15 },
-      gradeRange: { min: 0, max: 5 },
-      categories: [Category.Sports, Category.STEM],
-      registration: { kind: RegistrationKind.Register, url: 'https://camp.example/register' },
+      ageRange: { min: 5, max: 12 },
+      gradeRange: { min: 0, max: 6 },
+      categories: [Category.DayCamp, Category.Sports],
+      registration: { kind: RegistrationKind.Register, url: 'https://example.test/register' },
       registrationNotes: 'Opens March 1.',
+      verification: { kind: VerificationKind.Verified, on: '2026-09-01' },
+    });
+  });
+
+  it('keeps the rows in the order given', () => {
+    const rows = ['b', 'a', 'c'].map((id) => ({ ...VERIFIED_ROW, id }));
+    expect(sessionCardsFromRows(rows).map((card) => card.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  describe('the option a card shows', () => {
+    it('is the full day when there is one, whatever the order', () => {
+      expect(cardFor({ session_options: [MORNING, AFTERNOON, FULL_DAY] }).priceCents).toBe(32_500);
+    });
+
+    it('is the morning when there is no full day', () => {
+      const card = cardFor({ session_options: [AFTERNOON, MORNING] });
+      expect([card.startTime, card.endTime]).toEqual(['09:00', '12:30']);
+    });
+
+    it('reads Postgres times, which carry seconds, as the HH:MM the card formats', () => {
+      const card = cardFor({
+        session_options: [{ ...FULL_DAY, daily_start: '09:00:00', daily_end: '16:30:00' }],
+      });
+      expect([card.startTime, card.endTime]).toEqual(['09:00', '16:30']);
+    });
+
+    it('refuses a time with seconds, which the card has no way to show', () => {
+      expect(() =>
+        cardFor({ session_options: [{ ...FULL_DAY, daily_start: '09:00:30' }] }),
+      ).toThrow(/session-1/);
+    });
+
+    it('leaves hours and price out when the session has no option', () => {
+      const card = cardFor({ session_options: [] });
+      expect(card.startTime).toBeUndefined();
+      expect(card.priceCents).toBeUndefined();
     });
   });
 
   it('leaves unstated facts out rather than defaulting them', () => {
-    const view = card('session-phone');
-    expect(view.startTime).toBeUndefined();
-    expect(view.endTime).toBeUndefined();
-    expect(view.priceCents).toBeUndefined();
-    expect(view.priceNote).toBeUndefined();
-    expect(view.ageRange).toBeUndefined();
-    expect(view.gradeRange).toBeUndefined();
+    const card = cardFor({
+      min_age: null,
+      max_age: null,
+      min_grade: null,
+      max_grade: null,
+      session_options: [
+        {
+          kind: 'full_day',
+          daily_start: null,
+          daily_end: null,
+          price_cents: null,
+          price_note: null,
+        },
+      ],
+    });
+    expect(card.startTime).toBeUndefined();
+    expect(card.endTime).toBeUndefined();
+    expect(card.priceCents).toBeUndefined();
+    expect(card.priceNote).toBeUndefined();
+    expect(card.ageRange).toBeUndefined();
+    expect(card.gradeRange).toBeUndefined();
   });
 
-  it('offers a call when the camp has a phone number but no registration URL', () => {
-    expect(card('session-phone').registration).toEqual({
-      kind: RegistrationKind.Call,
-      phone: '804-555-0100',
+  it('keeps an age range with one end stated', () => {
+    expect(cardFor({ min_age: 7, max_age: null }).ageRange).toEqual({ min: 7 });
+  });
+
+  describe('registration', () => {
+    it("is the camp's own link first", () => {
+      expect(cardFor().registration).toEqual({
+        kind: RegistrationKind.Register,
+        url: 'https://example.test/register',
+      });
+    });
+
+    it("falls back to the provider's website", () => {
+      expect(withCamp({ registration_url: null }).registration).toEqual({
+        kind: RegistrationKind.Website,
+        url: 'https://example.test',
+      });
+    });
+
+    it('offers none when there is nowhere to send the parent, but keeps the note', () => {
+      const card = cardFor({
+        camps: {
+          ...(VERIFIED_ROW.camps as NonNullable<SessionCardRow['camps']>),
+          registration_url: null,
+          registration_note: 'Ask at the front desk.',
+          providers: { name: 'Fixture Rec League', website_url: null },
+        },
+      });
+      expect(card.registration).toBeUndefined();
+      expect(card.registrationNotes).toBe('Ask at the front desk.');
     });
   });
 
-  it("falls back to the provider's website when the camp has neither", () => {
-    expect(card('session-provider-site').registration).toEqual({
-      kind: RegistrationKind.Website,
-      url: 'https://provider-a.example',
+  describe('verification', () => {
+    it('is the Richmond day a verified session was checked, not the UTC one', () => {
+      // 02:30 UTC on Sep 2 is 22:30 on Sep 1 in Richmond.
+      expect(cardFor({ verified_at: '2026-09-02T02:30:00Z' }).verification).toEqual({
+        kind: VerificationKind.Verified,
+        on: '2026-09-01',
+      });
     });
-  });
 
-  it('offers no registration when there is nowhere to send the parent, but keeps the notes', () => {
-    const view = card('session-nothing');
-    expect(view.registration).toBeUndefined();
-    expect(view.registrationNotes).toBe('Ask at the front desk.');
+    it('is a draft, with the page it was read from, for a draft session', () => {
+      expect(cardFor({ status: 'draft', verified_at: null }).verification).toEqual({
+        kind: VerificationKind.Draft,
+        sourceUrl: 'https://example.test/summer',
+      });
+    });
+
+    it('is a draft with no link when its source is a stored document', () => {
+      const card = cardFor({ status: 'draft', verified_at: null, source_url: null });
+      expect(card.verification).toEqual({ kind: VerificationKind.Draft });
+    });
+
+    it('refuses a verified session with no verified date', () => {
+      expect(() => cardFor({ verified_at: null })).toThrow(/session-1/);
+    });
+
+    it('refuses an archived session, which no card is for', () => {
+      expect(() => cardFor({ status: 'archived' })).toThrow(/session-1/);
+    });
   });
 
   it.each([
-    ['camp', { campId: 'camp-missing' }],
-    ['location', { locationId: 'location-missing' }],
-  ])('refuses a session whose %s is not in the catalog', (_what, broken) => {
-    const [first] = CATALOG.sessions;
-    if (!first) throw new Error('No session');
-    expect(() => sessionCardsFrom({ ...CATALOG, sessions: [{ ...first, ...broken }] })).toThrow();
+    ['camp', { camps: null }],
+    ['location', { locations: null }],
+  ])('refuses a session whose %s the database did not return', (_what, broken) => {
+    expect(() => cardFor(broken)).toThrow(/session-1/);
   });
 
-  it('refuses a camp whose provider is not in the catalog', () => {
-    expect(() => sessionCardsFrom({ ...CATALOG, providers: [] })).toThrow();
-  });
-});
-
-describe('listSessionCards', () => {
-  it('returns a card for every session in the catalog', async () => {
-    const cards = await listSessionCards();
-    expect(cards.map((view) => view.id)).toEqual(mockSessions.map((session) => session.id));
-  });
-
-  it('carries the VCU Ironbridge session as its card', async () => {
-    const cards = await listSessionCards();
-    expect(cards.find((view) => view.id === 'session-vcu-ironbridge')).toMatchObject({
-      campName: 'VCU Baseball Summer Youth Camps',
-      providerName: 'VCU Baseball',
-      locationName: 'Ironbridge Sports Park',
-      city: 'Chester',
-      registration: { kind: RegistrationKind.Register, url: 'https://ramsbaseballcamps.com' },
-    });
+  it('refuses a camp whose provider the database did not return', () => {
+    expect(() => withCamp({ providers: null })).toThrow(/session-1/);
   });
 });

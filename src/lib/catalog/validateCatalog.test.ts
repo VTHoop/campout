@@ -5,7 +5,7 @@ import type { CatalogSnapshot } from './validateCatalog';
 import { findCatalogInconsistencies } from './validateCatalog';
 
 // Small, purpose-built fixtures for this file's scenarios — not the real
-// seed data in mock-data.ts. Each test overrides just the field it needs to
+// catalog data. Each test overrides just the field it needs to
 // break, so a failure points at exactly one invariant.
 
 const provider: Provider = { id: 'provider-1', name: 'Test Provider' };

@@ -4,7 +4,7 @@ The field-by-field definition of a catalog record, what counts as verified, and 
 
 The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`, and the review gate is `20260930000100_catalog_review_gate.sql` (ADR-0017); the numbered decisions it cites are CAM-27's.
 
-> **This spec does not describe `src/lib/catalog/`** (CAM-1, CAM-42), the provisional TypeScript mock the Find camps page still reads. The mock was the tool for making the decisions below and is not reshaped to match them: CAM-28 imports it as drafts and deletes it. Read this spec as the schema, not as documentation of the mock.
+> **This spec does not describe `src/lib/catalog/types.ts`** (CAM-1, CAM-42), the TypeScript record shapes the first mock catalog used. The mock was the tool for making the decisions below; CAM-28 imported it as drafts and deleted it. Read this spec as the schema.
 
 ---
 

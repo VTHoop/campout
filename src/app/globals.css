@@ -36,6 +36,7 @@
   --color-brick: #a23b29;
 
   /* Category hues — one darkness, dot only, never a filled badge. */
+  --color-category-day-camp: #a1521f;
   --color-category-sports: #1d5b79;
   --color-category-stem: #5a4b8c;
   --color-category-arts: #a93a68;

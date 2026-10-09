@@ -121,3 +121,8 @@ export function partialWeekCallout(
   const endsByNoon = endTime !== undefined && endTime <= NOON;
   return `Covers ${String(covered)} of ${String(WEEKDAYS_IN_A_WEEK)} days${endsByNoon ? ', and ends at noon' : ''}`;
 }
+
+/** The day a session was verified, as the card says it: `May 1, 2026`. */
+export function formatVerifiedOn(date: CalendarDate): string {
+  return `${shortMonth(date)} ${dayOfMonth(date)}, ${date.slice(0, 4)}`;
+}

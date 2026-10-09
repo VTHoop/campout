@@ -49,7 +49,7 @@ Contrast, WCAG, measured at the current values: `ink` on `paper` 12.4:1, `bluepr
 
 ### Category hues
 
-Tokens `category-sports` … `category-faith-based`. Six hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
+Tokens `category-day-camp`, `category-sports` … `category-faith-based`. Seven hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
 
 ## Type
 

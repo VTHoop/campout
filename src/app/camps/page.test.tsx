@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listSessionCards } from '@/lib/catalog/session-cards';
+import { SUMMER_2026_CARDS } from '@/lib/catalog/session-card-fixtures';
 import { CampsView } from './camps-view';
 import CampsPage, { metadata } from './page';
 
@@ -10,13 +10,23 @@ vi.mock('next/navigation', async (importOriginal) => ({
   useSearchParams: vi.fn(),
 }));
 
+// The page's job is wiring: a client in, cards out. The real read, and what RLS
+// lets each visitor see, are in supabase/tests/session-cards.rls.test.ts.
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(() => Promise.resolve({})) }));
+vi.mock('@/lib/catalog/session-cards', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/catalog/session-cards')>()),
+  listSessionCards: vi.fn(
+    async () => (await import('@/lib/catalog/session-card-fixtures')).SUMMER_2026_CARDS,
+  ),
+}));
+
 /**
  * The page is drawn from Chesterfield's drafted calendars for 2025-26 through
  * 2027-28 (CAM-31). Summer 2026 runs May 30 – Aug 23, summer 2027 June 5 –
  * Aug 22. Today is passed in, so these hold whatever the date they run on.
  */
 const SEPTEMBER_2026 = '2026-09-27';
-const CARDS = await listSessionCards();
+const CARDS = SUMMER_2026_CARDS;
 
 /** The week picker reads `?week=` from the URL on the client (CAM-32). */
 function atUrl(search: string) {
@@ -173,15 +183,15 @@ describe('CampsPage', () => {
     atUrl('summer=2026&week=10');
     renderSummer({ requested: '2026' });
     const picker = screen.getByRole('group', { name: 'Weeks of summer' });
-    const heading = screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' });
+    const heading = screen.getByRole('heading', { level: 2, name: '5 camps, week of Aug 3' });
     expect(picker.compareDocumentPosition(heading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'VCU Baseball Summer Youth Camps' }),
+      screen.getByRole('heading', { level: 3, name: 'Fixture Baseball Camp' }),
     ).toBeInTheDocument();
   });
 
-  it('lists no camps for a week the mock catalog has none in', () => {
-    // Summer 2027's last two weeks: SCOR's listed weeks end with August 2.
+  it('lists no camps for a week the catalog has none in', () => {
+    // The fixtures are all summer 2026; summer 2027's week 11 has none.
     atUrl('week=11');
     renderSummer();
     expect(
@@ -196,7 +206,7 @@ describe('CampsPage', () => {
 
     render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026', week: '10' }) }));
     expect(
-      screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' }),
+      screen.getByRole('heading', { level: 2, name: '5 camps, week of Aug 3' }),
     ).toBeInTheDocument();
   });
 });

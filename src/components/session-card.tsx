@@ -3,6 +3,7 @@ import {
   type Registration,
   RegistrationKind,
   type SessionCardView,
+  VerificationKind,
 } from '@/lib/catalog/session-cards';
 import { Category } from '@/lib/catalog/types';
 import {
@@ -10,6 +11,7 @@ import {
   formatGrades,
   formatHours,
   formatPrice,
+  formatVerifiedOn,
   partialWeekCallout,
   weekTab,
 } from '@/lib/session-card-format';
@@ -21,12 +23,12 @@ import { cn } from '@/lib/utils';
  * right. It says what the camp told us — a fact the camp did not state is said
  * to be missing, never defaulted — and it ranks nothing.
  *
- * Not yet on the card: distance (CAM-28), Add to plan (the planner) and the
- * verified line (real data).
+ * Not yet on the card: distance (CAM-45) and Add to plan (the planner).
  */
 
 const CATEGORY_LABELS = new Map(
   Object.entries({
+    [Category.DayCamp]: 'Day camp',
     [Category.Sports]: 'Sports',
     [Category.STEM]: 'STEM',
     [Category.Arts]: 'Arts',
@@ -39,6 +41,7 @@ const CATEGORY_LABELS = new Map(
 /** Whole class names, so Tailwind can see each one. */
 const CATEGORY_DOTS = new Map(
   Object.entries({
+    [Category.DayCamp]: 'bg-category-day-camp',
     [Category.Sports]: 'bg-category-sports',
     [Category.STEM]: 'bg-category-stem',
     [Category.Arts]: 'bg-category-arts',
@@ -181,6 +184,28 @@ function Actions({ card }: { card: SessionCardView }) {
   );
 }
 
+/**
+ * Whether a person checked these facts. "Verified" means we confirmed they were
+ * accurate that day, nothing about the camp. A draft says it is not, and links
+ * where it was read from when there is a page to link.
+ */
+function Provenance({ verification }: { verification: SessionCardView['verification'] }) {
+  if (verification.kind === VerificationKind.Verified)
+    return (
+      <p className="text-caption text-ink-muted">Verified {formatVerifiedOn(verification.on)}</p>
+    );
+  return (
+    <p className="flex flex-wrap gap-x-3 text-caption text-ink-muted">
+      <span>Draft · not yet verified</span>
+      {verification.sourceUrl === undefined ? null : (
+        <a href={verification.sourceUrl} className="text-blueprint underline">
+          See the source
+        </a>
+      )}
+    </p>
+  );
+}
+
 export function SessionCard({ card, weekNumber }: { card: SessionCardView; weekNumber: number }) {
   const headingId = `${card.id}-name`;
   return (
@@ -202,6 +227,7 @@ export function SessionCard({ card, weekNumber }: { card: SessionCardView; weekN
         <Categories categories={card.categories} />
         <Callout card={card} />
         <Actions card={card} />
+        <Provenance verification={card.verification} />
       </div>
     </li>
   );
