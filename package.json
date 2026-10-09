@@ -23,8 +23,7 @@
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/db/types.ts",
-    "codescene:check": "tsx --env-file-if-exists=.env.local scripts/check-code-health.ts",
-    "catalog:import": "tsx --env-file-if-exists=.env.local scripts/import-catalog.ts"
+    "codescene:check": "tsx --env-file-if-exists=.env.local scripts/check-code-health.ts"
   },
   "dependencies": {
     "@campout/planner": "workspace:*",
