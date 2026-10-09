@@ -27,6 +27,8 @@ Launch market is the Richmond, Virginia metro: Richmond city, Chesterfield, Henr
 
 Two people, part-time, building largely through AI coding agents. **Scope for any task comes from its Linear issue** — not from this file, and not from an agent's own reading of what the product needs next. `AGENTS.md` §0 covers the working style; the short version is that boring beats clever, and the gates in §1 are not optional.
 
+Each ticket runs as a loop of fresh sessions that hand off through Linear and the PR: `/next-up` → `/refine-ticket` → `/start-ticket` → PR → `/pr-review` → `/address-review` → re-review → merge. AGENTS.md §1 (*Working with multiple agents*, *Review gate*) has the rules; ADR-0019 has the reasoning.
+
 ## Where the reasoning lives
 
 - **`AGENTS.md`** / `CLAUDE.md` — the engineering contract: TDD, PR flow, quality gates, product rules. **Read first.**

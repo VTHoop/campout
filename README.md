@@ -73,7 +73,7 @@ Most of this codebase is written by AI agents. Agents fail in a specific way: wh
 
 **Ratchets only move upward.** Coverage floors (95% on the planner, 80% on the app) and the CodeScene health floor can be raised, never lowered — and the hook enforces that, not just the docs.
 
-**An adversarial reviewer runs after every code-editing turn.** The [challenger](./.claude/agents/challenger.md) is a separate context with no write access, so the author never grades its own work.
+**Every PR is reviewed from a session that did not write it.** `/pr-review` posts its findings to the PR, and the author answers each one with a fix or with evidence there; the owner rules on any dismissal ([ADR-0019](./docs/adr/0019-review-gate-fresh-session-pr-review.md)). No context grades its own work.
 
 The full contract is in [`AGENTS.md`](./AGENTS.md).
 
