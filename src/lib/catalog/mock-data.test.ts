@@ -401,3 +401,20 @@ describe('Richmond Ballet (richmondballet.com, summer camps and classes)', () =>
     expect(sessionsOf(campId)).toHaveLength(0);
   });
 });
+
+describe('mock locations', () => {
+  it('every location has coordinates inside the Richmond metro (CAM-28: the distance filter needs them)', () => {
+    const missing = mockLocations.filter((l) => l.lat === undefined || l.long === undefined);
+    expect(missing.map((l) => l.name)).toEqual([]);
+    for (const { name, lat, long } of mockLocations) {
+      expect({ name, inMetro: (lat ?? 0) > 37.2 && (lat ?? 0) < 37.8 }).toEqual({
+        name,
+        inMetro: true,
+      });
+      expect({ name, inMetro: (long ?? 0) > -77.8 && (long ?? 0) < -77.2 }).toEqual({
+        name,
+        inMetro: true,
+      });
+    }
+  });
+});
