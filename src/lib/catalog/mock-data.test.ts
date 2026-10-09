@@ -439,3 +439,10 @@ describe('import readiness (CAM-28)', () => {
     expect(bad.map((p) => p.name)).toEqual([]);
   });
 });
+
+describe('mock catalog import readiness (CAM-28)', () => {
+  it('has no location that no session uses', () => {
+    const used = new Set(mockSessions.map((s) => s.locationId));
+    expect(mockLocations.filter((l) => !used.has(l.id)).map((l) => l.name)).toEqual([]);
+  });
+});
