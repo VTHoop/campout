@@ -56,6 +56,7 @@ type OptionKind = Database['public']['Enums']['session_option_kind'];
 /** Our enum to the database's. An exhaustive table, read through a Map. */
 const DB_CATEGORIES: ReadonlyMap<Category, CampCategory> = new Map(
   Object.entries({
+    [Category.DayCamp]: 'day_camp',
     [Category.Sports]: 'sports',
     [Category.STEM]: 'stem',
     [Category.Arts]: 'arts',

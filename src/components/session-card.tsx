@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 
 const CATEGORY_LABELS = new Map(
   Object.entries({
+    [Category.DayCamp]: 'Day camp',
     [Category.Sports]: 'Sports',
     [Category.STEM]: 'STEM',
     [Category.Arts]: 'Arts',
@@ -39,6 +40,7 @@ const CATEGORY_LABELS = new Map(
 /** Whole class names, so Tailwind can see each one. */
 const CATEGORY_DOTS = new Map(
   Object.entries({
+    [Category.DayCamp]: 'bg-category-day-camp',
     [Category.Sports]: 'bg-category-sports',
     [Category.STEM]: 'bg-category-stem',
     [Category.Arts]: 'bg-category-arts',
