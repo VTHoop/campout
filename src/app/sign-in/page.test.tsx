@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@/lib/supabase/browser', () => ({ createClient: vi.fn() }));
 
-const getUser = vi.fn();
+const getClaims = vi.fn();
 
 async function renderPage(searchParams: Record<string, string | string[] | undefined> = {}) {
   render(await SignInPage({ searchParams: Promise.resolve(searchParams) }));
@@ -21,9 +21,9 @@ async function renderPage(searchParams: Record<string, string | string[] | undef
 describe('the sign-in page', () => {
   beforeEach(() => {
     vi.mocked(redirect).mockClear();
-    getUser.mockReset().mockResolvedValue({ data: { user: null } });
+    getClaims.mockReset().mockResolvedValue({ data: null, error: null });
     vi.mocked(createClient).mockResolvedValue({
-      auth: { getUser },
+      auth: { getClaims },
     } as unknown as Awaited<ReturnType<typeof createClient>>);
   });
 
@@ -40,7 +40,7 @@ describe('the sign-in page', () => {
   });
 
   it('sends a signed-in user to /', async () => {
-    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'u1' } }, error: null });
 
     await expect(renderPage()).rejects.toThrow('NEXT_REDIRECT /');
   });
