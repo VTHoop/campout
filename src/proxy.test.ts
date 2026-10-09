@@ -1,3 +1,4 @@
+import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 import { refreshSession } from '@/lib/supabase/session';
@@ -6,7 +7,7 @@ import { config, proxy } from './proxy';
 vi.mock('@/lib/supabase/session', () => ({ refreshSession: vi.fn() }));
 
 function runsOn(path: string) {
-  return config.matcher.some((pattern) => new RegExp(`^${pattern}$`).test(path));
+  return unstable_doesMiddlewareMatch({ config, url: `https://campout.test${path}` });
 }
 
 describe('proxy', () => {
