@@ -51,7 +51,7 @@ const VERIFIED_ROW: SessionCardRow = {
   verified_at: '2026-09-01T12:00:00Z',
   camps: {
     name: 'Fixture Day Camp',
-    categories: [Category.DayCamp, Category.Sports],
+    categories: ['day_camp', 'sports'],
     registration_url: 'https://example.test/register',
     registration_note: 'Opens March 1.',
     providers: { name: 'Fixture Rec League', website_url: 'https://example.test' },

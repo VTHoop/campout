@@ -123,6 +123,6 @@ export function partialWeekCallout(
 }
 
 /** The day a session was verified, as the card says it: `May 1, 2026`. */
-export function formatVerifiedOn(_date: CalendarDate): string {
-  throw new Error('not implemented');
+export function formatVerifiedOn(date: CalendarDate): string {
+  return `${shortMonth(date)} ${dayOfMonth(date)}, ${date.slice(0, 4)}`;
 }
