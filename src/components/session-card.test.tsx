@@ -1,6 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { RegistrationKind, type SessionCardView } from '@/lib/catalog/session-cards';
+import {
+  RegistrationKind,
+  type SessionCardView,
+  VerificationKind,
+} from '@/lib/catalog/session-cards';
 import { Category } from '@/lib/catalog/types';
 import { SessionCard } from './session-card';
 
@@ -10,10 +14,10 @@ import { SessionCard } from './session-card';
  */
 
 const IRONBRIDGE: SessionCardView = {
-  id: 'session-vcu-ironbridge',
-  campName: 'VCU Baseball Summer Youth Camps',
-  providerName: 'VCU Baseball',
-  locationName: 'Ironbridge Sports Park',
+  id: 'session-baseball',
+  campName: 'Fixture Baseball Camp',
+  providerName: 'Fixture Provider',
+  locationName: 'Fixture Park',
   city: 'Chester',
   startDate: '2026-08-03',
   endDate: '2026-08-05',
@@ -21,18 +25,20 @@ const IRONBRIDGE: SessionCardView = {
   endTime: '12:00',
   priceCents: 29_900,
   categories: [Category.Sports],
-  registration: { kind: RegistrationKind.Register, url: 'https://ramsbaseballcamps.com' },
+  registration: { kind: RegistrationKind.Register, url: 'https://example.test/register' },
+  verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
 };
 
 const UNSTATED: SessionCardView = {
-  id: 'session-magical-mess',
-  campName: 'Magical Mess',
-  providerName: 'acac',
-  locationName: 'acac Midlothian',
+  id: 'session-craft',
+  campName: 'Fixture Craft Week',
+  providerName: 'Fixture Provider',
+  locationName: 'Fixture Park',
   city: 'Midlothian',
   startDate: '2026-06-08',
   endDate: '2026-06-12',
   categories: [Category.Arts],
+  verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
 };
 
 function renderCard(card: SessionCardView, weekNumber = 10) {
@@ -48,13 +54,13 @@ describe('SessionCard', () => {
   it('is a list item headed by the camp name', () => {
     const item = renderCard(IRONBRIDGE);
     expect(
-      within(item).getByRole('heading', { name: 'VCU Baseball Summer Youth Camps' }),
+      within(item).getByRole('heading', { name: 'Fixture Baseball Camp' }),
     ).toBeInTheDocument();
   });
 
   it('names the provider and where the session runs', () => {
     renderCard(IRONBRIDGE);
-    expect(screen.getByText('VCU Baseball at Ironbridge Sports Park, Chester')).toBeInTheDocument();
+    expect(screen.getByText('Fixture Provider at Fixture Park, Chester')).toBeInTheDocument();
   });
 
   describe('week tab', () => {
@@ -137,7 +143,7 @@ describe('SessionCard', () => {
       renderCard(IRONBRIDGE);
       expect(screen.getByRole('link', { name: "Register on the camp's site" })).toHaveAttribute(
         'href',
-        'https://ramsbaseballcamps.com',
+        'https://example.test/register',
       );
     });
 
@@ -174,8 +180,40 @@ describe('SessionCard', () => {
     });
   });
 
-  it('ranks nothing and claims no verification', () => {
+  it('ranks nothing and recommends nothing', () => {
     renderCard(IRONBRIDGE);
-    expect(screen.queryByText(/verified|popular|top pick|recommended/i)).toBeNull();
+    expect(screen.queryByText(/popular|top pick|recommended|best/i)).toBeNull();
+  });
+  describe('verification', () => {
+    it('says the day a verified session was checked', () => {
+      renderCard(IRONBRIDGE);
+      expect(screen.getByText('Verified May 1, 2026')).toBeInTheDocument();
+    });
+
+    it('says a draft is not verified, and never that it is', () => {
+      const item = renderCard({
+        ...IRONBRIDGE,
+        verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
+      });
+      expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
+      expect(within(item).queryByText(/^Verified/)).toBeNull();
+    });
+
+    it('links the page a draft was read from', () => {
+      const item = renderCard({
+        ...IRONBRIDGE,
+        verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
+      });
+      expect(within(item).getByRole('link', { name: 'See the source' })).toHaveAttribute(
+        'href',
+        'https://example.test/camps',
+      );
+    });
+
+    it('offers no source link for a draft read from a stored document', () => {
+      const item = renderCard({ ...IRONBRIDGE, verification: { kind: VerificationKind.Draft } });
+      expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
+      expect(within(item).queryByRole('link', { name: 'See the source' })).toBeNull();
+    });
   });
 });

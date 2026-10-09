@@ -2,7 +2,7 @@ import { weeksBetween } from '@campout/planner';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
-import { listSessionCards } from '@/lib/catalog/session-cards';
+import { SUMMER_2026_CARDS } from '@/lib/catalog/session-card-fixtures';
 import { SummerWeeks } from './summer-weeks';
 
 vi.mock('next/navigation', async (importOriginal) => ({
@@ -11,13 +11,13 @@ vi.mock('next/navigation', async (importOriginal) => ({
 }));
 
 /**
- * The week picker over the selected week's session cards (CAM-32), on the mock
- * catalog. Summer 2026 is 12 weeks, Monday June 1 to Monday August 17; week 10
+ * The week picker over the selected week's session cards (CAM-32), on invented
+ * cards. Summer 2026 is 12 weeks, Monday June 1 to Monday August 17; week 10
  * is the week of August 3. Real navigation — reload, back and forward — is in
  * e2e/session-cards.spec.ts.
  */
 const WEEKS = weeksBetween('2026-06-01', '2026-08-21');
-const CARDS = await listSessionCards();
+const CARDS = SUMMER_2026_CARDS;
 
 function renderAt(search: string, cards = CARDS) {
   vi.mocked(useSearchParams).mockReturnValue(
@@ -51,22 +51,20 @@ describe('SummerWeeks', () => {
     renderAt('summer=2026&week=10');
     expect(tile(10)).toHaveAttribute('aria-pressed', 'true');
     expect(
-      screen.getByRole('heading', { level: 2, name: '7 camps, week of Aug 3' }),
+      screen.getByRole('heading', { level: 2, name: '5 camps, week of Aug 3' }),
     ).toBeInTheDocument();
     expect(campNames()).toEqual([
-      'Game On!',
-      'Junior Lifeguarding Camp',
-      'Junior Mini Tennis Camp',
-      'Minds In Motion Camp',
-      'SwimRVA Summer Swim Camp',
-      'SwimRVA Summer Swim Camp',
-      'VCU Baseball Summer Youth Camps',
+      'Fixture Baseball Camp',
+      'Fixture Swim Camp',
+      'Fixture Swim Camp',
+      'Fixture Theater Camp',
+      'Fixture Chess Club',
     ]);
   });
 
   it('labels the list of cards with its heading', () => {
     renderAt('week=10');
-    expect(screen.getByRole('list', { name: '7 camps, week of Aug 3' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: '5 camps, week of Aug 3' })).toBeInTheDocument();
   });
 
   it('gives each card its week number', () => {
@@ -78,7 +76,7 @@ describe('SummerWeeks', () => {
     renderAt('summer=2026');
     expect(tile(1)).toHaveAttribute('aria-pressed', 'true');
     expect(
-      screen.getByRole('heading', { level: 2, name: '4 camps, week of Jun 1' }),
+      screen.getByRole('heading', { level: 2, name: '2 camps, week of Jun 1' }),
     ).toBeInTheDocument();
   });
 
@@ -94,7 +92,7 @@ describe('SummerWeeks', () => {
   it('counts a single camp as one camp', () => {
     renderAt(
       'week=10',
-      CARDS.filter((card) => card.id === 'session-vcu-ironbridge'),
+      CARDS.filter((card) => card.id === 'baseball'),
     );
     expect(
       screen.getByRole('heading', { level: 2, name: '1 camp, week of Aug 3' }),

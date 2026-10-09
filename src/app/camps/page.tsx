@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { listSessionCards } from '@/lib/catalog/session-cards';
+import { createClient } from '@/lib/supabase/server';
 import { richmondDate } from '@/lib/today';
 import { CampsView } from './camps-view';
 
@@ -16,6 +17,7 @@ export default async function CampsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ summer }, cards] = await Promise.all([searchParams, listSessionCards()]);
+  const client = await createClient();
+  const [{ summer }, cards] = await Promise.all([searchParams, listSessionCards(client)]);
   return <CampsView today={richmondDate(new Date())} requested={summer} cards={cards} />;
 }

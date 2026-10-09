@@ -1,21 +1,14 @@
 import type { CalendarDate } from '@campout/planner';
-import { mockCamps, mockLocations, mockProviders, mockSessions } from './mock-data';
-import type {
-  AgeRange,
-  Camp,
-  Category,
-  GradeRange,
-  Location,
-  Provider,
-  Session,
-  WallClockTime,
-} from './types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/db/types';
+import type { AgeRange, Category, GradeRange, WallClockTime } from './types';
 
 /**
- * The data-access service behind the session cards (CAM-32): the one place the
- * catalog is read for them. The page and the card see only `SessionCardView`,
- * never the mock data, so CAM-28 can switch this to Supabase without touching
- * either. Async for the same reason: the database read will be.
+ * The data-access service behind the session cards (CAM-32, CAM-28): the one
+ * place the catalog is read for them. The page and the card see only
+ * `SessionCardView`, never a database row. What a visitor may see is decided by
+ * the database (RLS, ADR-0017 §2): this reads as the visitor and adds no status
+ * filter and no reviewer logic of its own.
  */
 
 /** Which way the card sends a parent to register, in order of preference. */
@@ -48,75 +41,60 @@ export interface SessionCardView {
   readonly categories: readonly Category[];
   readonly registration?: Registration;
   readonly registrationNotes?: string;
+  readonly verification: Verification;
 }
 
-export interface Catalog {
-  readonly providers: readonly Provider[];
-  readonly locations: readonly Location[];
-  readonly camps: readonly Camp[];
-  readonly sessions: readonly Session[];
+export enum VerificationKind {
+  Verified = 'verified',
+  Draft = 'draft',
 }
 
-function byId<T extends { readonly id: string }>(rows: readonly T[]): ReadonlyMap<string, T> {
-  return new Map(rows.map((row) => [row.id, row]));
+/**
+ * Whether a person has checked this session's facts. A verified session says
+ * the day (in Richmond) they were checked; a draft says it is not, and links
+ * the page it was read from when there is one. A card with neither cannot be
+ * built, so nothing unverified can look verified.
+ */
+export type Verification =
+  | { readonly kind: VerificationKind.Verified; readonly on: CalendarDate }
+  | { readonly kind: VerificationKind.Draft; readonly sourceUrl?: string };
+
+type Tables = Database['public']['Tables'];
+
+/** One session with everything its card reads, as the embedded select returns it. */
+export interface SessionCardRow {
+  readonly id: string;
+  readonly start_date: string;
+  readonly end_date: string;
+  readonly status: Database['public']['Enums']['record_status'];
+  readonly min_age: number | null;
+  readonly max_age: number | null;
+  readonly min_grade: number | null;
+  readonly max_grade: number | null;
+  readonly source_url: string | null;
+  readonly verified_at: string | null;
+  readonly camps: {
+    readonly name: string;
+    readonly categories: readonly Category[];
+    readonly registration_url: string | null;
+    readonly registration_note: string | null;
+    readonly providers: { readonly name: string; readonly website_url: string | null } | null;
+  } | null;
+  readonly locations: { readonly label: string; readonly city: string } | null;
+  readonly session_options: readonly Pick<
+    Tables['session_options']['Row'],
+    'kind' | 'daily_start' | 'daily_end' | 'price_cents' | 'price_note'
+  >[];
 }
 
-/** Refuse rather than guess (AGENTS.md → Code conventions): a dangling reference is a bug. */
-function lookup<T>(rows: ReadonlyMap<string, T>, id: string, what: string): T {
-  const row = rows.get(id);
-  if (row === undefined) throw new Error(`Catalog has no ${what} "${id}"`);
-  return row;
+/** One card per row, in the order given. Throws on any row the database could not have produced. */
+export function sessionCardsFromRows(_rows: readonly SessionCardRow[]): readonly SessionCardView[] {
+  throw new Error('not implemented');
 }
 
-/** The camp's registration URL, else its phone number, else the provider's website. */
-function registrationFor(camp: Camp, provider: Provider): Registration | undefined {
-  const info = camp.registrationInfo;
-  if (info?.url !== undefined) return { kind: RegistrationKind.Register, url: info.url };
-  if (info?.phone !== undefined) return { kind: RegistrationKind.Call, phone: info.phone };
-  if (provider.website !== undefined)
-    return { kind: RegistrationKind.Website, url: provider.website };
-  return undefined;
-}
-
-/** One card per session, in catalog order. Throws on any reference the catalog cannot resolve. */
-export function sessionCardsFrom(catalog: Catalog): readonly SessionCardView[] {
-  const camps = byId(catalog.camps);
-  const providers = byId(catalog.providers);
-  const locations = byId(catalog.locations);
-
-  return catalog.sessions.map((session) => {
-    const camp = lookup(camps, session.campId, 'camp');
-    const provider = lookup(providers, camp.providerId, 'provider');
-    const location = lookup(locations, session.locationId, 'location');
-    return {
-      id: session.id,
-      campName: camp.name,
-      providerName: provider.name,
-      locationName: location.name,
-      city: location.city,
-      startDate: session.startDate,
-      endDate: session.endDate,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      priceCents: session.priceCents,
-      priceNote: session.priceNote,
-      ageRange: session.ageRange,
-      gradeRange: session.gradeRange,
-      categories: camp.categories,
-      registration: registrationFor(camp, provider),
-      registrationNotes: camp.registrationInfo?.notes,
-    };
-  });
-}
-
-const MOCK_CATALOG: Catalog = {
-  providers: mockProviders,
-  locations: mockLocations,
-  camps: mockCamps,
-  sessions: mockSessions,
-};
-
-/** Every session in the catalog, as cards. */
-export function listSessionCards(): Promise<readonly SessionCardView[]> {
-  return Promise.resolve(sessionCardsFrom(MOCK_CATALOG));
+/** Every session the visitor may see, as cards. Who that is, is the database's decision. */
+export function listSessionCards(
+  _client: SupabaseClient<Database>,
+): Promise<readonly SessionCardView[]> {
+  return Promise.reject(new Error('not implemented'));
 }
