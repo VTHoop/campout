@@ -129,7 +129,8 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `src/lib/auth/safe-next.ts` | `safeNextPath`: the one check that a `?next=` is a path on this site. |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
-| `.claude/agents/challenger.md` | Adversarial reviewer for the Automatic Code Review Protocol |
+| `.claude/agents/refinement-answerer.md` | Settles `/refine-ticket`'s open questions against the ADRs and docs before the owner is asked |
+| `.claude/skills/start-ticket/`, `address-review/`, `next-up/` | The ticket loop's kickoffs: begin an issue, answer a PR review, pick the next issues (AGENTS.md §1, ADR-0019) |
 | `supabase/tests/` | The RLS policy suite — two households, two JWTs, real Postgres (ADR-0004) |
 | `vitest.config.ts` | Two projects (`unit`, `rls`) and the two ratcheted coverage floors |
 | `scripts/check-code-health.ts` | The absolute CodeScene ratchet. **Needs a project id before it does anything** — it exits 2 until then, rather than passing silently. |
