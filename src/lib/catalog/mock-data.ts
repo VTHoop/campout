@@ -23,6 +23,8 @@ export const mockLocations: readonly Location[] = [
     address: '11621 Robious Road',
     city: 'Midlothian',
     state: 'VA',
+    lat: 37.521703338674584,
+    long: -77.617485978636,
   },
   {
     id: 'location-rfp-park',
@@ -30,6 +32,8 @@ export const mockLocations: readonly Location[] = [
     address: '3400 Mountain Road',
     city: 'Glen Allen',
     state: 'VA',
+    lat: 37.67662487739671,
+    long: -77.50822734208077,
   },
   {
     id: 'location-robious-athletic-complex',
@@ -37,6 +41,8 @@ export const mockLocations: readonly Location[] = [
     address: '2801 Robious Crossing Drive',
     city: 'Midlothian',
     state: 'VA',
+    lat: 37.53149769116292,
+    long: -77.6110902115311,
   },
   {
     id: 'location-ironbridge-sports-park',
@@ -44,6 +50,8 @@ export const mockLocations: readonly Location[] = [
     address: '11400 Iron Bridge Rd Ste 100',
     city: 'Chester',
     state: 'VA',
+    lat: 37.358264444003716,
+    long: -77.50043752416897,
   },
   {
     id: 'location-swimrva-csac',
@@ -51,6 +59,8 @@ export const mockLocations: readonly Location[] = [
     address: '5050 Ridgedale Parkway',
     city: 'Richmond',
     state: 'VA',
+    lat: 37.449618158365176,
+    long: -77.49266585064802,
   },
   // SwimRVA's outdoor pool. No session is based here, but several CSAC weeks
   // spend a day or two here; the model has one location per session (CAM-27).
@@ -60,6 +70,8 @@ export const mockLocations: readonly Location[] = [
     address: '3700 Cogbill Road',
     city: 'Richmond',
     state: 'VA',
+    lat: 37.449790826674175,
+    long: -77.4642683761033,
   },
   {
     id: 'location-swimrva-north',
@@ -67,6 +79,8 @@ export const mockLocations: readonly Location[] = [
     address: '317 North Wilkinson Road',
     city: 'Richmond',
     state: 'VA',
+    lat: 37.627382014012845,
+    long: -77.429708508664,
   },
   {
     id: 'location-scor',
@@ -74,6 +88,8 @@ export const mockLocations: readonly Location[] = [
     address: '1385 Overbrook Rd',
     city: 'Richmond',
     state: 'VA',
+    lat: 37.563356966823356,
+    long: -77.45531973461617,
   },
   {
     id: 'location-richmond-ballet',
@@ -81,6 +97,8 @@ export const mockLocations: readonly Location[] = [
     address: '407 East Canal Street',
     city: 'Richmond',
     state: 'VA',
+    lat: 37.53883188231505,
+    long: -77.44212290884096,
   },
 ];
 
