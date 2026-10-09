@@ -109,6 +109,19 @@ describe('sessionCardsFromRows', () => {
       expect([card.startTime, card.endTime]).toEqual(['09:00', '12:30']);
     });
 
+    it('reads Postgres times, which carry seconds, as the HH:MM the card formats', () => {
+      const card = cardFor({
+        session_options: [{ ...FULL_DAY, daily_start: '09:00:00', daily_end: '16:30:00' }],
+      });
+      expect([card.startTime, card.endTime]).toEqual(['09:00', '16:30']);
+    });
+
+    it('refuses a time with seconds, which the card has no way to show', () => {
+      expect(() =>
+        cardFor({ session_options: [{ ...FULL_DAY, daily_start: '09:00:30' }] }),
+      ).toThrow(/session-1/);
+    });
+
     it('leaves hours and price out when the session has no option', () => {
       const card = cardFor({ session_options: [] });
       expect(card.startTime).toBeUndefined();
