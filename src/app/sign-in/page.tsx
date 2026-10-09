@@ -19,8 +19,8 @@ export default async function SignInPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = await createClient();
-  const [{ data }, { next, error }] = await Promise.all([supabase.auth.getUser(), searchParams]);
-  if (data.user) redirect('/');
+  const [{ data }, { next, error }] = await Promise.all([supabase.auth.getClaims(), searchParams]);
+  if (data?.claims) redirect('/');
 
   return (
     <main className="mx-auto max-w-md px-4 py-12">

@@ -4,9 +4,10 @@ import { supabaseEnv } from './env';
 
 /**
  * Refreshes the signed-in user's session on a request, so it outlasts the
- * access token's short life across reloads and new tabs. `getUser()` is what
- * triggers the refresh; it also checks the token with Supabase rather than
- * trusting the cookie.
+ * access token's short life across reloads and new tabs. `getClaims()` is what
+ * triggers the refresh. It also verifies the token's signature rather than
+ * trusting the cookie, and does so locally when the project signs with
+ * asymmetric keys, so this is not a round trip to Supabase on every page.
  *
  * The refreshed cookies go on both the request (so this render sees them) and
  * the response (so the browser keeps them).
@@ -26,6 +27,6 @@ export async function refreshSession(request: NextRequest): Promise<NextResponse
     },
   });
 
-  await supabase.auth.getUser();
+  await supabase.auth.getClaims();
   return response;
 }

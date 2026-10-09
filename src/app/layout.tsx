@@ -24,12 +24,12 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
-        <SiteNav signedIn={data.user !== null} />
+        <SiteNav signedIn={data?.claims != null} />
         {children}
       </body>
     </html>

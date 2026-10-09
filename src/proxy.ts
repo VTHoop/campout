@@ -7,6 +7,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Pages only: not Next's static output or image files.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // Pages only: not Next's static output, image files, or the /auth routes,
+  // which build their own client and set their own cookies.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|auth/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
