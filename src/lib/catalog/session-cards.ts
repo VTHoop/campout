@@ -120,6 +120,13 @@ function present<T>(value: T | null, what: string, sessionId: string): T {
   return value;
 }
 
+/** Postgres sends `time` as HH:MM:SS; the card works in HH:MM, and a second it cannot show is a bug. */
+function wallClock(value: string, sessionId: string): WallClockTime {
+  if (!/^\d{2}:\d{2}(:00)?$/.test(value))
+    throw new Error(`Session ${sessionId} has a time the card cannot show: ${value}`);
+  return value.slice(0, 5);
+}
+
 function rangeOf(min: number | null, max: number | null): AgeRange | undefined {
   if (min === null && max === null) return undefined;
   return { ...(min === null ? {} : { min }), ...(max === null ? {} : { max }) };
@@ -168,8 +175,8 @@ function cardFromRow(row: SessionCardRow): SessionCardView {
     city: location.city,
     startDate: assertCalendarDate(row.start_date, `Session ${row.id} start date`),
     endDate: assertCalendarDate(row.end_date, `Session ${row.id} end date`),
-    ...(option?.daily_start == null ? {} : { startTime: option.daily_start }),
-    ...(option?.daily_end == null ? {} : { endTime: option.daily_end }),
+    ...(option?.daily_start == null ? {} : { startTime: wallClock(option.daily_start, row.id) }),
+    ...(option?.daily_end == null ? {} : { endTime: wallClock(option.daily_end, row.id) }),
     ...(option?.price_cents == null ? {} : { priceCents: option.price_cents }),
     ...(option?.price_note == null ? {} : { priceNote: option.price_note }),
     ...(ageRange === undefined ? {} : { ageRange }),
