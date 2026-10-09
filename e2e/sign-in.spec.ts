@@ -78,6 +78,7 @@ test('a link that was already used lands on /sign-in with a message, signed out'
   await page.goto(link);
 
   await expect(page).toHaveURL(/\/sign-in\?error=link/);
-  await expect(page.getByRole('alert')).toContainText("That link didn't work");
+  // Scoped to main: Next's route announcer is a second role=alert on every page.
+  await expect(page.getByRole('main').getByRole('alert')).toContainText("That link didn't work");
   await expect(nav(page).getByRole('button', { name: 'Sign out' })).toHaveCount(0);
 });

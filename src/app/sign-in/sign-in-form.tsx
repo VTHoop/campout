@@ -33,14 +33,17 @@ export function SignInForm({ next }: { next: string }) {
     if (sentTo) confirmation.current?.focus();
   }, [sentTo]);
 
-  async function send(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const address = email.trim();
     if (!EMAIL_SHAPE.test(address)) {
       setError(INVALID_EMAIL);
       return;
     }
+    void send(address);
+  }
 
+  async function send(address: string) {
     setError(null);
     setSending(true);
     const { error: failure } = await createClient().auth.signInWithOtp({
@@ -85,7 +88,7 @@ export function SignInForm({ next }: { next: string }) {
   }
 
   return (
-    <form onSubmit={send} noValidate className="mt-6 flex flex-col gap-3">
+    <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-3">
       <label htmlFor="email" className="text-ui font-semibold text-ink">
         Email
       </label>
@@ -94,7 +97,9 @@ export function SignInForm({ next }: { next: string }) {
         type="email"
         autoComplete="email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        onChange={(event) => {
+          setEmail(event.target.value);
+        }}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? ERROR_ID : undefined}
       />
