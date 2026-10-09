@@ -86,6 +86,8 @@ const summary = await importDrafts(client, drafts, {
     const extension = path.split('.').pop()?.toLowerCase() ?? '';
     const { error } = await client.storage.from(DOCUMENT_BUCKET).upload(path, bytes, {
       contentType: CONTENT_TYPES.get(extension) ?? 'application/octet-stream',
+      // A re-run after clearing a partial import finds the file already there.
+      upsert: true,
     });
     if (error) throw new Error(`Could not upload ${path}: ${error.message}`);
   },

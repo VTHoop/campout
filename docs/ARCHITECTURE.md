@@ -98,6 +98,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `docs/DESIGN.md` | Visual language — tokens, card anatomy, state signals, copy. Proposed, not locked. |
 | `supabase/migrations/…_catalog.sql` | `camps`, `locations`, `sessions`, `school_calendars`, `school_closures`, PostGIS, `btree_gist`, catalog RLS |
 | `supabase/migrations/…_catalog_review_gate.sql`, `…_plan_entries_options.sql` | The review gate (CAM-27, ADR-0017): `status` and the verified chain, `reviewers`/`is_reviewer()`, `approve_record()`, `reviewer_edit()`, the guard triggers and gate flag, `catalog_history`, and `plan_entries.option_id` with restrict deletes and the tightened insert policy |
+| `supabase/migrations/20261009000100_guard_function_grants.sql` | Grants `service_role` execute on the two internal guard functions the triggers call as the writing role (CAM-28). The review-gate migration left it to platform defaults, which hosted Supabase doesn't give. |
 | `supabase/migrations/…_catalog_shape.sql` | The provider → camp → session shape (CAM-27): `providers`, `session_options`, standalone locations with `find_location_duplicates()`, the seven categories, `details` and its vocabulary (`pg_jsonschema`), `closed_dates`, and `search_sessions()` with its indexes |
 | `supabase/seed.sql` | An invented local catalog covering the shape. Loaded by `pnpm supabase:reset`. No real camps (ADR-0010). |
 | `src/lib/db/types.ts` | Generated from the local schema by `pnpm db:types`. Never hand-edited. |
