@@ -121,7 +121,12 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `src/components/ui/` | shadcn/ui components on Campout tokens (ADR-0015). |
 | `src/lib/utils.ts` | `cn`, taught Campout's type roles (ADR-0015). |
 | `src/lib/dates.ts`, `src/lib/districts.ts` | Display formats for a `CalendarDate` and a `SchoolDistrict`. |
-| `src/components/site-nav.tsx` | The top nav bar, rendered by the root layout (DESIGN.md → *Navigation*). |
+| `src/components/site-nav.tsx` | The top nav bar, rendered by the root layout (DESIGN.md → *Navigation*). Shows a Sign out button to a signed-in user (CAM-41). |
+| `src/lib/supabase/` | The Supabase clients (CAM-41): `server.ts` for Server Components and route handlers, `browser.ts` for Client Components, `session.ts` for the proxy's session refresh. All use the publishable key; `env.ts` refuses to start without it. |
+| `src/proxy.ts` | Refreshes the Supabase session on every page request, so a user stays signed in across reloads and new tabs (CAM-41). |
+| `src/app/sign-in/` | The app's only sign-in page: one email field, a magic link, no password (CAM-41). `?next=` is where to land; `?error=link` is the failed-link message. |
+| `src/app/auth/callback/route.ts`, `src/app/auth/sign-out/route.ts` | Finish a magic-link sign-in and return to `next` (or `/sign-in?error=link`); sign out with a POST and land on `/`. |
+| `src/lib/auth/safe-next.ts` | `safeNextPath`: the one check that a `?next=` is a path on this site. |
 | `.claude/hooks/tdd-guard.sh` | Test-integrity + ratchet guard (blocks the turn) |
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
 | `.claude/agents/challenger.md` | Adversarial reviewer for the Automatic Code Review Protocol |

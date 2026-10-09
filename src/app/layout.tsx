@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Instrument_Sans } from 'next/font/google';
 import { SiteNav } from '../components/site-nav';
+import { createClient } from '../lib/supabase/server';
 import './globals.css';
 
 // Self-hosted at build time, so no request reaches Google from the browser. The
@@ -21,11 +22,14 @@ export const metadata: Metadata = {
     'Plan the days school is out, from twelve weeks of summer to a single teacher workday.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
-        <SiteNav />
+        <SiteNav signedIn={data?.claims != null} />
         {children}
       </body>
     </html>

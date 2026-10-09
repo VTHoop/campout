@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Button } from './ui/button';
 
 /**
  * The app's top navigation, drawn from the design prototype (CAM-29).
@@ -13,6 +14,10 @@ import { usePathname } from 'next/navigation';
  * assistive tech. Below `lg` the tabs stack under the wordmark as one row of
  * buttons sharing the width; from `lg` up they sit inline after it, underlined when
  * current. `lg` rather than `md` for now, so tablets get the phone layout.
+ *
+ * A signed-in user also gets a Sign out button (CAM-41), a form that posts to
+ * the sign-out route so it works with the keyboard and without script. A
+ * signed-out visitor sees no auth controls: sign-in has no public link yet.
  *
  * A client component only because it reads the current path to mark the
  * active tab.
@@ -32,7 +37,7 @@ const TAB_CURRENT = 'border-paper bg-paper text-ink lg:bg-transparent lg:text-pa
 
 const TAB_OTHER = 'border-ink-muted text-rule hover:text-paper lg:border-transparent';
 
-export function SiteNav() {
+export function SiteNav({ signedIn = false }: { signedIn?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -61,6 +66,13 @@ export function SiteNav() {
             );
           })}
         </ul>
+        {signedIn && (
+          <form action="/auth/sign-out" method="post" className="lg:ml-auto">
+            <Button type="submit" variant="outline" className="w-full lg:w-auto">
+              Sign out
+            </Button>
+          </form>
+        )}
       </div>
     </nav>
   );
