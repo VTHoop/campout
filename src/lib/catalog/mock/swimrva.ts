@@ -7,6 +7,7 @@ import { Category } from '../types';
  * against the CAM-27 decision it belongs to.
  *
  * - Where to be: several CSAC weeks spend a day or two at the Meadowbrook pool
+ *   (3700 Cogbill Road, not in the catalog: no session is based there)
  *   (Thu Jun 25; Thu–Fri Jul 9–10; Tue–Wed Jul 14–15; Tue Jul 21; Thu–Fri
  *   Jul 30–31). A session has one location, so those days are lost.
  * - Who can come: a camper "must be 6 years old on or before the first day of

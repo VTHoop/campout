@@ -88,18 +88,6 @@ export const mockLocations: readonly Location[] = [
     lat: 37.449618158365176,
     long: -77.49266585064802,
   },
-  // SwimRVA's outdoor pool. No session is based here, but several CSAC weeks
-  // spend a day or two here; the model has one location per session (CAM-27).
-  {
-    id: 'location-swimrva-meadowbrook',
-    name: 'SwimRVA Meadowbrook',
-    address: '3700 Cogbill Road',
-    city: 'Richmond',
-    state: 'VA',
-    postalCode: '23234',
-    lat: 37.449790826674175,
-    long: -77.4642683761033,
-  },
   {
     id: 'location-swimrva-north',
     name: 'SwimRVA North',
