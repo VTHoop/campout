@@ -76,7 +76,7 @@ The general rule this leaves behind: **if a policy depends on state a trigger cr
 
 **A read model that can represent an unverified record is a bug.** Build types so a record without `verifiedAt` cannot be constructed, rather than checking for it at every render site — the check you have to remember is the one that gets missed. `verified_at` is shown to the parent on every session: stale data here is not cosmetic, because a parent who shows up to a camp that moved has lost a workday.
 
-**The one open exception is `SessionCardView`** (`src/lib/catalog/session-cards.ts`, CAM-32), which has no `verifiedAt` yet because it is built on the unverified mock catalog. CAM-28, which moves it onto Supabase, adds `verifiedAt` as a required field and the card's verified line with it.
+**`SessionCardView` holds the rule too** (`src/lib/catalog/session-cards.ts`): its required `verification` is either `Verified` with the Richmond day it was checked, or `Draft` with the page it was read from. A card with neither cannot be built, and an archived session throws instead of rendering.
 
 ## The catalog review gate
 
@@ -91,7 +91,7 @@ Nothing reaches a parent until a reviewer approves it (ADR-0017). Four pieces, a
 
 ## Session cards come from one service
 
-The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards()` (`src/lib/catalog/session-cards.ts`). Neither imports the catalog. The service joins each session to its camp, provider and location, picks the registration link (the camp's registration URL, else its phone, else the provider's website), and throws on a reference it cannot resolve. It is async already, so swapping the mock catalog for a Supabase read (CAM-28) touches neither the page nor the card.
+The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards(client)` (`src/lib/catalog/session-cards.ts`). Neither imports a database row. The page passes the request's Supabase client, so the visitor's own JWT decides which rows come back. The service shows one option per session (the full day, else the morning, else the afternoon), reads Postgres `HH:MM:SS` times as `HH:MM`, picks the registration link (the camp's registration URL, else the provider's website; the camp's note is shown beside it), and throws on a row missing a parent the database should have returned. Page and card tests use invented cards (`session-card-fixtures.ts`); what each kind of visitor sees is tested against the seed in `supabase/tests/session-cards.rls.test.ts`.
 
 ## The browser vault (`src/lib/vault/`, not yet built)
 
