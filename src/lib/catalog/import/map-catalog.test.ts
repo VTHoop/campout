@@ -255,6 +255,19 @@ describe('findImportGaps', () => {
     expect(findImportGaps({ ...catalog, providers: [asRegistration] })).toEqual(expected);
   });
 
+  it('accepts a document source even when a camp has no registration link', () => {
+    const catalog = ready();
+    const provider = { ...PROVIDER, source: { documentPath: 'flyer-2027.jpg' } };
+    const { registrationInfo, ...phoneOnly } = CAMP;
+    expect(
+      findImportGaps({
+        ...catalog,
+        providers: [provider],
+        camps: [{ ...phoneOnly, registrationInfo: { phone: '804-555-0100' } }],
+      }),
+    ).toEqual([]);
+  });
+
   it('names a location no session uses, rather than guessing a source for it', () => {
     const catalog = ready();
     const spare = { ...LOCATION, id: 'l2', name: 'Fixture Annex' };
