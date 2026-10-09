@@ -110,7 +110,8 @@ function notEvidence(provider: Provider, camps: readonly Camp[]): ReadonlySet<st
 function providerGaps(provider: Provider, camps: readonly Camp[]): string[] {
   const label = `Provider "${provider.name}"`;
   if (provider.source === undefined) return [`${label}: no source`];
-  if (notEvidence(provider, camps).has(provider.source.url))
+  const { url } = provider.source;
+  if (url !== undefined && notEvidence(provider, camps).has(url))
     return [
       `${label}: source is the provider website or a registration link, not the page the facts came from`,
     ];
