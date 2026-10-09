@@ -418,3 +418,24 @@ describe('mock locations', () => {
     }
   });
 });
+
+describe('import readiness (CAM-28)', () => {
+  it('every location has a five-digit postal code', () => {
+    const bad = mockLocations.filter((l) => !/^\d{5}$/.test(l.postalCode ?? ''));
+    expect(bad.map((l) => l.name)).toEqual([]);
+  });
+
+  it('every provider has a source, and it is never the provider website or a registration link', () => {
+    const missing = mockProviders.filter((p) => p.source === undefined);
+    expect(missing.map((p) => p.name)).toEqual([]);
+
+    const notEvidence = new Set([
+      ...mockProviders.map((p) => p.website),
+      ...mockCamps.map((c) => c.registrationInfo?.url),
+    ]);
+    const bad = mockProviders.filter(
+      (p) => p.source?.url !== undefined && notEvidence.has(p.source.url),
+    );
+    expect(bad.map((p) => p.name)).toEqual([]);
+  });
+});

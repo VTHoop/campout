@@ -18,11 +18,22 @@ export enum Category {
 /** Wall-clock time of day, `HH:MM` in 24-hour time. Never a `Date`, never timezone-bearing. */
 export type WallClockTime = string;
 
+/**
+ * Where a record's facts came from (ADR-0012): the exact page, or a document
+ * kept in the `camp-sources` bucket when there is no durable URL. A provider's
+ * website or a registration link is not a source.
+ */
+export type Source =
+  | { readonly url: string; readonly documentPath?: undefined }
+  | { readonly documentPath: string; readonly url?: undefined };
+
 /** An organization that runs one or more camps. */
 export interface Provider {
   readonly id: string;
   readonly name: string;
   readonly website?: string;
+  /** Evidence for the provider and everything it runs. Required before import (CAM-28). */
+  readonly source?: Source;
 }
 
 /** A physical site a session runs at. */
@@ -32,6 +43,7 @@ export interface Location {
   readonly address: string;
   readonly city: string;
   readonly state: string;
+  readonly postalCode?: string;
   readonly lat?: number;
   readonly long?: number;
 }
