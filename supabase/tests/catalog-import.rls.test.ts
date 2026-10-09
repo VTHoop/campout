@@ -98,7 +98,10 @@ const drafts = mapCatalogToDrafts({
   ],
 });
 
-const options = () => ({ readDocument: vi.fn(() => Promise.resolve(FLYER_BYTES)) });
+const options = () => ({
+  readDocument: vi.fn(() => Promise.resolve(FLYER_BYTES)),
+  uploadDocument: vi.fn(() => Promise.resolve()),
+});
 
 async function rowCount(table: string): Promise<number> {
   const { count, error } = await serviceClient()
@@ -129,19 +132,20 @@ function restoreSeed(): void {
   );
 }
 
+const firstRun = options();
+
 describe.skipIf(isLiveProject())('importDrafts', () => {
   beforeAll(() => {
     emptyCatalog();
   });
 
   afterAll(async () => {
-    await serviceClient().storage.from('camp-sources').remove([FLYER_PATH]);
     emptyCatalog();
     restoreSeed();
   });
 
   it('writes every draft, linked to its parents, and every row is a draft', async () => {
-    const summary = await importDrafts(serviceClient(), drafts, options());
+    const summary = await importDrafts(serviceClient(), drafts, firstRun);
 
     expect(summary).toEqual({
       providers: 2,
@@ -183,10 +187,10 @@ describe.skipIf(isLiveProject())('importDrafts', () => {
     ]);
   });
 
-  it('stores the source document in the camp-sources bucket', async () => {
-    const { data, error } = await serviceClient().storage.from('camp-sources').download(FLYER_PATH);
-    expect(error).toBeNull();
-    expect(new Uint8Array((await data?.arrayBuffer()) ?? new ArrayBuffer(0))).toEqual(FLYER_BYTES);
+  it('hands each source document to the uploader once, with its bytes', async () => {
+    // The first run's call, recorded on the options object below.
+    expect(firstRun.uploadDocument).toHaveBeenCalledTimes(1);
+    expect(firstRun.uploadDocument).toHaveBeenCalledWith(FLYER_PATH, FLYER_BYTES);
   });
 
   it('refuses a second run, writing and uploading nothing', async () => {
@@ -195,6 +199,7 @@ describe.skipIf(isLiveProject())('importDrafts', () => {
       CatalogNotEmptyError,
     );
     expect(second.readDocument).not.toHaveBeenCalled();
+    expect(second.uploadDocument).not.toHaveBeenCalled();
     expect(await rowCount('providers')).toBe(2);
     expect(await rowCount('sessions')).toBe(3);
   });
