@@ -23,11 +23,20 @@ import { RecordKind } from './types';
 interface FakeOptions {
   readonly refusal?: string;
   readonly verifiedAt?: string | null;
+  readonly readBackError?: string;
 }
 
-function fakeClient({ refusal, verifiedAt = '2026-10-14T02:00:00Z' }: FakeOptions = {}) {
+function fakeClient({
+  refusal,
+  verifiedAt = '2026-10-14T02:00:00Z',
+  readBackError,
+}: FakeOptions = {}) {
   const rpc = vi.fn(async () => ({ error: refusal === undefined ? null : { message: refusal } }));
-  const single = vi.fn(async () => ({ data: { verified_at: verifiedAt }, error: null }));
+  const single = vi.fn(async () =>
+    readBackError === undefined
+      ? { data: { verified_at: verifiedAt }, error: null }
+      : { data: null, error: { message: readBackError } },
+  );
   const eq = vi.fn(() => ({ single }));
   const select = vi.fn(() => ({ eq }));
   const from = vi.fn(() => ({ select }));
@@ -90,6 +99,13 @@ describe('approveRecord', () => {
       message,
     });
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it('throws, naming the record, when the approved row cannot be read back', async () => {
+    const { client } = fakeClient({ readBackError: 'permission denied' });
+    await expect(approveRecord(client, RecordKind.Camp, 'camp-1')).rejects.toThrow(
+      /camp camp-1.*permission denied/,
+    );
   });
 
   it('throws when an approved record comes back with no verified date', async () => {

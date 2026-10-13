@@ -197,7 +197,10 @@ describe('a session that spans more than 14 days', () => {
     const opener = control('Approve session: Fixture Day Camp');
     opener.focus();
     fireEvent.click(opener);
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    // The browser moves focus into the modal; jsdom does not, so do it here.
+    const cancel = within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' });
+    cancel.focus();
+    fireEvent.click(cancel);
     expect(opener).toHaveFocus();
   });
 
@@ -215,6 +218,70 @@ describe('a session that spans more than 14 days', () => {
     fireEvent.click(control('Approve camp: Fixture Day Camp'));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(onApprove).toHaveBeenCalledOnce();
+  });
+});
+
+/** What Chromium does when the focused button is disabled: focus falls to the body. */
+function dropFocus() {
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
+describe('when an approval does not go through', () => {
+  it('puts focus back on the control after a refusal', async () => {
+    const onApprove = vi.fn(async (): Promise<ApproveResult> => {
+      dropFocus();
+      return { ok: false, message: 'approve the camp first' };
+    });
+    renderCard(draftCard(), onApprove);
+    const button = control('Approve session: Fixture Day Camp');
+    button.focus();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(control('Approve session: Fixture Day Camp')).toHaveFocus();
+  });
+
+  it('re-enables the control and shows the failure when the call itself throws', async () => {
+    const onApprove = vi.fn(async (): Promise<ApproveResult> => {
+      throw new Error('Could not read camp camp-id back: permission denied');
+    });
+    renderCard(draftCard(), onApprove);
+    await act(async () => {
+      fireEvent.click(control('Approve camp: Fixture Day Camp'));
+    });
+    expect(control('Approve camp: Fixture Day Camp')).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('permission denied');
+  });
+});
+
+describe('two cards that each ask first', () => {
+  it('give each dialog its own heading and its own span', () => {
+    render(
+      <ul>
+        {[
+          ['s1', '2026-06-22'], // 15 days
+          ['s2', '2026-06-28'], // 21 days
+        ].map(([id, end]) => (
+          <SessionCard
+            key={id}
+            weekNumber={2}
+            onApprove={vi.fn(async () => OK)}
+            card={cardFixture(id ?? '', `Fixture Camp ${id}`, '2026-06-08', end ?? '', {
+              records: chainFixture({
+                sessionId: id ?? '',
+                campName: `Fixture Camp ${id}`,
+                drafts: true,
+              }),
+              verification: { kind: VerificationKind.Draft },
+            })}
+          />
+        ))}
+      </ul>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Approve session: Fixture Camp s1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve session: Fixture Camp s2' }));
+    expect(screen.getByRole('dialog', { name: 'This session runs 15 days' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'This session runs 21 days' })).toBeInTheDocument();
   });
 });
 
