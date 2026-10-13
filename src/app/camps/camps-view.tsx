@@ -1,10 +1,11 @@
-import type { CalendarDate, SummerChoice, SummerChoices } from '@campout/planner';
+import type { CalendarDate } from '@campout/planner';
 import { SchoolDistrict, summerChoices } from '@campout/planner';
 import { SummerChooser } from '@/components/summer-chooser';
 import { SummerWeeks } from '@/components/summer-weeks';
 import { CHESTERFIELD_CALENDARS } from '@/lib/calendars/chesterfield';
 import type { SessionCardView } from '@/lib/catalog/session-cards';
 import { districtName } from '@/lib/districts';
+import { chosenSummer } from '@/lib/summer-window';
 
 /**
  * The Find camps page's body: a summer chooser over the chosen summer's weeks, and
@@ -15,15 +16,6 @@ import { districtName } from '@/lib/districts';
  * stored on any calendar; it is derived from the gap between two (ADR-0013).
  */
 const DISTRICT = SchoolDistrict.Chesterfield;
-
-/** The summer the URL names, or the upcoming one when it names none on offer. */
-function chosenSummer(
-  { summers, upcoming }: SummerChoices,
-  requested: string | string[] | undefined,
-): SummerChoice {
-  if (typeof requested !== 'string') return upcoming;
-  return summers.find((summer) => String(summer.year) === requested) ?? upcoming;
-}
 
 export function CampsView({
   today,

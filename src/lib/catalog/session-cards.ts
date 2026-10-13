@@ -221,13 +221,15 @@ export interface DateWindow {
  */
 export async function listSessionCards(
   client: SupabaseClient<Database>,
-  _window: DateWindow,
+  window: DateWindow,
 ): Promise<readonly SessionCardView[]> {
   const { data, error } = await client
     .from('sessions')
     .select(SESSION_CARD_SELECT)
+    .lte('start_date', window.end)
+    .gte('end_date', window.start)
     .order('start_date')
     .order('id');
-  if (error) throw new Error(`Could not read sessions: ${error.message}`);
+  if (error) throw new Error(`Could not read sessions: ${error.message}`, { cause: error });
   return sessionCardsFromRows(data);
 }
