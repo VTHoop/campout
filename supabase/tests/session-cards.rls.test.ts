@@ -1,8 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { approveRecord, isReviewer } from '../../src/lib/catalog/approve';
 import { listSessionCards, VerificationKind } from '../../src/lib/catalog/session-cards';
+import { RecordKind } from '../../src/lib/catalog/types';
 import type { Database } from '../../src/lib/db/types';
-import { createReviewer } from './catalog-fixtures';
+import {
+  createReviewer,
+  insertId,
+  optionRow,
+  type SeededSession,
+  withSeededSession,
+} from './catalog-fixtures';
 import { createTestUser, deleteTestUsers, localKeys, type TestUser } from './helpers';
 
 /**
@@ -99,4 +107,116 @@ describe('listSessionCards', () => {
     const summer2026 = { start: '2026-06-01', end: '2026-08-21' } as const;
     expect(await listSessionCards(signedOut(), summer2026)).toEqual([]);
   });
+});
+
+/**
+ * Approving from the card (CAM-46), through the service the card uses and the
+ * reviewer's own session: the function decides, and its words come back as
+ * written. Each test stands up its own draft chain, so the seed is untouched.
+ */
+describe('approving from the card', () => {
+  const FIXTURE_WINDOW = { start: '2027-07-12', end: '2027-07-16' } as const;
+
+  async function cardOf(user: TestUser, ids: SeededSession) {
+    const cards = await listSessionCards(typed(user), FIXTURE_WINDOW);
+    const card = cards.find((candidate) => candidate.id === ids.sessionId);
+    if (card === undefined) throw new Error('the fixture session did not come back');
+    return card;
+  }
+
+  async function approveAs(user: TestUser, kind: RecordKind, id: string, confirm = false) {
+    return approveRecord(typed(user), kind, id, confirm);
+  }
+
+  it('says who is a reviewer: a reviewer, and not a parent or a signed-out visitor', async () => {
+    expect(await isReviewer(typed(reviewer))).toBe(true);
+    expect(await isReviewer(typed(parent))).toBe(false);
+    expect(await isReviewer(signedOut())).toBe(false);
+  });
+
+  it('approves the chain top down, each record on its own, and the card updates to verified', () =>
+    withSeededSession(async (ids, admin) => {
+      await insertId(admin, 'session_options', optionRow(ids.sessionId));
+
+      const first = await cardOf(reviewer, ids);
+      expect(first.records.map((record) => record.isDraft)).toEqual([true, true, true, true]);
+
+      for (const [kind, id] of [
+        [RecordKind.Provider, ids.providerId],
+        [RecordKind.Location, ids.locationId],
+        [RecordKind.Camp, ids.campId],
+      ] as const) {
+        expect(await approveAs(reviewer, kind, id)).toMatchObject({ ok: true });
+      }
+      const midway = await cardOf(reviewer, ids);
+      expect(midway.records.map((record) => record.isDraft)).toEqual([false, false, false, true]);
+      expect(midway.verification.kind).toBe(VerificationKind.Draft);
+
+      const result = await approveAs(reviewer, RecordKind.Session, ids.sessionId);
+      expect(result).toMatchObject({ ok: true, on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
+      const done = await cardOf(reviewer, ids);
+      expect(done.records.every((record) => !record.isDraft)).toBe(true);
+      expect(done.verification.kind).toBe(VerificationKind.Verified);
+    }));
+
+  it('refuses a session before its chain, in the function’s words, and it stays a draft', () =>
+    withSeededSession(async (ids, admin) => {
+      await insertId(admin, 'session_options', optionRow(ids.sessionId));
+      expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId)).toEqual({
+        ok: false,
+        message: "approve the session's camp, provider and location first",
+      });
+      expect((await cardOf(reviewer, ids)).verification.kind).toBe(VerificationKind.Draft);
+    }));
+
+  it('refuses a camp before its provider', () =>
+    withSeededSession(async (ids) => {
+      expect(await approveAs(reviewer, RecordKind.Camp, ids.campId)).toEqual({
+        ok: false,
+        message: "approve the camp's provider first",
+      });
+    }));
+
+  it('refuses a session with no time option', () =>
+    withSeededSession(async (ids) => {
+      for (const [kind, id] of [
+        [RecordKind.Provider, ids.providerId],
+        [RecordKind.Location, ids.locationId],
+        [RecordKind.Camp, ids.campId],
+      ] as const)
+        await approveAs(reviewer, kind, id);
+      expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId)).toEqual({
+        ok: false,
+        message: 'a session needs at least one time option',
+      });
+    }));
+
+  it('refuses a session longer than 14 days until the reviewer confirms, and says how long', () =>
+    withSeededSession(async (ids, admin) => {
+      await admin.from('sessions').update({ end_date: '2027-07-26' }).eq('id', ids.sessionId);
+      await insertId(admin, 'session_options', optionRow(ids.sessionId));
+      for (const [kind, id] of [
+        [RecordKind.Provider, ids.providerId],
+        [RecordKind.Location, ids.locationId],
+        [RecordKind.Camp, ids.campId],
+      ] as const)
+        await approveAs(reviewer, kind, id);
+
+      expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId)).toEqual({
+        ok: false,
+        message: 'the session spans 15 days; confirm it before approving',
+      });
+      expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId, true)).toMatchObject({
+        ok: true,
+      });
+    }));
+
+  it('refuses a parent, and the record stays a draft', () =>
+    withSeededSession(async (ids) => {
+      expect(await approveAs(parent, RecordKind.Provider, ids.providerId)).toEqual({
+        ok: false,
+        message: 'only a reviewer can approve',
+      });
+      expect((await cardOf(reviewer, ids)).records[0]?.isDraft).toBe(true);
+    }));
 });
