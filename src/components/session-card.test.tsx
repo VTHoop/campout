@@ -13,7 +13,7 @@ import { SessionCard } from './session-card';
  * 375px and 44px targets — is covered in e2e/session-cards.spec.ts.
  */
 
-const IRONBRIDGE: SessionCardView = {
+const BASEBALL: SessionCardView = {
   id: 'session-baseball',
   campName: 'Fixture Baseball Camp',
   providerName: 'Fixture Provider',
@@ -52,20 +52,20 @@ function renderCard(card: SessionCardView, weekNumber = 10) {
 
 describe('SessionCard', () => {
   it('is a list item headed by the camp name', () => {
-    const item = renderCard(IRONBRIDGE);
+    const item = renderCard(BASEBALL);
     expect(
       within(item).getByRole('heading', { name: 'Fixture Baseball Camp' }),
     ).toBeInTheDocument();
   });
 
   it('names the provider and where the session runs', () => {
-    renderCard(IRONBRIDGE);
+    renderCard(BASEBALL);
     expect(screen.getByText('Fixture Provider at Fixture Park, Chester')).toBeInTheDocument();
   });
 
   describe('week tab', () => {
     it('shows the week, month, dates and days', () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       const tab = screen.getByTestId('week-tab');
       for (const text of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
         expect(within(tab).getByText(text)).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe('SessionCard', () => {
     });
 
     it('reads as one phrase', () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       expect(screen.getByText('Week 10, August 3 to 5, Monday to Wednesday')).toBeInTheDocument();
       for (const piece of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
         expect(screen.getByText(piece).closest('[aria-hidden="true"]')).not.toBeNull();
@@ -81,7 +81,7 @@ describe('SessionCard', () => {
     });
 
     it('sets a partial span in brick', () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       expect(screen.getByText('Mon–Wed')).toHaveClass('text-brick');
     });
 
@@ -94,7 +94,7 @@ describe('SessionCard', () => {
 
   describe('data row', () => {
     it('shows the hours, ages, grades and price', () => {
-      renderCard({ ...IRONBRIDGE, ageRange: { min: 5, max: 15 }, gradeRange: { min: 0, max: 5 } });
+      renderCard({ ...BASEBALL, ageRange: { min: 5, max: 15 }, gradeRange: { min: 0, max: 5 } });
       for (const text of ['9:00am – 12:00pm', 'Ages 5–15', 'Grades K–5', '$299']) {
         expect(screen.getByText(text)).toBeInTheDocument();
       }
@@ -113,13 +113,13 @@ describe('SessionCard', () => {
     });
 
     it('shows the price note verbatim', () => {
-      renderCard({ ...IRONBRIDGE, priceNote: 'acac member price: $225' });
-      expect(screen.getByText('acac member price: $225')).toBeInTheDocument();
+      renderCard({ ...BASEBALL, priceNote: 'Member price: $225' });
+      expect(screen.getByText('Member price: $225')).toBeInTheDocument();
     });
   });
 
   it('shows every category as a word beside a decorative dot', () => {
-    renderCard({ ...IRONBRIDGE, categories: [Category.Sports, Category.FaithBased] });
+    renderCard({ ...BASEBALL, categories: [Category.Sports, Category.FaithBased] });
     for (const word of ['Sports', 'Faith-based']) {
       const category = screen.getByText(word);
       expect(category.parentElement?.querySelector('[aria-hidden="true"]')).not.toBeNull();
@@ -128,7 +128,7 @@ describe('SessionCard', () => {
 
   describe('partial-week callout', () => {
     it('says how many days a short session covers, and that it ends at noon', () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       expect(screen.getByText('Covers 3 of 5 days, and ends at noon')).toBeInTheDocument();
     });
 
@@ -140,7 +140,7 @@ describe('SessionCard', () => {
 
   describe('registration', () => {
     it("links to the camp's registration page", () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       expect(screen.getByRole('link', { name: "Register on the camp's site" })).toHaveAttribute(
         'href',
         'https://example.test/register',
@@ -149,18 +149,18 @@ describe('SessionCard', () => {
 
     it('dials the camp when it has only a phone number', () => {
       renderCard({
-        ...IRONBRIDGE,
-        registration: { kind: RegistrationKind.Call, phone: '804-378-1616' },
+        ...BASEBALL,
+        registration: { kind: RegistrationKind.Call, phone: '804-555-0100' },
       });
-      expect(screen.getByRole('link', { name: 'Call 804-378-1616' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Call 804-555-0100' })).toHaveAttribute(
         'href',
-        'tel:804-378-1616',
+        'tel:804-555-0100',
       );
     });
 
     it("links to the camp's site when that is all there is", () => {
       renderCard({
-        ...IRONBRIDGE,
+        ...BASEBALL,
         registration: { kind: RegistrationKind.Website, url: 'https://provider.example' },
       });
       expect(screen.getByRole('link', { name: "Camp's site" })).toHaveAttribute(
@@ -175,24 +175,24 @@ describe('SessionCard', () => {
     });
 
     it('shows the registration notes verbatim', () => {
-      renderCard({ ...IRONBRIDGE, registrationNotes: 'Register on the acac app.' });
-      expect(screen.getByText('Register on the acac app.')).toBeInTheDocument();
+      renderCard({ ...BASEBALL, registrationNotes: 'Register on the camp app.' });
+      expect(screen.getByText('Register on the camp app.')).toBeInTheDocument();
     });
   });
 
   it('ranks nothing and recommends nothing', () => {
-    renderCard(IRONBRIDGE);
+    renderCard(BASEBALL);
     expect(screen.queryByText(/popular|top pick|recommended|best/i)).toBeNull();
   });
   describe('verification', () => {
     it('says the day a verified session was checked', () => {
-      renderCard(IRONBRIDGE);
+      renderCard(BASEBALL);
       expect(screen.getByText('Verified May 1, 2026')).toBeInTheDocument();
     });
 
     it('says a draft is not verified, and never that it is', () => {
       const item = renderCard({
-        ...IRONBRIDGE,
+        ...BASEBALL,
         verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
       });
       expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe('SessionCard', () => {
 
     it('links the page a draft was read from', () => {
       const item = renderCard({
-        ...IRONBRIDGE,
+        ...BASEBALL,
         verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
       });
       expect(within(item).getByRole('link', { name: 'See the source' })).toHaveAttribute(
@@ -211,7 +211,7 @@ describe('SessionCard', () => {
     });
 
     it('offers no source link for a draft read from a stored document', () => {
-      const item = renderCard({ ...IRONBRIDGE, verification: { kind: VerificationKind.Draft } });
+      const item = renderCard({ ...BASEBALL, verification: { kind: VerificationKind.Draft } });
       expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
       expect(within(item).queryByRole('link', { name: 'See the source' })).toBeNull();
     });
