@@ -129,7 +129,9 @@ describe('approving', () => {
     const message = "approve the session's camp, provider and location first";
     const onApprove = vi.fn(async (): Promise<ApproveResult> => ({ ok: false, message }));
     renderCard(draftCard(), onApprove);
-    await act(async () => fireEvent.click(control('Approve session: Fixture Day Camp')));
+    await act(async () => {
+      fireEvent.click(control('Approve session: Fixture Day Camp'));
+    });
 
     const refused = control('Approve session: Fixture Day Camp');
     expect(refused).toBeEnabled();
@@ -144,9 +146,13 @@ describe('approving', () => {
       .mockResolvedValueOnce({ ok: false, message: 'refused once' })
       .mockResolvedValueOnce(OK);
     renderCard(draftCard(), onApprove);
-    await act(async () => fireEvent.click(control('Approve camp: Fixture Day Camp')));
+    await act(async () => {
+      fireEvent.click(control('Approve camp: Fixture Day Camp'));
+    });
     expect(screen.getByRole('alert')).toHaveTextContent('refused once');
-    await act(async () => fireEvent.click(control('Approve camp: Fixture Day Camp')));
+    await act(async () => {
+      fireEvent.click(control('Approve camp: Fixture Day Camp'));
+    });
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -223,7 +229,9 @@ describe('after approval', () => {
     );
     const button = control('Approve camp: Fixture Day Camp');
     button.focus();
-    await act(async () => fireEvent.click(button));
+    await act(async () => {
+      fireEvent.click(button);
+    });
     rerender(
       <ul>
         <SessionCard

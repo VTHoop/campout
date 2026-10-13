@@ -130,17 +130,24 @@ describe('SummerWeeks', () => {
 });
 
 /**
- * A reviewer approving from a card (CAM-46). Two drafts of one camp, in weeks 1
- * and 2, share a provider, location and camp: approving one of those on a card
+ * A reviewer approving from a card (CAM-46). Two drafts of one camp, both in week 1,
+ * share a provider, location and camp: approving one of those on a card
  * updates the other card without a reload.
  */
 describe('SummerWeeks, for a reviewer', () => {
-  const DRAFTS = ['a', 'b'].map((id, index) =>
-    cardFixture(id, 'Fixture Camp', index === 0 ? '2026-06-01' : '2026-06-01', '2026-06-05', {
+  const DRAFTS = ['a', 'b'].map((id) =>
+    cardFixture(id, 'Fixture Camp', '2026-06-01', '2026-06-05', {
       records: chainFixture({ sessionId: id, campName: 'Fixture Camp', drafts: true }),
       verification: { kind: VerificationKind.Draft },
     }),
   );
+
+  /** The first match, or a failure that names it: no indexing, no cast. */
+  function firstControl(name: string): HTMLElement {
+    const [first] = screen.getAllByRole('button', { name });
+    if (first === undefined) throw new Error(`No control named ${name}`);
+    return first;
+  }
 
   function renderReviewer(canApprove: boolean) {
     vi.mocked(useSearchParams).mockReturnValue(
@@ -163,18 +170,14 @@ describe('SummerWeeks, for a reviewer', () => {
 
   it('calls approve_record as the signed-in user, for the one record', async () => {
     renderReviewer(true);
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Approve camp: Fixture Camp' })[0] as HTMLElement,
-    );
+    fireEvent.click(firstControl('Approve camp: Fixture Camp'));
     await waitFor(() => expect(approveRecord).toHaveBeenCalledOnce());
     expect(approveRecord).toHaveBeenCalledWith(expect.anything(), 'camp', 'camp-id', false);
   });
 
   it('removes a shared record’s control from every card that carries it', async () => {
     renderReviewer(true);
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Approve camp: Fixture Camp' })[0] as HTMLElement,
-    );
+    fireEvent.click(firstControl('Approve camp: Fixture Camp'));
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Approve camp: Fixture Camp' })).toBeNull(),
     );
@@ -185,9 +188,7 @@ describe('SummerWeeks, for a reviewer', () => {
 
   it('turns that session’s provenance to Verified on the day, and not the other card’s', async () => {
     renderReviewer(true);
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Approve session: Fixture Camp' })[0] as HTMLElement,
-    );
+    fireEvent.click(firstControl('Approve session: Fixture Camp'));
     await screen.findByText('Verified Oct 13, 2026');
     expect(screen.getAllByText('Draft · not yet verified')).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Approve session: Fixture Camp' })).toHaveLength(
@@ -201,9 +202,7 @@ describe('SummerWeeks, for a reviewer', () => {
       message: 'approve the camp first',
     });
     renderReviewer(true);
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Approve session: Fixture Camp' })[0] as HTMLElement,
-    );
+    fireEvent.click(firstControl('Approve session: Fixture Camp'));
     expect(await screen.findByRole('alert')).toHaveTextContent('approve the camp first');
     expect(screen.getAllByText('Draft · not yet verified')).toHaveLength(2);
   });
