@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { isReviewer } from '@/lib/catalog/approve';
 import { listSessionCards } from '@/lib/catalog/session-cards';
 import { summerWindow } from '@/lib/summer-window';
 import { createClient } from '@/lib/supabase/server';
@@ -20,6 +21,9 @@ export default async function CampsPage({
 }) {
   const today = richmondDate(new Date());
   const [client, { summer }] = await Promise.all([createClient(), searchParams]);
-  const cards = await listSessionCards(client, summerWindow(today, summer));
-  return <CampsView today={today} requested={summer} cards={cards} canApprove={false} />;
+  const [cards, canApprove] = await Promise.all([
+    listSessionCards(client, summerWindow(today, summer)),
+    isReviewer(client),
+  ]);
+  return <CampsView today={today} requested={summer} cards={cards} canApprove={canApprove} />;
 }

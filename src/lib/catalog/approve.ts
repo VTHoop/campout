@@ -2,7 +2,7 @@ import { type CalendarDate, daysBetween } from '@campout/planner';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/db/types';
 import { richmondDate } from '../today';
-import type { SessionCardView } from './session-cards';
+import { type SessionCardView, VerificationKind } from './session-cards';
 import { RecordKind } from './types';
 
 /**
@@ -78,13 +78,31 @@ export function recordKey(kind: RecordKind, id: string): string {
   return `${kind}:${id}`;
 }
 
+/** The cards as they stand once `approvals` have happened: each approved record verified wherever a card carries it. */
 export function applyApprovals(
   cards: readonly SessionCardView[],
-  _approvals: Approvals,
+  approvals: Approvals,
 ): readonly SessionCardView[] {
-  return cards;
+  if (approvals.size === 0) return cards;
+  return cards.map((card) => {
+    const sessionDay = approvals.get(recordKey(RecordKind.Session, card.id));
+    return {
+      ...card,
+      records: card.records.map((record) => ({
+        ...record,
+        isDraft: record.isDraft && !approvals.has(recordKey(record.kind, record.id)),
+      })),
+      ...(sessionDay === undefined
+        ? {}
+        : { verification: { kind: VerificationKind.Verified, on: sessionDay } }),
+    };
+  });
 }
 
-export async function isReviewer(_client: SupabaseClient<Database>): Promise<boolean> {
-  return false;
+/** Whether the visitor is a reviewer, as the database says: `is_reviewer()` is false for anon. */
+export async function isReviewer(client: SupabaseClient<Database>): Promise<boolean> {
+  const { data, error } = await client.rpc('is_reviewer');
+  if (error)
+    throw new Error(`Could not ask whether you are a reviewer: ${error.message}`, { cause: error });
+  return data;
 }

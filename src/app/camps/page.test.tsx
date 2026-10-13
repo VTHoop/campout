@@ -15,6 +15,7 @@ vi.mock('next/navigation', async (importOriginal) => ({
 // The page's job is wiring: a client in, cards out. The real read, and what RLS
 // lets each visitor see, are in supabase/tests/session-cards.rls.test.ts.
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(() => Promise.resolve({})) }));
+vi.mock('@/lib/supabase/browser', () => ({ createClient: vi.fn(() => ({})) }));
 vi.mock('@/lib/catalog/approve', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/catalog/approve')>()),
   isReviewer: vi.fn(async () => false),
