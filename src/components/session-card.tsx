@@ -1,12 +1,13 @@
+import { useRef } from 'react';
+import { ApproveControls, type OnApprove } from '@/components/approve-controls';
 import { Button } from '@/components/ui/button';
-import type { ApproveResult } from '@/lib/catalog/approve';
 import {
   type Registration,
   RegistrationKind,
   type SessionCardView,
   VerificationKind,
 } from '@/lib/catalog/session-cards';
-import { Category, type RecordKind } from '@/lib/catalog/types';
+import { Category } from '@/lib/catalog/types';
 import {
   formatAges,
   formatGrades,
@@ -193,12 +194,15 @@ function Actions({ card }: { card: SessionCardView }) {
 function Provenance({ verification }: { verification: SessionCardView['verification'] }) {
   if (verification.kind === VerificationKind.Verified)
     return (
-      <p className="border-rule border-t pt-3 text-caption text-ink-muted">
+      <p aria-live="polite" className="border-rule border-t pt-3 text-caption text-ink-muted">
         Verified {formatVerifiedOn(verification.on)}
       </p>
     );
   return (
-    <p className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted">
+    <p
+      aria-live="polite"
+      className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted"
+    >
       <span>Draft · not yet verified</span>
       {verification.sourceUrl === undefined ? null : (
         <a href={verification.sourceUrl} className="text-blueprint underline">
@@ -212,15 +216,19 @@ function Provenance({ verification }: { verification: SessionCardView['verificat
 export function SessionCard({
   card,
   weekNumber,
+  onApprove,
 }: {
   card: SessionCardView;
   weekNumber: number;
   /** Present only for a reviewer: approves one record, resolving to what the database said. */
-  onApprove?: (kind: RecordKind, id: string, confirmLongSpan: boolean) => Promise<ApproveResult>;
+  onApprove?: OnApprove;
 }) {
   const headingId = `${card.id}-name`;
+  const item = useRef<HTMLLIElement>(null);
   return (
     <li
+      ref={item}
+      tabIndex={-1}
       aria-labelledby={headingId}
       className="flex overflow-hidden rounded-card border border-rule bg-surface"
     >
@@ -238,6 +246,13 @@ export function SessionCard({
         <Categories categories={card.categories} />
         <Callout card={card} />
         <Actions card={card} />
+        {onApprove === undefined ? null : (
+          <ApproveControls
+            card={card}
+            onApprove={onApprove}
+            onApproved={() => item.current?.focus()}
+          />
+        )}
         <Provenance verification={card.verification} />
       </div>
     </li>
