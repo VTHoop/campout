@@ -89,6 +89,14 @@ Nothing reaches a parent until a reviewer approves it (ADR-0017). Four pieces, a
 
 **The general rule:** anything that changes what a parent sees goes through one of the two functions. A new reviewer action (adding an option to a verified session, say) is a new function that opens the gate, never a loosened trigger.
 
+## Approving from a card
+
+A reviewer publishes a record from its card on `/camps` (CAM-46); the page asks `is_reviewer()` (`isReviewer()` in `src/lib/catalog/approve.ts`) and passes `canApprove` down, but the database still decides every call. `approveRecord(client, kind, id, confirmLongSpan)` calls `approve_record()` as the signed-in user from the browser client and returns either the Richmond day it was verified or the function's refusal, worded as the function wrote it. The app adds no refusal rule of its own: `needsSpanConfirmation()` only decides whether to ask before sending `confirm_long_span` (the database's 14-day rule, restated so the card can ask first).
+
+- **A card's `records`** are its provider, location, camp and session, top down, each with `isDraft`. One control per draft record, each approving only itself: `verified_at` means a human checked that record's own evidence.
+- **`SummerWeeks` holds the approvals**, as a map from record to the day it was verified, and `applyApprovals()` re-derives every card from it, so a camp shared by several sessions turns verified on all of them. A card never mutates its own record.
+- **The long-span dialog is a native `<dialog>`** opened with `showModal()`: focus trapping and Escape come from the browser, with no dependency.
+
 ## Session cards come from one service
 
 The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards(client)` (`src/lib/catalog/session-cards.ts`). Neither imports a database row. The page passes the request's Supabase client, so the visitor's own JWT decides which rows come back. The service shows one option per session (the full day, else the morning, else the afternoon), reads Postgres `HH:MM:SS` times as `HH:MM`, picks the registration link (the camp's registration URL, else the provider's website; the camp's note is shown beside it), and throws on a row missing a parent the database should have returned. Page and card tests use invented cards (`session-card-fixtures.ts`); what each kind of visitor sees is tested against the seed in `supabase/tests/session-cards.rls.test.ts`.
