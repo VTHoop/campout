@@ -49,7 +49,7 @@ Contrast, WCAG, measured at the current values: `ink` on `paper` 12.4:1, `bluepr
 
 ### Category hues
 
-Tokens `category-sports` … `category-faith-based`. Six hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
+Tokens `category-day-camp`, `category-sports` … `category-faith-based`. Seven hues at one darkness so none looks more important than another. They appear as a **9px dot beside the category word** — never as a filled badge, which would read as a mark of approval (AGENTS.md §2). The label text stays `ink-muted`; only the dot carries hue.
 
 ## Type
 
@@ -92,6 +92,7 @@ Some sizes in the artboards fall between steps of the scales above. CAM-32 mappe
 6. Actions.
 7. Hairline `rule`.
 8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **See what we read** link.
+   Built so far (CAM-28): a verified card says `Verified Sep 3, 2026`; a draft says `Draft · not yet verified` and links **See what we read** to the page it was read from (none when its source is a stored document). `by PH` and the link on a verified card are not built yet.
 
 ### Rules the card must keep
 

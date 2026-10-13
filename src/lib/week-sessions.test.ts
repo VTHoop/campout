@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cardFixture } from './catalog/session-card-fixtures';
 import type { SessionCardView } from './catalog/session-cards';
 import { cardsInWeek, weekIndexFrom } from './week-sessions';
 
@@ -8,16 +9,7 @@ import { cardsInWeek, weekIndexFrom } from './week-sessions';
  */
 
 function view(id: string, campName: string, startDate: string): SessionCardView {
-  return {
-    id,
-    campName,
-    providerName: 'Provider',
-    locationName: 'Park',
-    city: 'Chester',
-    startDate,
-    endDate: startDate,
-    categories: [],
-  };
+  return cardFixture(id, campName, startDate, startDate, { categories: [] });
 }
 
 describe('cardsInWeek', () => {

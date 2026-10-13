@@ -4,7 +4,7 @@ The field-by-field definition of a catalog record, what counts as verified, and 
 
 The schema is the authority; this document explains it. Where they disagree, the migration wins and this file is wrong — fix it. The shape below is `supabase/migrations/20260929000100_catalog_shape.sql` (CAM-27, ADR-0018) on top of `20260914000100_catalog.sql`, and the review gate is `20260930000100_catalog_review_gate.sql` (ADR-0017); the numbered decisions it cites are CAM-27's.
 
-> **This spec does not describe `src/lib/catalog/`** (CAM-1, CAM-42), the provisional TypeScript mock the Find camps page still reads. The mock was the tool for making the decisions below and is not reshaped to match them: CAM-28 imports it as drafts and deletes it. Read this spec as the schema, not as documentation of the mock.
+> **This spec does not describe the first mock catalog** (CAM-1, CAM-42), the TypeScript record shapes the decisions below were made on. CAM-28 imported it as drafts and deleted it. Read this spec as the schema.
 
 ---
 
@@ -27,7 +27,7 @@ Entering a new organization means: one `providers` row, one `camps` row per prog
 **A session meets every weekday of its date range** (decision 1). Meeting days are not modelled.
 
 - An offering that meets on some weekdays only — a weekly class, Tue/Thu afternoons — is **split into sessions that do meet every weekday of their range, or not listed.** Entered as one long session it would show as weeks of daily coverage.
-- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. `approve_record()` refuses such a session until the reviewer passes `confirm_long_span`, and `findCatalogInconsistencies` flags the same thing in the TypeScript mock.
+- **Confirm any session spanning more than two weeks** (more than 14 days, both ends counted) before approving it. Most camps run one week, occasionally two; a longer one is usually a weekly class or a mistyped end date. `approve_record()` refuses such a session until the reviewer passes `confirm_long_span`.
 - Weekdays inside the range the camp is shut (a Juneteenth closure) go in `closed_dates`, not in a split.
 
 **A session falls inside the workday** (decision 11): a full day, a morning or an afternoon on a weekday.

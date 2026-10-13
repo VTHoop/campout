@@ -4,6 +4,7 @@ import {
   formatGrades,
   formatHours,
   formatPrice,
+  formatVerifiedOn,
   partialWeekCallout,
   weekTab,
 } from './session-card-format';
@@ -142,5 +143,15 @@ describe('partialWeekCallout', () => {
     ['at an unstated time', undefined],
   ])('does not say it ends at noon when it ends %s', (_case, endTime) => {
     expect(partialWeekCallout('2026-08-03', '2026-08-05', endTime)).toBe('Covers 3 of 5 days');
+  });
+});
+
+describe('formatVerifiedOn', () => {
+  it.each([
+    ['2026-09-01', 'Sep 1, 2026'],
+    ['2027-12-25', 'Dec 25, 2027'],
+    ['2028-02-29', 'Feb 29, 2028'],
+  ])('writes %s as %s', (date, written) => {
+    expect(formatVerifiedOn(date)).toBe(written);
   });
 });

@@ -19,7 +19,7 @@ export interface CalendarDraft {
  * same consistency `orderedCalendars` already enforces for a live calendar,
  * plus the provenance ADR-0012 requires. Returns every issue at once rather
  * than throwing on the first, so a reviewer sees everything wrong with a
- * draft in one pass — the same reasoning as `findCatalogInconsistencies`.
+ * draft in one pass.
  */
 export function findDraftIssues(draft: CalendarDraft): string[] {
   return [...findStructuralIssues(draft.calendar), ...findProvenanceIssues(draft)];
