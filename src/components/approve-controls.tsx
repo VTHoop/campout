@@ -71,33 +71,19 @@ function failureText(error: unknown): string {
   return error instanceof Error ? error.message : 'The approval did not go through.';
 }
 
+/** Chromium drops focus to the body when the focused button is disabled. */
+function focusWasDropped(): boolean {
+  return document.activeElement === document.body;
+}
+
 /**
- * One draft record's control. A session that runs longer than the database
- * accepts without a say-so (`longSpanDays`) asks first. However an attempt ends,
- * the control is usable again: a refusal and a call that threw are both shown
- * beside it, and focus returns to it if the disabled button dropped it.
+ * One approval attempt at a time for a record. However it ends the control is
+ * usable again: a refusal and a call that threw are both kept as `message`.
  */
-function ApproveRow({
-  record,
-  longSpanDays,
-  onApprove,
-  onApproved,
-}: {
-  record: ChainRecord;
-  longSpanDays: number | undefined;
-  onApprove: OnApprove;
-  onApproved: () => void;
-}) {
+function useAttempt(record: ChainRecord, onApprove: OnApprove, onApproved: () => void) {
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string>();
   const inFlight = useRef(false);
-  const button = useRef<HTMLButtonElement>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    if (!working && message !== undefined && document.activeElement === document.body)
-      button.current?.focus();
-  }, [working, message]);
 
   async function run(confirmLongSpan: boolean) {
     if (inFlight.current) return;
@@ -116,6 +102,44 @@ function ApproveRow({
     }
   }
 
+  return { working, message, run };
+}
+
+/** Puts focus back on the control once a failed attempt has re-enabled it, if the disabling dropped it. */
+function useRefocusAfterFailure(
+  button: React.RefObject<HTMLButtonElement | null>,
+  failed: boolean,
+) {
+  useEffect(() => {
+    if (failed && focusWasDropped()) button.current?.focus();
+  }, [button, failed]);
+}
+
+/**
+ * One draft record's control. A session that runs longer than the database
+ * accepts without a say-so (`longSpanDays`) asks first.
+ */
+function ApproveRow({
+  record,
+  longSpanDays,
+  onApprove,
+  onApproved,
+}: {
+  record: ChainRecord;
+  longSpanDays: number | undefined;
+  onApprove: OnApprove;
+  onApproved: () => void;
+}) {
+  const { working, message, run } = useAttempt(record, onApprove, onApproved);
+  const button = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useRefocusAfterFailure(button, !working && message !== undefined);
+
+  function choose() {
+    if (longSpanDays === undefined) void run(false);
+    else dialog.current?.showModal();
+  }
+
   function closeDialog() {
     dialog.current?.close();
     button.current?.focus();
@@ -129,10 +153,7 @@ function ApproveRow({
         variant="outline"
         aria-label={`Approve ${record.kind}: ${record.name}`}
         disabled={working}
-        onClick={() => {
-          if (longSpanDays === undefined) void run(false);
-          else dialog.current?.showModal();
-        }}
+        onClick={choose}
         className="justify-start whitespace-normal text-left"
       >
         {working ? 'Approving…' : `Approve ${record.kind}`}

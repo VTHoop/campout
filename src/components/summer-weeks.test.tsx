@@ -144,7 +144,7 @@ describe('SummerWeeks, for a reviewer', () => {
 
   /** The first match, or a failure that names it: no indexing, no cast. */
   function firstControl(name: string): HTMLElement {
-    const [first] = screen.getAllByRole('button', { name });
+    const first = screen.getAllByRole('button', { name }).at(0);
     if (first === undefined) throw new Error(`No control named ${name}`);
     return first;
   }

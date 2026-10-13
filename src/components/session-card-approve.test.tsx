@@ -122,7 +122,9 @@ describe('approving', () => {
     fireEvent.click(working);
     expect(onApprove).toHaveBeenCalledOnce();
 
-    await act(async () => settle(OK));
+    await act(async () => {
+      settle(OK);
+    });
   });
 
   it("shows the function's message beside the refused control, and re-enables it", async () => {
@@ -259,16 +261,16 @@ describe('two cards that each ask first', () => {
     render(
       <ul>
         {[
-          ['s1', '2026-06-22'], // 15 days
-          ['s2', '2026-06-28'], // 21 days
-        ].map(([id, end]) => (
+          { id: 's1', end: '2026-06-22' }, // 15 days
+          { id: 's2', end: '2026-06-28' }, // 21 days
+        ].map(({ id, end }) => (
           <SessionCard
             key={id}
             weekNumber={2}
             onApprove={vi.fn(async () => OK)}
-            card={cardFixture(id ?? '', `Fixture Camp ${id}`, '2026-06-08', end ?? '', {
+            card={cardFixture(id, `Fixture Camp ${id}`, '2026-06-08', end, {
               records: chainFixture({
-                sessionId: id ?? '',
+                sessionId: id,
                 campName: `Fixture Camp ${id}`,
                 drafts: true,
               }),
