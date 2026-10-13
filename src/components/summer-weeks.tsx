@@ -31,10 +31,13 @@ function headingFor(count: number, week: CoverageWeek): string {
 export function SummerWeeks({
   weeks,
   cards,
+  canApprove = false,
   children,
 }: {
   weeks: readonly CoverageWeek[];
   cards: readonly SessionCardView[];
+  /** True for a reviewer: the cards show approve controls on their draft records. */
+  canApprove?: boolean;
   children?: ReactNode;
 }) {
   const searchParams = useSearchParams();

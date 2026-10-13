@@ -2,6 +2,7 @@ import { type CalendarDate, daysBetween } from '@campout/planner';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/db/types';
 import { richmondDate } from '../today';
+import type { SessionCardView } from './session-cards';
 import { RecordKind } from './types';
 
 /**
@@ -68,4 +69,22 @@ export async function approveRecord(
   });
   if (error) return { ok: false, message: error.message };
   return { ok: true, on: await verifiedOn(client, kind, id) };
+}
+
+/** Which approvals have happened in this view, by record, with the day each was verified. */
+export type Approvals = ReadonlyMap<string, CalendarDate>;
+
+export function recordKey(kind: RecordKind, id: string): string {
+  return `${kind}:${id}`;
+}
+
+export function applyApprovals(
+  cards: readonly SessionCardView[],
+  _approvals: Approvals,
+): readonly SessionCardView[] {
+  return cards;
+}
+
+export async function isReviewer(_client: SupabaseClient<Database>): Promise<boolean> {
+  return false;
 }

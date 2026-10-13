@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SUMMER_2026_CARDS } from '@/lib/catalog/session-card-fixtures';
-import { listSessionCards } from '@/lib/catalog/session-cards';
+import { isReviewer } from '@/lib/catalog/approve';
+import { cardFixture, chainFixture, SUMMER_2026_CARDS } from '@/lib/catalog/session-card-fixtures';
+import { listSessionCards, VerificationKind } from '@/lib/catalog/session-cards';
 import { CampsView } from './camps-view';
 import CampsPage, { metadata } from './page';
 
@@ -14,6 +15,10 @@ vi.mock('next/navigation', async (importOriginal) => ({
 // The page's job is wiring: a client in, cards out. The real read, and what RLS
 // lets each visitor see, are in supabase/tests/session-cards.rls.test.ts.
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(() => Promise.resolve({})) }));
+vi.mock('@/lib/catalog/approve', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/catalog/approve')>()),
+  isReviewer: vi.fn(async () => false),
+}));
 vi.mock('@/lib/catalog/session-cards', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/catalog/session-cards')>()),
   listSessionCards: vi.fn(
@@ -219,5 +224,27 @@ describe('CampsPage', () => {
       start: '2026-06-01',
       end: '2026-08-21',
     });
+  });
+
+  it('shows a reviewer the approve controls on a draft card, and nobody else', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
+    atUrl('summer=2026&week=1');
+    const draft = cardFixture('d1', 'Fixture Draft Camp', '2026-06-01', '2026-06-05', {
+      records: chainFixture({ sessionId: 'd1', campName: 'Fixture Draft Camp', drafts: true }),
+      verification: { kind: VerificationKind.Draft },
+    });
+    vi.mocked(listSessionCards).mockResolvedValue([draft]);
+
+    vi.mocked(isReviewer).mockResolvedValueOnce(true);
+    const reviewer = render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026' }) }));
+    expect(
+      screen.getByRole('button', { name: 'Approve camp: Fixture Draft Camp' }),
+    ).toBeInTheDocument();
+    reviewer.unmount();
+
+    vi.mocked(isReviewer).mockResolvedValueOnce(false);
+    render(await CampsPage({ searchParams: Promise.resolve({ summer: '2026' }) }));
+    expect(screen.queryByRole('button', { name: /^Approve / })).toBeNull();
   });
 });

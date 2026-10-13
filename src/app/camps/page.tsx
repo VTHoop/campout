@@ -21,5 +21,5 @@ export default async function CampsPage({
   const today = richmondDate(new Date());
   const [client, { summer }] = await Promise.all([createClient(), searchParams]);
   const cards = await listSessionCards(client, summerWindow(today, summer));
-  return <CampsView today={today} requested={summer} cards={cards} />;
+  return <CampsView today={today} requested={summer} cards={cards} canApprove={false} />;
 }
