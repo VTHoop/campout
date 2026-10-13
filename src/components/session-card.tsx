@@ -192,14 +192,16 @@ function Actions({ card }: { card: SessionCardView }) {
 function Provenance({ verification }: { verification: SessionCardView['verification'] }) {
   if (verification.kind === VerificationKind.Verified)
     return (
-      <p className="text-caption text-ink-muted">Verified {formatVerifiedOn(verification.on)}</p>
+      <p className="border-rule border-t pt-3 text-caption text-ink-muted">
+        Verified {formatVerifiedOn(verification.on)}
+      </p>
     );
   return (
-    <p className="flex flex-wrap gap-x-3 text-caption text-ink-muted">
+    <p className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted">
       <span>Draft · not yet verified</span>
       {verification.sourceUrl === undefined ? null : (
         <a href={verification.sourceUrl} className="text-blueprint underline">
-          See the source
+          See what we read
         </a>
       )}
     </p>
