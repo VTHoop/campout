@@ -190,6 +190,13 @@ describe('SessionCard', () => {
       expect(screen.getByText('Verified May 1, 2026')).toBeInTheDocument();
     });
 
+    it('sits below a hairline, as the last thing on the card', () => {
+      const item = renderCard(BASEBALL);
+      const line = within(item).getByText('Verified May 1, 2026');
+      expect(line).toHaveClass('border-t', 'border-rule');
+      expect(item.lastElementChild?.lastElementChild).toBe(line);
+    });
+
     it('says a draft is not verified, and never that it is', () => {
       const item = renderCard({
         ...BASEBALL,
@@ -204,7 +211,7 @@ describe('SessionCard', () => {
         ...BASEBALL,
         verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
       });
-      expect(within(item).getByRole('link', { name: 'See the source' })).toHaveAttribute(
+      expect(within(item).getByRole('link', { name: 'See what we read' })).toHaveAttribute(
         'href',
         'https://example.test/camps',
       );
@@ -213,7 +220,7 @@ describe('SessionCard', () => {
     it('offers no source link for a draft read from a stored document', () => {
       const item = renderCard({ ...BASEBALL, verification: { kind: VerificationKind.Draft } });
       expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
-      expect(within(item).queryByRole('link', { name: 'See the source' })).toBeNull();
+      expect(within(item).queryByRole('link', { name: 'See what we read' })).toBeNull();
     });
   });
 });
