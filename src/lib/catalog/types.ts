@@ -1,5 +1,3 @@
-import type { CalendarDate } from '@campout/planner';
-
 /**
  * The camp categories a parent filters by: the database's `camp_category`
  * enum, value for value (ADR-0018; the lock is in `src/lib/db/enum-mirrors.ts`).
@@ -19,57 +17,6 @@ export enum Category {
 /** Wall-clock time of day, `HH:MM` in 24-hour time. Never a `Date`, never timezone-bearing. */
 export type WallClockTime = string;
 
-/**
- * Where a record's facts came from (ADR-0012): the exact page, or a document
- * kept in the `camp-sources` bucket when there is no durable URL. A provider's
- * website or a registration link is not a source.
- */
-export type Source =
-  | { readonly url: string; readonly documentPath?: undefined }
-  | { readonly documentPath: string; readonly url?: undefined };
-
-/** An organization that runs one or more camps. */
-export interface Provider {
-  readonly id: string;
-  readonly name: string;
-  readonly website?: string;
-  /** Evidence for the provider and everything it runs. Required before import (CAM-28). */
-  readonly source?: Source;
-}
-
-/** A physical site a session runs at. */
-export interface Location {
-  readonly id: string;
-  readonly name: string;
-  readonly address: string;
-  readonly city: string;
-  readonly state: string;
-  readonly postalCode?: string;
-  readonly lat?: number;
-  readonly long?: number;
-}
-
-/** How a parent signs up, since sources vary between links, phone numbers, and app-based registration. */
-export interface RegistrationInfo {
-  readonly url?: string;
-  readonly phone?: string;
-  readonly notes?: string;
-}
-
-/**
- * An offering a provider runs. Location, price, and time live on `Session`,
- * not here, because one camp can run sessions at different locations,
- * prices, and times.
- */
-export interface Camp {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly providerId: string;
-  readonly categories: readonly Category[];
-  readonly registrationInfo?: RegistrationInfo;
-}
-
 /** Age is optional, independent of grade, and never derived from one. */
 export interface AgeRange {
   readonly min?: number;
@@ -80,34 +27,4 @@ export interface AgeRange {
 export interface GradeRange {
   readonly min?: number;
   readonly max?: number;
-}
-
-/**
- * A dated offering of a `Camp`. This is what a parent actually shops for.
- *
- * `startTime`/`endTime`/`priceCents` are optional: a source can state dates
- * without stating hours or a price (a themed week announced before the
- * schedule is set, for instance), and leaving the field out is how "not
- * stated" stays distinguishable from a real, verified value.
- */
-export interface Session {
-  readonly id: string;
-  readonly campId: string;
-  readonly locationId: string;
-  readonly startDate: CalendarDate;
-  readonly endDate: CalendarDate;
-  readonly startTime?: WallClockTime;
-  readonly endTime?: WallClockTime;
-  /** Single non-member price, integer cents. Member/non-member tiering is out of scope for v1. */
-  readonly priceCents?: number;
-  /**
-   * Everything the number can't carry: member pricing, sibling discounts,
-   * sliding scale, deposit terms. Mirrors camp-record-spec.md's
-   * `sessions.price_note` — a second price field is a schema decision the
-   * real catalog already made against, so this stays prose rather than a
-   * structured tier.
-   */
-  readonly priceNote?: string;
-  readonly ageRange?: AgeRange;
-  readonly gradeRange?: GradeRange;
 }

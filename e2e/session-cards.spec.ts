@@ -122,7 +122,7 @@ test.describe('on a phone', () => {
     const week = await boxOf(swim.getByText('Week 6', { exact: true }));
 
     expect(week.x + week.width).toBeLessThanOrEqual(name.x);
-    // Wrapped, not truncated: the whole name is on the page.
+    // Not truncated: the whole name is on the page.
     await expect(swim.getByRole('heading')).toHaveText(SWIM_CAMP);
   });
 
