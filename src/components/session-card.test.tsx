@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { chainFixture } from '@/lib/catalog/session-card-fixtures';
 import {
   RegistrationKind,
   type SessionCardView,
@@ -27,6 +28,7 @@ const BASEBALL: SessionCardView = {
   categories: [Category.Sports],
   registration: { kind: RegistrationKind.Register, url: 'https://example.test/register' },
   verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
+  records: chainFixture({ sessionId: 'session-baseball', campName: 'Fixture Baseball Camp' }),
 };
 
 const UNSTATED: SessionCardView = {
@@ -39,6 +41,7 @@ const UNSTATED: SessionCardView = {
   endDate: '2026-06-12',
   categories: [Category.Arts],
   verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
+  records: chainFixture({ sessionId: 'session-craft', campName: 'Fixture Craft Week' }),
 };
 
 function renderCard(card: SessionCardView, weekNumber = 10) {

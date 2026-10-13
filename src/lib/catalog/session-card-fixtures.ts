@@ -1,11 +1,29 @@
-import { type SessionCardView, VerificationKind } from './session-cards';
-import { Category } from './types';
+import { type ChainRecord, type SessionCardView, VerificationKind } from './session-cards';
+import { Category, RecordKind } from './types';
 
 /**
  * Invented session cards for the UI suites (CAM-28): never a real camp, never
  * the database. `cardFixture` is a verified full-day card; each test changes
  * only the fact it is about.
  */
+
+/** A card's chain, top down. Every record is verified unless `drafts` says otherwise. */
+export function chainFixture({
+  sessionId,
+  campName,
+  drafts = false,
+}: {
+  sessionId: string;
+  campName: string;
+  drafts?: boolean;
+}): readonly ChainRecord[] {
+  return [
+    { kind: RecordKind.Provider, id: 'provider-id', name: 'Fixture Provider', isDraft: drafts },
+    { kind: RecordKind.Location, id: 'location-id', name: 'Fixture Park', isDraft: drafts },
+    { kind: RecordKind.Camp, id: 'camp-id', name: campName, isDraft: drafts },
+    { kind: RecordKind.Session, id: sessionId, name: campName, isDraft: drafts },
+  ];
+}
 
 export function cardFixture(
   id: string,
@@ -24,6 +42,7 @@ export function cardFixture(
     endDate,
     categories: [Category.Sports],
     verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
+    records: chainFixture({ sessionId: id, campName }),
     ...overrides,
   };
 }

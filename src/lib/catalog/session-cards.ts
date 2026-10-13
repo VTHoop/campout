@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/db/types';
 import { richmondDate } from '../today';
 import type { AgeRange, GradeRange, WallClockTime } from './types';
-import { Category } from './types';
+import { Category, type RecordKind } from './types';
 
 /**
  * The data-access service behind the session cards (CAM-32, CAM-28): the one
@@ -44,6 +44,16 @@ export interface SessionCardView {
   readonly registration?: Registration;
   readonly registrationNotes?: string;
   readonly verification: Verification;
+  /** The records a reviewer can approve, top down: provider, location, camp, session. */
+  readonly records: readonly ChainRecord[];
+}
+
+/** One record in a card's chain, with whether it is still waiting for a reviewer. */
+export interface ChainRecord {
+  readonly kind: RecordKind;
+  readonly id: string;
+  readonly name: string;
+  readonly isDraft: boolean;
 }
 
 export enum VerificationKind {
@@ -77,13 +87,25 @@ export interface SessionCardRow {
   readonly source_url: string | null;
   readonly verified_at: string | null;
   readonly camps: {
+    readonly id: string;
+    readonly status: Database['public']['Enums']['record_status'];
     readonly name: string;
     readonly categories: readonly CampCategory[];
     readonly registration_url: string | null;
     readonly registration_note: string | null;
-    readonly providers: { readonly name: string; readonly website_url: string | null } | null;
+    readonly providers: {
+      readonly id: string;
+      readonly status: Database['public']['Enums']['record_status'];
+      readonly name: string;
+      readonly website_url: string | null;
+    } | null;
   } | null;
-  readonly locations: { readonly label: string; readonly city: string } | null;
+  readonly locations: {
+    readonly id: string;
+    readonly status: Database['public']['Enums']['record_status'];
+    readonly label: string;
+    readonly city: string;
+  } | null;
   readonly session_options: readonly Pick<
     Tables['session_options']['Row'],
     'kind' | 'daily_start' | 'daily_end' | 'price_cents' | 'price_note'
@@ -190,6 +212,7 @@ function cardFromRow(row: SessionCardRow): SessionCardView {
     ...(registration === undefined ? {} : { registration }),
     ...(camp.registration_note === null ? {} : { registrationNotes: camp.registration_note }),
     verification: verificationOf(row),
+    records: [],
   };
 }
 
@@ -201,9 +224,9 @@ export function sessionCardsFromRows(rows: readonly SessionCardRow[]): readonly 
 const SESSION_CARD_SELECT = `
   id, start_date, end_date, status, min_age, max_age, min_grade, max_grade,
   source_url, verified_at,
-  camps ( name, categories, registration_url, registration_note,
-          providers ( name, website_url ) ),
-  locations ( label, city ),
+  camps ( id, status, name, categories, registration_url, registration_note,
+          providers ( id, status, name, website_url ) ),
+  locations ( id, status, label, city ),
   session_options ( kind, daily_start, daily_end, price_cents, price_note )
 `;
 

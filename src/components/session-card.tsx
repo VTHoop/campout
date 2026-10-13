@@ -1,11 +1,12 @@
 import { Button } from '@/components/ui/button';
+import type { ApproveResult } from '@/lib/catalog/approve';
 import {
   type Registration,
   RegistrationKind,
   type SessionCardView,
   VerificationKind,
 } from '@/lib/catalog/session-cards';
-import { Category } from '@/lib/catalog/types';
+import { Category, type RecordKind } from '@/lib/catalog/types';
 import {
   formatAges,
   formatGrades,
@@ -208,7 +209,15 @@ function Provenance({ verification }: { verification: SessionCardView['verificat
   );
 }
 
-export function SessionCard({ card, weekNumber }: { card: SessionCardView; weekNumber: number }) {
+export function SessionCard({
+  card,
+  weekNumber,
+}: {
+  card: SessionCardView;
+  weekNumber: number;
+  /** Present only for a reviewer: approves one record, resolving to what the database said. */
+  onApprove?: (kind: RecordKind, id: string, confirmLongSpan: boolean) => Promise<ApproveResult>;
+}) {
   const headingId = `${card.id}-name`;
   return (
     <li

@@ -6,7 +6,7 @@ import {
   sessionCardsFromRows,
   VerificationKind,
 } from './session-cards';
-import { Category } from './types';
+import { Category, RecordKind } from './types';
 
 /**
  * The data-access service behind the session cards (CAM-32, CAM-28): database
@@ -50,13 +50,25 @@ const VERIFIED_ROW: SessionCardRow = {
   source_url: 'https://example.test/summer',
   verified_at: '2026-09-01T12:00:00Z',
   camps: {
+    id: 'camp-1',
+    status: 'verified',
     name: 'Fixture Day Camp',
     categories: ['day_camp', 'sports'],
     registration_url: 'https://example.test/register',
     registration_note: 'Opens March 1.',
-    providers: { name: 'Fixture Rec League', website_url: 'https://example.test' },
+    providers: {
+      id: 'provider-1',
+      status: 'verified',
+      name: 'Fixture Rec League',
+      website_url: 'https://example.test',
+    },
   },
-  locations: { label: 'Fixture Community Center', city: 'Midlothian' },
+  locations: {
+    id: 'location-1',
+    status: 'verified',
+    label: 'Fixture Community Center',
+    city: 'Midlothian',
+  },
   session_options: [FULL_DAY],
 };
 
@@ -91,7 +103,32 @@ describe('sessionCardsFromRows', () => {
       registration: { kind: RegistrationKind.Register, url: 'https://example.test/register' },
       registrationNotes: 'Opens March 1.',
       verification: { kind: VerificationKind.Verified, on: '2026-09-01' },
+      records: [
+        { kind: RecordKind.Provider, id: 'provider-1', name: 'Fixture Rec League', isDraft: false },
+        {
+          kind: RecordKind.Location,
+          id: 'location-1',
+          name: 'Fixture Community Center',
+          isDraft: false,
+        },
+        { kind: RecordKind.Camp, id: 'camp-1', name: 'Fixture Day Camp', isDraft: false },
+        { kind: RecordKind.Session, id: 'session-1', name: 'Fixture Day Camp', isDraft: false },
+      ],
     });
+  });
+
+  it('marks each record of the chain as a draft or not on its own status', () => {
+    const card = cardFor({
+      status: 'draft',
+      verified_at: null,
+      camps: { ...VERIFIED_ROW.camps, status: 'draft' } as SessionCardRow['camps'],
+    });
+    expect(card.records.map((record) => [record.kind, record.isDraft])).toEqual([
+      [RecordKind.Provider, false],
+      [RecordKind.Location, false],
+      [RecordKind.Camp, true],
+      [RecordKind.Session, true],
+    ]);
   });
 
   it('keeps the rows in the order given', () => {
@@ -178,7 +215,12 @@ describe('sessionCardsFromRows', () => {
           ...(VERIFIED_ROW.camps as NonNullable<SessionCardRow['camps']>),
           registration_url: null,
           registration_note: 'Ask at the front desk.',
-          providers: { name: 'Fixture Rec League', website_url: null },
+          providers: {
+            id: 'provider-1',
+            status: 'verified',
+            name: 'Fixture Rec League',
+            website_url: null,
+          },
         },
       });
       expect(card.registration).toBeUndefined();
