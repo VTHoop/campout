@@ -22,7 +22,7 @@ const DRAFT = 'Draft · not yet verified';
 /** Sign in by magic link, then list the new user as a reviewer. Returns a clean-up. */
 async function signInAsReviewer(page: Page): Promise<() => Promise<void>> {
   const address = `approver-${Date.now()}@example.com`;
-  await page.goto('/sign-in');
+  await page.goto('/sign-in?next=%2Fcamps');
   await page.getByLabel('Email').fill(address);
   await page.getByRole('button', { name: 'Email me a link' }).click();
   await expect(page.getByText('Check your email')).toBeVisible();
