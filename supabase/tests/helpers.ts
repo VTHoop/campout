@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@supabase/supabase-js';
 
@@ -192,6 +193,24 @@ export function runSql(sql: string): string {
     'docker',
     ['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+}
+
+/**
+ * Run a SQL file as the local database's superuser, as `runSql` does a
+ * statement. For re-applying a migration under altered conditions. Local only.
+ */
+export function runSqlFile(path: string): void {
+  if (isLiveProject())
+    throw new Error('runSqlFile reaches only the local stack; skip this test live');
+  const container = process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_campout';
+  execFileSync(
+    'docker',
+    ['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'],
+    {
+      input: readFileSync(path),
+      stdio: ['pipe', 'ignore', 'pipe'],
+    },
   );
 }
 

@@ -1,8 +1,6 @@
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
 import { optionRow, withSeededSession } from './catalog-fixtures';
-import { isLiveProject, runSql } from './helpers';
+import { isLiveProject, runSql, runSqlFile } from './helpers';
 
 /**
  * The guard triggers call two internal functions as the writing role
@@ -19,20 +17,7 @@ const MIGRATION = 'supabase/migrations/20261009000100_guard_function_grants.sql'
 const GUARDS = ['refuse_if_session_verified(uuid)', 'refuse_if_calendar_verified(uuid)'];
 
 function applyMigration(): void {
-  execFileSync(
-    'docker',
-    [
-      'exec',
-      '-i',
-      process.env.SUPABASE_DB_CONTAINER ?? 'supabase_db_campout',
-      'psql',
-      '-U',
-      'postgres',
-      '-v',
-      'ON_ERROR_STOP=1',
-    ],
-    { input: readFileSync(MIGRATION), stdio: ['pipe', 'ignore', 'pipe'] },
-  );
+  runSqlFile(MIGRATION);
 }
 
 describe.skipIf(isLiveProject())('guard function grants', () => {
