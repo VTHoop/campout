@@ -32,6 +32,8 @@ function signedOut() {
   });
 }
 
+const SUMMER_2027 = { start: '2027-06-07', end: '2027-08-20' } as const;
+
 let parent: TestUser;
 let reviewer: TestUser;
 
@@ -46,18 +48,18 @@ afterAll(async () => {
 
 describe('listSessionCards', () => {
   it('shows a signed-out visitor only the verified sessions', async () => {
-    const cards = await listSessionCards(signedOut());
+    const cards = await listSessionCards(signedOut(), SUMMER_2027);
     expect(cards.map((card) => card.id)).toEqual(VERIFIED_SESSIONS);
     expect(cards.every((card) => card.verification.kind === VerificationKind.Verified)).toBe(true);
   });
 
   it('shows a signed-in parent the same, and no draft', async () => {
-    const cards = await listSessionCards(typed(parent));
+    const cards = await listSessionCards(typed(parent), SUMMER_2027);
     expect(cards.map((card) => card.id)).toEqual(VERIFIED_SESSIONS);
   });
 
   it('shows a reviewer the draft too, marked as one, with its source', async () => {
-    const cards = await listSessionCards(typed(reviewer));
+    const cards = await listSessionCards(typed(reviewer), SUMMER_2027);
     expect(cards.map((card) => card.id)).toEqual([...VERIFIED_SESSIONS, DRAFT_SESSION]);
     expect(cards.find((card) => card.id === DRAFT_SESSION)?.verification).toEqual({
       kind: VerificationKind.Draft,
@@ -66,7 +68,7 @@ describe('listSessionCards', () => {
   });
 
   it('carries a verified session joined to its camp, provider, location and option', async () => {
-    const cards = await listSessionCards(signedOut());
+    const cards = await listSessionCards(signedOut(), SUMMER_2027);
     expect(cards[0]).toMatchObject({
       campName: 'Maple Hollow Summer Camp',
       providerName: 'Maple Hollow Rec League',
@@ -78,5 +80,23 @@ describe('listSessionCards', () => {
       priceCents: 32_500,
       verification: { kind: VerificationKind.Verified, on: '2026-09-01' },
     });
+  });
+  it('reads only the sessions that overlap the window', async () => {
+    const week = { start: '2027-06-21', end: '2027-06-25' } as const;
+    expect((await listSessionCards(signedOut(), week)).map((card) => card.id)).toEqual([
+      VERIFIED_SESSIONS[0],
+    ]);
+  });
+
+  it('includes a session that starts before the window and runs into it', async () => {
+    const lateInTheWeek = { start: '2027-06-24', end: '2027-06-24' } as const;
+    expect((await listSessionCards(signedOut(), lateInTheWeek)).map((card) => card.id)).toEqual([
+      VERIFIED_SESSIONS[0],
+    ]);
+  });
+
+  it('reads nothing for a summer with no sessions', async () => {
+    const summer2026 = { start: '2026-06-01', end: '2026-08-21' } as const;
+    expect(await listSessionCards(signedOut(), summer2026)).toEqual([]);
   });
 });

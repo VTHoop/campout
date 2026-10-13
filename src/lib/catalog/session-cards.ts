@@ -207,9 +207,21 @@ const SESSION_CARD_SELECT = `
   session_options ( kind, daily_start, daily_end, price_cents, price_note )
 `;
 
-/** Every session the visitor may see, as cards. Who that is, is the database's decision. */
+/** Calendar dates, both ends included. */
+export interface DateWindow {
+  readonly start: CalendarDate;
+  readonly end: CalendarDate;
+}
+
+/**
+ * The sessions the visitor may see that overlap `window`, as cards. Who the
+ * visitor is, is the database's decision. The window keeps the read to what
+ * the page shows: an unbounded one is cut off silently at the server's row cap,
+ * and the newest sessions go first.
+ */
 export async function listSessionCards(
   client: SupabaseClient<Database>,
+  _window: DateWindow,
 ): Promise<readonly SessionCardView[]> {
   const { data, error } = await client
     .from('sessions')

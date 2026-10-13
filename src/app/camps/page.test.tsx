@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SUMMER_2026_CARDS } from '@/lib/catalog/session-card-fixtures';
+import { listSessionCards } from '@/lib/catalog/session-cards';
 import { CampsView } from './camps-view';
 import CampsPage, { metadata } from './page';
 
@@ -208,5 +209,15 @@ describe('CampsPage', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: '5 camps, week of Aug 3' }),
     ).toBeInTheDocument();
+  });
+  it('reads only the sessions of the summer on the page', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-27T16:00:00Z'));
+
+    await CampsPage({ searchParams: Promise.resolve({ summer: '2026' }) });
+    expect(listSessionCards).toHaveBeenLastCalledWith(expect.anything(), {
+      start: '2026-06-01',
+      end: '2026-08-21',
+    });
   });
 });
