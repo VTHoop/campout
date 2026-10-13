@@ -1,8 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { type ApproveResult, needsSpanConfirmation, spanDays } from '@/lib/catalog/approve';
+import {
+  type ApproveResult,
+  needsSpanConfirmation,
+  recordKey,
+  spanDays,
+} from '@/lib/catalog/approve';
 import type { ChainRecord, SessionCardView } from '@/lib/catalog/session-cards';
 import { RecordKind } from '@/lib/catalog/types';
 
@@ -20,23 +25,6 @@ export type OnApprove = (
   confirmLongSpan: boolean,
 ) => Promise<ApproveResult>;
 
-const KIND_LABELS = new Map(
-  Object.entries({
-    [RecordKind.Provider]: 'provider',
-    [RecordKind.Location]: 'location',
-    [RecordKind.Camp]: 'camp',
-    [RecordKind.Session]: 'session',
-  } satisfies Record<RecordKind, string>),
-);
-
-function keyOf(record: ChainRecord): string {
-  return `${record.kind}:${record.id}`;
-}
-
-function labelOf(record: ChainRecord): string {
-  return `${KIND_LABELS.get(record.kind)}: ${record.name}`;
-}
-
 /** Asks a reviewer to say they checked a session that runs longer than a camp usually does. */
 function LongSpanDialog({
   dialogRef,
@@ -49,17 +37,18 @@ function LongSpanDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const titleId = useId();
   return (
     <dialog
       ref={dialogRef}
-      aria-labelledby="long-span-title"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
         onCancel();
       }}
       className="m-auto w-[min(90vw,24rem)] rounded-card border border-rule bg-surface p-4 text-ink backdrop:bg-ink/40"
     >
-      <h4 id="long-span-title" className="text-title">
+      <h4 id={titleId} className="text-title">
         This session runs {days} days
       </h4>
       <p className="mt-2 text-caption text-ink-muted">
@@ -78,6 +67,96 @@ function LongSpanDialog({
   );
 }
 
+function failureText(error: unknown): string {
+  return error instanceof Error ? error.message : 'The approval did not go through.';
+}
+
+/**
+ * One draft record's control. A session that runs longer than the database
+ * accepts without a say-so (`longSpanDays`) asks first. However an attempt ends,
+ * the control is usable again: a refusal and a call that threw are both shown
+ * beside it, and focus returns to it if the disabled button dropped it.
+ */
+function ApproveRow({
+  record,
+  longSpanDays,
+  onApprove,
+  onApproved,
+}: {
+  record: ChainRecord;
+  longSpanDays: number | undefined;
+  onApprove: OnApprove;
+  onApproved: () => void;
+}) {
+  const [working, setWorking] = useState(false);
+  const [message, setMessage] = useState<string>();
+  const inFlight = useRef(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (!working && message !== undefined && document.activeElement === document.body)
+      button.current?.focus();
+  }, [working, message]);
+
+  async function run(confirmLongSpan: boolean) {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setMessage(undefined);
+    setWorking(true);
+    try {
+      const result = await onApprove(record.kind, record.id, confirmLongSpan);
+      if (result.ok) onApproved();
+      else setMessage(result.message);
+    } catch (error) {
+      setMessage(failureText(error));
+    } finally {
+      inFlight.current = false;
+      setWorking(false);
+    }
+  }
+
+  function closeDialog() {
+    dialog.current?.close();
+    button.current?.focus();
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        ref={button}
+        type="button"
+        variant="outline"
+        aria-label={`Approve ${record.kind}: ${record.name}`}
+        disabled={working}
+        onClick={() => {
+          if (longSpanDays === undefined) void run(false);
+          else dialog.current?.showModal();
+        }}
+        className="justify-start whitespace-normal text-left"
+      >
+        {working ? 'Approving…' : `Approve ${record.kind}`}
+      </Button>
+      {message === undefined ? null : (
+        <p role="alert" className="text-caption text-brick">
+          {message}
+        </p>
+      )}
+      {longSpanDays === undefined ? null : (
+        <LongSpanDialog
+          dialogRef={dialog}
+          days={longSpanDays}
+          onConfirm={() => {
+            closeDialog();
+            void run(true);
+          }}
+          onCancel={closeDialog}
+        />
+      )}
+    </div>
+  );
+}
+
 export function ApproveControls({
   card,
   onApprove,
@@ -88,78 +167,24 @@ export function ApproveControls({
   /** Called once a record is verified, while its control is still on screen. */
   onApproved: () => void;
 }) {
-  const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
-  const [refusals, setRefusals] = useState<ReadonlyMap<string, string>>(new Map());
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const opener = useRef<HTMLElement | null>(null);
   const drafts = card.records.filter((record) => record.isDraft);
-  const days = spanDays(card.startDate, card.endDate);
-
-  async function approve(record: ChainRecord, confirmLongSpan: boolean) {
-    const key = keyOf(record);
-    setRefusals((all) => new Map([...all].filter(([other]) => other !== key)));
-    setPending((all) => new Set(all).add(key));
-    const result = await onApprove(record.kind, record.id, confirmLongSpan);
-    setPending((all) => new Set([...all].filter((other) => other !== key)));
-    if (result.ok) onApproved();
-    else setRefusals((all) => new Map(all).set(key, result.message));
-  }
-
-  function choose(record: ChainRecord, button: HTMLElement) {
-    if (pending.has(keyOf(record))) return;
-    const long =
-      record.kind === RecordKind.Session && needsSpanConfirmation(card.startDate, card.endDate);
-    if (!long) {
-      void approve(record, false);
-      return;
-    }
-    opener.current = button;
-    dialogRef.current?.showModal();
-  }
-
-  function closeDialog() {
-    dialogRef.current?.close();
-    opener.current?.focus();
-  }
-
   if (drafts.length === 0) return null;
-  const session = card.records.find((record) => record.kind === RecordKind.Session);
+  const asksFirst = needsSpanConfirmation(card.startDate, card.endDate);
   return (
     <div className="flex flex-col gap-2 border-rule border-t pt-3">
-      {drafts.map((record) => {
-        const working = pending.has(keyOf(record));
-        const refusal = refusals.get(keyOf(record));
-        return (
-          <div key={keyOf(record)} className="flex flex-col gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              aria-label={`Approve ${labelOf(record)}`}
-              disabled={working}
-              onClick={(event) => choose(record, event.currentTarget)}
-              className="justify-start whitespace-normal text-left"
-            >
-              {working ? 'Approving…' : `Approve ${KIND_LABELS.get(record.kind)}`}
-            </Button>
-            {refusal === undefined ? null : (
-              <p role="alert" className="text-caption text-brick">
-                {refusal}
-              </p>
-            )}
-          </div>
-        );
-      })}
-      {session === undefined ? null : (
-        <LongSpanDialog
-          dialogRef={dialogRef}
-          days={days}
-          onConfirm={() => {
-            closeDialog();
-            void approve(session, true);
-          }}
-          onCancel={closeDialog}
+      {drafts.map((record) => (
+        <ApproveRow
+          key={recordKey(record.kind, record.id)}
+          record={record}
+          longSpanDays={
+            asksFirst && record.kind === RecordKind.Session
+              ? spanDays(card.startDate, card.endDate)
+              : undefined
+          }
+          onApprove={onApprove}
+          onApproved={onApproved}
         />
-      )}
+      ))}
     </div>
   );
 }

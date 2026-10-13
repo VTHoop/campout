@@ -1,5 +1,5 @@
 import type { CalendarType, ClosureTag, SchoolDistrict } from '@campout/planner';
-import type { Category } from '@/lib/catalog/types';
+import type { Category, RecordKind } from '@/lib/catalog/types';
 import type { Database } from './types';
 
 /**
@@ -21,4 +21,11 @@ type Locked<T extends true> = T;
 export type SchoolDistrictLocked = Locked<SameSet<`${SchoolDistrict}`, Enums['school_district']>>;
 export type CalendarTypeLocked = Locked<SameSet<`${CalendarType}`, Enums['calendar_type']>>;
 export type ClosureTagLocked = Locked<SameSet<`${ClosureTag}`, Enums['closure_tag']>>;
+/**
+ * The card's `RecordKind` is four of the database's seven `catalog_record_kind`
+ * values, so the lock is a subset: a renamed or removed value fails here.
+ */
+export type RecordKindLocked = Locked<
+  [`${RecordKind}`] extends [Enums['catalog_record_kind']] ? true : false
+>;
 export type CategoryLocked = Locked<SameSet<`${Category}`, Enums['camp_category']>>;

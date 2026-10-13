@@ -30,7 +30,6 @@ export function needsSpanConfirmation(start: CalendarDate, end: CalendarDate): b
 
 type VerifiedTable = 'providers' | 'camps' | 'locations' | 'sessions';
 
-/** An exhaustive table, read through a Map. */
 const TABLES: ReadonlyMap<string, VerifiedTable> = new Map(
   Object.entries({
     [RecordKind.Provider]: 'providers',

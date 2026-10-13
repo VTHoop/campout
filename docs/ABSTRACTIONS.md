@@ -99,7 +99,7 @@ A reviewer publishes a record from its card on `/camps` (CAM-46); the page asks 
 
 ## Session cards come from one service
 
-The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards(client)` (`src/lib/catalog/session-cards.ts`). Neither imports a database row. The page passes the request's Supabase client, so the visitor's own JWT decides which rows come back. The service shows one option per session (the full day, else the morning, else the afternoon), reads Postgres `HH:MM:SS` times as `HH:MM`, picks the registration link (the camp's registration URL, else the provider's website; the camp's note is shown beside it), and throws on a row missing a parent the database should have returned. Page and card tests use invented cards (`session-card-fixtures.ts`); what each kind of visitor sees is tested against the seed in `supabase/tests/session-cards.rls.test.ts`.
+The Find camps page and `SessionCard` read session cards only as `SessionCardView`s from `listSessionCards(client)` (`src/lib/catalog/session-cards.ts`). Neither imports a database row. The page passes the request's Supabase client, so the visitor's own JWT decides which rows come back. The service shows one option per session (the full day, else the morning, else the afternoon), reads Postgres `HH:MM:SS` times as `HH:MM`, picks the registration link (the camp's registration URL, else the provider's website; the camp's note is shown beside it), and throws on a row missing a parent the database should have returned. Each card also carries its `records` (provider, location, camp, session, each with `isDraft`), which is what a reviewer's approve controls read. Page and card tests use invented cards (`session-card-fixtures.ts`); what each kind of visitor sees is tested against the seed in `supabase/tests/session-cards.rls.test.ts`.
 
 ## The browser vault (`src/lib/vault/`, not yet built)
 
@@ -138,7 +138,7 @@ Sign-in is a magic link (ADR-0003), and nothing in the app decides who a reviewe
 The boundary agents get wrong most often, so state it plainly:
 
 - **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`.
-- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, and the summer's weeks (`SummerWeeks`), which read the selected week from `?week=` and change it with `history.pushState` — Next.js syncs that into `useSearchParams` with no server round trip.
+- **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, the session card and its approve controls (`SessionCard`, `ApproveControls`), which hold focus and the confirm dialog, and the summer's weeks (`SummerWeeks`), which read the selected week from `?week=` and change it with `history.pushState` — Next.js syncs that into `useSearchParams` with no server round trip.
 - **The planner package runs in both.** That is the point of its purity.
 - **The vault is client-only, always.** If you find yourself passing vault data across the boundary as props, stop — that is the leak ADR-0006 exists to prevent.
 

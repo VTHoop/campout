@@ -1,3 +1,5 @@
+'use client';
+
 import { useRef } from 'react';
 import { ApproveControls, type OnApprove } from '@/components/approve-controls';
 import { Button } from '@/components/ui/button';
