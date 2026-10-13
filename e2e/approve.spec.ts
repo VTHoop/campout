@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { withSeededSession } from '../supabase/tests/catalog-fixtures';
 import { serviceClient } from '../supabase/tests/helpers';
-import { signInLinkFor } from './mailpit';
+import { signInByMagicLink } from './mailpit';
 
 /**
  * A reviewer approving from the card (CAM-46). The unit suites cover which
@@ -21,19 +21,16 @@ const DRAFT = 'Draft · not yet verified';
 
 /** Sign in by magic link, then list the new user as a reviewer. Returns a clean-up. */
 async function signInAsReviewer(page: Page): Promise<() => Promise<void>> {
-  const address = `approver-${Date.now()}@example.com`;
-  await page.goto('/sign-in?next=%2Fcamps');
-  await page.getByLabel('Email').fill(address);
-  await page.getByRole('button', { name: 'Email me a link' }).click();
-  await expect(page.getByText('Check your email')).toBeVisible();
-  await page.goto(await signInLinkFor(page, address));
-  await expect(page).toHaveURL('/camps');
+  const address = await signInByMagicLink(page, '/camps');
 
   const admin = serviceClient();
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const user = data.users.find((candidate) => candidate.email === address);
   if (user === undefined) throw new Error(`No user for ${address}`);
-  await admin.from('reviewers').insert({ user_id: user.id, display_name: 'E2E reviewer' });
+  const { error } = await admin
+    .from('reviewers')
+    .insert({ user_id: user.id, display_name: 'E2E reviewer' });
+  if (error) throw new Error(`Could not list ${address} as a reviewer: ${error.message}`);
   return async () => {
     await admin.auth.admin.deleteUser(user.id);
   };
@@ -80,13 +77,16 @@ test('a refusal shows the database’s words beside the control, and the record 
   try {
     await withSeededSession(async () => {
       await openDraftCard(page);
-      await control(page, `Approve session: ${CAMP}`).click();
+      const session = control(page, `Approve session: ${CAMP}`);
+      await session.focus();
+      await page.keyboard.press('Enter');
 
       await expect(card(page).getByRole('alert')).toHaveText(
         "approve the session's camp, provider and location first",
       );
       await expect(card(page).getByText(DRAFT)).toBeVisible();
-      await expect(control(page, `Approve session: ${CAMP}`)).toBeEnabled();
+      await expect(session).toBeEnabled();
+      await expect(session).toBeFocused();
     });
   } finally {
     await cleanUp();
@@ -144,6 +144,18 @@ test('the controls fit the card at 400px with no horizontal scroll', async ({ pa
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(overflow).toBeLessThanOrEqual(0);
+
+      // The card clips what overflows it, so the page's width alone can't see a clipped control.
+      const cardBox = await card(page).boundingBox();
+      for (const control of await card(page)
+        .getByRole('button', { name: /^Approve / })
+        .all()) {
+        const box = await control.boundingBox();
+        expect(box?.x).toBeGreaterThanOrEqual(cardBox?.x ?? Infinity);
+        expect((box?.x ?? Infinity) + (box?.width ?? Infinity)).toBeLessThanOrEqual(
+          (cardBox?.x ?? 0) + (cardBox?.width ?? 0),
+        );
+      }
     });
   } finally {
     await cleanUp();

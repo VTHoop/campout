@@ -5,6 +5,7 @@ import { listSessionCards, VerificationKind } from '../../src/lib/catalog/sessio
 import { RecordKind } from '../../src/lib/catalog/types';
 import type { Database } from '../../src/lib/db/types';
 import {
+  approve,
   createReviewer,
   insertId,
   optionRow,
@@ -128,6 +129,13 @@ describe('approving from the card', () => {
     return approveRecord(typed(user), kind, id, confirm);
   }
 
+  /** Setup, not the thing under test: the throwing `approve()` fails loudly if a step does not land. */
+  async function approveParents(ids: SeededSession) {
+    await approve(reviewer, 'provider', ids.providerId);
+    await approve(reviewer, 'location', ids.locationId);
+    await approve(reviewer, 'camp', ids.campId);
+  }
+
   it('says who is a reviewer: a reviewer, and not a parent or a signed-out visitor', async () => {
     expect(await isReviewer(typed(reviewer))).toBe(true);
     expect(await isReviewer(typed(parent))).toBe(false);
@@ -179,12 +187,7 @@ describe('approving from the card', () => {
 
   it('refuses a session with no time option', () =>
     withSeededSession(async (ids) => {
-      for (const [kind, id] of [
-        [RecordKind.Provider, ids.providerId],
-        [RecordKind.Location, ids.locationId],
-        [RecordKind.Camp, ids.campId],
-      ] as const)
-        await approveAs(reviewer, kind, id);
+      await approveParents(ids);
       expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId)).toEqual({
         ok: false,
         message: 'a session needs at least one time option',
@@ -193,14 +196,13 @@ describe('approving from the card', () => {
 
   it('refuses a session longer than 14 days until the reviewer confirms, and says how long', () =>
     withSeededSession(async (ids, admin) => {
-      await admin.from('sessions').update({ end_date: '2027-07-26' }).eq('id', ids.sessionId);
+      const { error } = await admin
+        .from('sessions')
+        .update({ end_date: '2027-07-26' })
+        .eq('id', ids.sessionId);
+      if (error) throw new Error(`Could not stretch the session: ${error.message}`);
       await insertId(admin, 'session_options', optionRow(ids.sessionId));
-      for (const [kind, id] of [
-        [RecordKind.Provider, ids.providerId],
-        [RecordKind.Location, ids.locationId],
-        [RecordKind.Camp, ids.campId],
-      ] as const)
-        await approveAs(reviewer, kind, id);
+      await approveParents(ids);
 
       expect(await approveAs(reviewer, RecordKind.Session, ids.sessionId)).toEqual({
         ok: false,
