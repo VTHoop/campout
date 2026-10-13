@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/db/types';
 import { richmondDate } from '../today';
 import type { AgeRange, GradeRange, WallClockTime } from './types';
-import { Category, type RecordKind } from './types';
+import { Category, RecordKind } from './types';
 
 /**
  * The data-access service behind the session cards (CAM-32, CAM-28): the one
@@ -125,6 +125,14 @@ const CATEGORIES: ReadonlyMap<string, Category> = new Map(
   } satisfies Record<CampCategory, Category>),
 );
 
+type CampRow = NonNullable<SessionCardRow['camps']>;
+type ProviderRow = NonNullable<CampRow['providers']>;
+type LocationRow = NonNullable<SessionCardRow['locations']>;
+
+function isDraft(record: { readonly status: SessionCardRow['status'] }): boolean {
+  return record.status === 'draft';
+}
+
 type CardOption = SessionCardRow['session_options'][number];
 
 /** The option a card shows: the full day when there is one, else the morning, else the afternoon. */
@@ -180,6 +188,24 @@ function registrationOf(
   return undefined;
 }
 
+/** The records a reviewer can approve, top down: a record's parents come before it. */
+function chainOf(
+  row: SessionCardRow,
+  { camp, provider, location }: { camp: CampRow; provider: ProviderRow; location: LocationRow },
+): readonly ChainRecord[] {
+  return [
+    { kind: RecordKind.Provider, id: provider.id, name: provider.name, isDraft: isDraft(provider) },
+    {
+      kind: RecordKind.Location,
+      id: location.id,
+      name: location.label,
+      isDraft: isDraft(location),
+    },
+    { kind: RecordKind.Camp, id: camp.id, name: camp.name, isDraft: isDraft(camp) },
+    { kind: RecordKind.Session, id: row.id, name: camp.name, isDraft: isDraft(row) },
+  ];
+}
+
 function cardFromRow(row: SessionCardRow): SessionCardView {
   const camp = present(row.camps, 'camp', row.id);
   const provider = present(camp.providers, 'provider', row.id);
@@ -212,7 +238,7 @@ function cardFromRow(row: SessionCardRow): SessionCardView {
     ...(registration === undefined ? {} : { registration }),
     ...(camp.registration_note === null ? {} : { registrationNotes: camp.registration_note }),
     verification: verificationOf(row),
-    records: [],
+    records: chainOf(row, { camp, provider, location }),
   };
 }
 
