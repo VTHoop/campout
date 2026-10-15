@@ -52,6 +52,93 @@ function control(name: string) {
   return screen.getByRole('button', { name });
 }
 
+describe('review rows', () => {
+  function rows() {
+    const group = screen.getByRole('group', { name: 'Records to review' });
+    return Array.from(group.children);
+  }
+
+  /** The row for one kind of record: a failure that names it, no indexing and no cast. */
+  function rowFor(kind: string): HTMLElement {
+    const found = rows().find((row) => row.textContent?.toLowerCase().startsWith(kind));
+    if (!(found instanceof HTMLElement)) throw new Error(`No row for ${kind}`);
+    return found;
+  }
+
+  it('shows a row for each record, top down, each with its status', () => {
+    const records = chainFixture({
+      sessionId: 's1',
+      campName: 'Fixture Day Camp',
+      drafts: true,
+    }).map((record) =>
+      record.kind === RecordKind.Provider ? { ...record, isDraft: false } : record,
+    );
+    renderCard(draftCard({ records }), vi.fn());
+    expect(rows().map((row) => row.textContent)).toEqual([
+      expect.stringMatching(/^provider.*Fixture Provider.*Verified/i),
+      expect.stringMatching(/^location.*Fixture Park.*Draft.*Approve/i),
+      expect.stringMatching(/^camp.*Fixture Day Camp.*Draft.*Approve/i),
+      expect.stringMatching(/^session.*Draft.*Approve/i),
+    ]);
+  });
+
+  it('gives a verified record a Verified pill and no button', () => {
+    const records = chainFixture({
+      sessionId: 's1',
+      campName: 'Fixture Day Camp',
+      drafts: true,
+    }).map((record) =>
+      record.kind === RecordKind.Provider ? { ...record, isDraft: false } : record,
+    );
+    renderCard(draftCard({ records }), vi.fn());
+    const provider = rowFor('provider');
+    expect(provider).toHaveTextContent('Verified');
+    expect(within(provider).queryByRole('button')).toBeNull();
+  });
+
+  it('shows no rows on a card with nothing left to review', () => {
+    renderCard(cardFixture('v1', 'Fixture Day Camp', '2026-06-08', '2026-06-12'), vi.fn());
+    expect(screen.queryByRole('group', { name: 'Records to review' })).toBeNull();
+  });
+
+  it('shows no rows to a visitor who cannot approve', () => {
+    renderCard(draftCard());
+    expect(screen.queryByRole('group', { name: 'Records to review' })).toBeNull();
+  });
+
+  it('shows the session’s own facts, not the camp name again', () => {
+    renderCard(
+      draftCard({
+        startTime: '09:00',
+        endTime: '12:00',
+        priceCents: 24_000,
+        ageRange: { min: 9, max: 13 },
+        gradeRange: { min: 4, max: 8 },
+      }),
+      vi.fn(),
+    );
+    const session = rowFor('session');
+    for (const fact of [
+      'Jun 8 – Jun 12, 2026',
+      '9:00am – 12:00pm',
+      'Ages 9–13',
+      'Grades 4–8',
+      '$240',
+    ]) {
+      expect(session).toHaveTextContent(fact);
+    }
+    expect(session).not.toHaveTextContent('Fixture Day Camp');
+  });
+
+  it('says a fact the source did not state is missing', () => {
+    renderCard(draftCard(), vi.fn());
+    const session = rowFor('session');
+    for (const missing of ['Hours not stated', 'Ages and grades not stated', 'Price not stated']) {
+      expect(session).toHaveTextContent(missing);
+    }
+  });
+});
+
 describe('approve controls', () => {
   it('names each draft record by kind and name', () => {
     renderCard(draftCard(), vi.fn());

@@ -190,7 +190,7 @@ describe('SummerWeeks, for a reviewer', () => {
     renderReviewer(true);
     fireEvent.click(firstControl('Approve session: Fixture Camp'));
     await screen.findByText('Verified Oct 13, 2026');
-    expect(screen.getAllByText('Draft · not yet verified')).toHaveLength(1);
+    expect(screen.getAllByText('Draft — not published')).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Approve session: Fixture Camp' })).toHaveLength(
       1,
     );
@@ -204,6 +204,6 @@ describe('SummerWeeks, for a reviewer', () => {
     renderReviewer(true);
     fireEvent.click(firstControl('Approve session: Fixture Camp'));
     expect(await screen.findByRole('alert')).toHaveTextContent('approve the camp first');
-    expect(screen.getAllByText('Draft · not yet verified')).toHaveLength(2);
+    expect(screen.getAllByText('Draft — not published')).toHaveLength(2);
   });
 });

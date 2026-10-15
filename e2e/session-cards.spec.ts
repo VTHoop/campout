@@ -96,7 +96,7 @@ test('shows no draft to a signed-out visitor', async ({ page }) => {
   // The draft clay camp is in week 9 of the seed, and RLS alone keeps it out.
   await open(page, '/camps?summer=2027&week=9');
   await expect(weekHeading(page)).toHaveText('No camps listed for week 9');
-  await expect(page.getByText('Draft · not yet verified')).toHaveCount(0);
+  await expect(page.getByText('Draft — not published')).toHaveCount(0);
 });
 
 test.describe('on a phone', () => {

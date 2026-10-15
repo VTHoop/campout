@@ -17,7 +17,7 @@ test.describe.configure({ mode: 'serial' });
 
 const URL = '/camps?summer=2027&week=6';
 const CAMP = 'Fixture Day Camp';
-const DRAFT = 'Draft · not yet verified';
+const DRAFT = 'Draft — not published';
 
 /** Sign in by magic link, then list the new user as a reviewer. Returns a clean-up. */
 async function signInAsReviewer(page: Page): Promise<() => Promise<void>> {
