@@ -9,7 +9,7 @@ import {
   spanDays,
 } from '@/lib/catalog/approve';
 import type { ChainRecord, SessionCardView } from '@/lib/catalog/session-cards';
-import { RecordKind } from '@/lib/catalog/types';
+import { type LocationAddress, RecordKind } from '@/lib/catalog/types';
 import { formatAddress } from '@/lib/session-card-format';
 
 /**
@@ -116,6 +116,28 @@ function useRefocusAfterFailure(
   }, [button, failed]);
 }
 
+/** What sits under a control: the venue's address to check, and why an attempt was refused. */
+function RecordNotes({
+  address,
+  message,
+}: {
+  address: LocationAddress | undefined;
+  message: string | undefined;
+}) {
+  return (
+    <>
+      {address === undefined ? null : (
+        <p className="text-caption text-ink-muted">{formatAddress(address)}</p>
+      )}
+      {message === undefined ? null : (
+        <p role="alert" className="text-caption text-brick">
+          {message}
+        </p>
+      )}
+    </>
+  );
+}
+
 /**
  * One draft record's control. A session that runs longer than the database
  * accepts without a say-so (`longSpanDays`) asks first.
@@ -159,14 +181,7 @@ function ApproveRow({
       >
         {working ? 'Approving…' : `Approve ${record.kind}`}
       </Button>
-      {record.address === undefined ? null : (
-        <p className="text-caption text-ink-muted">{formatAddress(record.address)}</p>
-      )}
-      {message === undefined ? null : (
-        <p role="alert" className="text-caption text-brick">
-          {message}
-        </p>
-      )}
+      <RecordNotes address={record.address} message={message} />
       {longSpanDays === undefined ? null : (
         <LongSpanDialog
           dialogRef={dialog}
