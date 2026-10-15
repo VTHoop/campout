@@ -6,7 +6,7 @@ import {
   Weekday,
   weekdayOf,
 } from '@campout/planner';
-import type { AgeRange, GradeRange, WallClockTime } from './catalog/types';
+import type { AgeRange, GradeRange, LocationAddress, WallClockTime } from './catalog/types';
 import { dayOfMonth, longMonth, longWeekday, shortMonth, shortWeekday } from './dates';
 
 /**
@@ -125,4 +125,9 @@ export function partialWeekCallout(
 /** The day a session was verified, as the card says it: `May 1, 2026`. */
 export function formatVerifiedOn(date: CalendarDate): string {
   return `${shortMonth(date)} ${dayOfMonth(date)}, ${date.slice(0, 4)}`;
+}
+
+/** An address on one line, for a reviewer to check against its source. */
+export function formatAddress(_address: LocationAddress): string {
+  return '';
 }

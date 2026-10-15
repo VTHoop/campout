@@ -39,3 +39,11 @@ export enum RecordKind {
   Location = 'location',
   Session = 'session',
 }
+
+/** A venue's address as the database holds it. */
+export interface LocationAddress {
+  readonly street: string;
+  readonly city: string;
+  readonly state: string;
+  readonly postalCode: string;
+}

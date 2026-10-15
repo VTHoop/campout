@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/db/types';
 import { richmondDate } from '../today';
 import type { AgeRange, GradeRange, WallClockTime } from './types';
-import { Category, RecordKind } from './types';
+import { Category, type LocationAddress, RecordKind } from './types';
 
 /**
  * The data-access service behind the session cards (CAM-32, CAM-28): the one
@@ -54,6 +54,8 @@ export interface ChainRecord {
   readonly id: string;
   readonly name: string;
   readonly isDraft: boolean;
+  /** Only a location has one: where the venue is, for a reviewer to check against its source. */
+  readonly address?: LocationAddress;
 }
 
 export enum VerificationKind {
@@ -104,7 +106,10 @@ export interface SessionCardRow {
     readonly id: string;
     readonly status: Database['public']['Enums']['record_status'];
     readonly label: string;
+    readonly street: string;
     readonly city: string;
+    readonly state: string;
+    readonly postal_code: string;
   } | null;
   readonly session_options: readonly Pick<
     Tables['session_options']['Row'],
@@ -252,7 +257,7 @@ const SESSION_CARD_SELECT = `
   source_url, verified_at,
   camps ( id, status, name, categories, registration_url, registration_note,
           providers ( id, status, name, website_url ) ),
-  locations ( id, status, label, city ),
+  locations ( id, status, label, street, city, state, postal_code ),
   session_options ( kind, daily_start, daily_end, price_cents, price_note )
 `;
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatAddress,
   formatAges,
   formatGrades,
   formatHours,
@@ -153,5 +154,18 @@ describe('formatVerifiedOn', () => {
     ['2028-02-29', 'Feb 29, 2028'],
   ])('writes %s as %s', (date, written) => {
     expect(formatVerifiedOn(date)).toBe(written);
+  });
+});
+
+describe('formatAddress', () => {
+  it('writes the street, then city, state and postal code, on one line', () => {
+    expect(
+      formatAddress({
+        street: '18 Kiln Hill Ln',
+        city: 'Ashland',
+        state: 'VA',
+        postalCode: '23005',
+      }),
+    ).toBe('18 Kiln Hill Ln, Ashland, VA 23005');
   });
 });

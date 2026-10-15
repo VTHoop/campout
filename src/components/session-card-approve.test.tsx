@@ -91,6 +91,32 @@ describe('approve controls', () => {
     expect(control('Approve camp: Fixture Day Camp')).toBeInTheDocument();
   });
 
+  it('shows the location’s address beside its control, and no other record’s', () => {
+    renderCard(draftCard(), vi.fn());
+    const location = control('Approve location: Fixture Park');
+    expect(location.parentElement).toHaveTextContent('12 Fixture Way, Chester, VA 23831');
+    expect(control('Approve camp: Fixture Day Camp').parentElement).not.toHaveTextContent(
+      '12 Fixture Way',
+    );
+  });
+
+  it('does not show the address to a visitor who cannot approve', () => {
+    renderCard(draftCard());
+    expect(screen.queryByText(/12 Fixture Way/)).toBeNull();
+  });
+
+  it('does not show the address once the location is verified', () => {
+    const records = chainFixture({
+      sessionId: 's1',
+      campName: 'Fixture Day Camp',
+      drafts: true,
+    }).map((record) =>
+      record.kind === RecordKind.Location ? { ...record, isDraft: false } : record,
+    );
+    renderCard(draftCard({ records }), vi.fn());
+    expect(screen.queryByText(/12 Fixture Way/)).toBeNull();
+  });
+
   it('shows none at all on a verified card', () => {
     renderCard(cardFixture('v1', 'Fixture Day Camp', '2026-06-08', '2026-06-12'), vi.fn());
     expect(screen.queryByRole('button', { name: /^Approve / })).toBeNull();

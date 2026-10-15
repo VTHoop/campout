@@ -67,7 +67,10 @@ const VERIFIED_ROW: SessionCardRow = {
     id: 'location-1',
     status: 'verified',
     label: 'Fixture Community Center',
+    street: '100 Fixture Way',
     city: 'Midlothian',
+    state: 'VA',
+    postal_code: '23113',
   },
   session_options: [FULL_DAY],
 };
@@ -110,6 +113,12 @@ describe('sessionCardsFromRows', () => {
           id: 'location-1',
           name: 'Fixture Community Center',
           isDraft: false,
+          address: {
+            street: '100 Fixture Way',
+            city: 'Midlothian',
+            state: 'VA',
+            postalCode: '23113',
+          },
         },
         { kind: RecordKind.Camp, id: 'camp-1', name: 'Fixture Day Camp', isDraft: false },
         { kind: RecordKind.Session, id: 'session-1', name: 'Fixture Day Camp', isDraft: false },

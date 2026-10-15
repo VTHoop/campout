@@ -19,7 +19,13 @@ export function chainFixture({
 }): readonly ChainRecord[] {
   return [
     { kind: RecordKind.Provider, id: 'provider-id', name: 'Fixture Provider', isDraft: drafts },
-    { kind: RecordKind.Location, id: 'location-id', name: 'Fixture Park', isDraft: drafts },
+    {
+      kind: RecordKind.Location,
+      id: 'location-id',
+      name: 'Fixture Park',
+      isDraft: drafts,
+      address: { street: '12 Fixture Way', city: 'Chester', state: 'VA', postalCode: '23831' },
+    },
     { kind: RecordKind.Camp, id: 'camp-id', name: campName, isDraft: drafts },
     { kind: RecordKind.Session, id: sessionId, name: campName, isDraft: drafts },
   ];

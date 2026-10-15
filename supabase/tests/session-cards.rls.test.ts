@@ -70,6 +70,10 @@ describe('listSessionCards', () => {
   it('shows a reviewer the draft too, marked as one, with its source', async () => {
     const cards = await listSessionCards(typed(reviewer), SUMMER_2027);
     expect(cards.map((card) => card.id)).toEqual([...VERIFIED_SESSIONS, DRAFT_SESSION]);
+    expect(
+      cards.find((card) => card.id === DRAFT_SESSION)?.records.find((r) => r.kind === 'location')
+        ?.address,
+    ).toEqual({ street: '18 Kiln Hill Ln', city: 'Ashland', state: 'VA', postalCode: '23005' });
     expect(cards.find((card) => card.id === DRAFT_SESSION)?.verification).toEqual({
       kind: VerificationKind.Draft,
       sourceUrl: 'https://riverbend.example.test/clay',

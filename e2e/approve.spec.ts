@@ -57,6 +57,9 @@ test('approves from the keyboard, and focus lands on the card', async ({ page })
       await admin.from('session_options').insert({ session_id: ids.sessionId, kind: 'full_day' });
       await openDraftCard(page);
 
+      // The reviewer can check the venue's address against its source.
+      await expect(card(page)).toContainText('100 Test Way, Richmond, VA 23220');
+
       const provider = control(page, 'Approve provider: Fixture Rec League');
       await provider.focus();
       await page.keyboard.press('Enter');
