@@ -137,7 +137,7 @@ Sign-in is a magic link (ADR-0003), and nothing in the app decides who a reviewe
 
 The boundary agents get wrong most often, so state it plainly:
 
-- **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`.
+- **Server Component (default):** catalog reads, anything touching the database, anything importing `server-only`. **One exception, for writes (ADR-0020):** a signed-in user's own write may be made from a Client Component through a `SECURITY DEFINER` function that checks the caller itself (`approve_record()`, ADR-0011's household function), never by writing a table directly. A write that needs credentials the browser cannot hold stays on the server.
 - **Client Component (`"use client"`):** the planner grid, the map, anything with an event handler or local state, and the nav bar, which reads the current path to mark its active tab, the session card and its approve controls (`SessionCard`, `ApproveControls`), which hold focus and the confirm dialog, and the summer's weeks (`SummerWeeks`), which read the selected week from `?week=` and change it with `history.pushState` — Next.js syncs that into `useSearchParams` with no server round trip.
 - **The planner package runs in both.** That is the point of its purity.
 - **The vault is client-only, always.** If you find yourself passing vault data across the boundary as props, stop — that is the leak ADR-0006 exists to prevent.
