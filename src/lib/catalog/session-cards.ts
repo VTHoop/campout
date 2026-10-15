@@ -205,6 +205,12 @@ function chainOf(
       id: location.id,
       name: location.label,
       isDraft: isDraft(location),
+      address: {
+        street: location.street,
+        city: location.city,
+        state: location.state,
+        postalCode: location.postal_code,
+      },
     },
     { kind: RecordKind.Camp, id: camp.id, name: camp.name, isDraft: isDraft(camp) },
     { kind: RecordKind.Session, id: row.id, name: camp.name, isDraft: isDraft(row) },

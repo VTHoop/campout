@@ -10,6 +10,7 @@ import {
 } from '@/lib/catalog/approve';
 import type { ChainRecord, SessionCardView } from '@/lib/catalog/session-cards';
 import { RecordKind } from '@/lib/catalog/types';
+import { formatAddress } from '@/lib/session-card-format';
 
 /**
  * A reviewer's approve controls on a card (CAM-46): one for each of the
@@ -158,6 +159,9 @@ function ApproveRow({
       >
         {working ? 'Approving…' : `Approve ${record.kind}`}
       </Button>
+      {record.address === undefined ? null : (
+        <p className="text-caption text-ink-muted">{formatAddress(record.address)}</p>
+      )}
       {message === undefined ? null : (
         <p role="alert" className="text-caption text-brick">
           {message}

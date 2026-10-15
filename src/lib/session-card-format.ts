@@ -128,6 +128,6 @@ export function formatVerifiedOn(date: CalendarDate): string {
 }
 
 /** An address on one line, for a reviewer to check against its source. */
-export function formatAddress(_address: LocationAddress): string {
-  return '';
+export function formatAddress(address: LocationAddress): string {
+  return `${address.street}, ${address.city}, ${address.state} ${address.postalCode}`;
 }
