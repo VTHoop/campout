@@ -55,7 +55,7 @@ function control(name: string) {
 describe('review rows', () => {
   function rows() {
     const group = screen.getByRole('group', { name: 'Records to review' });
-    return Array.from(group.children);
+    return Array.from(group.children).filter((child) => child.tagName !== 'LEGEND');
   }
 
   /** The row for one kind of record: a failure that names it, no indexing and no cast. */
@@ -192,7 +192,7 @@ describe('approve controls', () => {
     expect(screen.queryByText(/12 Fixture Way/)).toBeNull();
   });
 
-  it('does not show the address once the location is verified', () => {
+  it('keeps the address on a verified location’s row, with no button', () => {
     const records = chainFixture({
       sessionId: 's1',
       campName: 'Fixture Day Camp',
@@ -201,7 +201,8 @@ describe('approve controls', () => {
       record.kind === RecordKind.Location ? { ...record, isDraft: false } : record,
     );
     renderCard(draftCard({ records }), vi.fn());
-    expect(screen.queryByText(/12 Fixture Way/)).toBeNull();
+    expect(screen.getByText(/12 Fixture Way/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Approve location/ })).toBeNull();
   });
 
   it('shows none at all on a verified card', () => {

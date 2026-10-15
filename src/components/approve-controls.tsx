@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import {
   type ApproveResult,
@@ -9,8 +10,15 @@ import {
   spanDays,
 } from '@/lib/catalog/approve';
 import type { ChainRecord, SessionCardView } from '@/lib/catalog/session-cards';
-import { type LocationAddress, RecordKind } from '@/lib/catalog/types';
-import { formatAddress } from '@/lib/session-card-format';
+import { RecordKind } from '@/lib/catalog/types';
+import { shortMonthDay } from '@/lib/dates';
+import {
+  formatAddress,
+  formatAges,
+  formatGrades,
+  formatHours,
+  formatPrice,
+} from '@/lib/session-card-format';
 
 /**
  * A reviewer's approve controls on a card (CAM-46): one for each of the
@@ -116,39 +124,57 @@ function useRefocusAfterFailure(
   }, [button, failed]);
 }
 
-/** What sits under a control: the venue's address to check, and why an attempt was refused. */
-function RecordNotes({
-  address,
-  message,
-}: {
-  address: LocationAddress | undefined;
-  message: string | undefined;
-}) {
+/** What a row shows for its record: a title and the facts a reviewer checks against the source. */
+function describe(record: ChainRecord, card: SessionCardView): { title: string; lines: string[] } {
+  if (record.kind !== RecordKind.Session) {
+    return {
+      title: record.name,
+      lines: record.address === undefined ? [] : [formatAddress(record.address)],
+    };
+  }
+  const days = `${shortMonthDay(card.startDate)} – ${shortMonthDay(card.endDate)}, ${card.startDate.slice(0, 4)}`;
+  const people = [formatAges(card.ageRange), formatGrades(card.gradeRange)].filter(
+    (range) => range !== undefined,
+  );
+  return {
+    title: days,
+    lines: [
+      formatHours(card.startTime, card.endTime) ?? 'Hours not stated',
+      people.length === 0 ? 'Ages and grades not stated' : people.join(' · '),
+      formatPrice(card.priceCents) ?? 'Price not stated',
+    ],
+  };
+}
+
+function RecordLabel({ record, card }: { record: ChainRecord; card: SessionCardView }) {
+  const { title, lines } = describe(record, card);
   return (
-    <>
-      {address === undefined ? null : (
-        <p className="text-caption text-ink-muted">{formatAddress(address)}</p>
-      )}
-      {message === undefined ? null : (
-        <p role="alert" className="text-caption text-brick">
-          {message}
+    <div className="min-w-0 flex-1 basis-40">
+      <p className="text-caption capitalize text-ink-muted">{record.kind}</p>
+      <p className="text-ui font-semibold text-ink">{title}</p>
+      {lines.map((line) => (
+        <p key={line} className="text-caption text-ink-muted">
+          {line}
         </p>
-      )}
-    </>
+      ))}
+    </div>
   );
 }
 
 /**
- * One draft record's control. A session that runs longer than the database
- * accepts without a say-so (`longSpanDays`) asks first.
+ * One draft record's row: what it is, its status, and the one button that
+ * approves it. A session that runs longer than the database accepts without a
+ * say-so (`longSpanDays`) asks first.
  */
 function ApproveRow({
   record,
+  card,
   longSpanDays,
   onApprove,
   onApproved,
 }: {
   record: ChainRecord;
+  card: SessionCardView;
   longSpanDays: number | undefined;
   onApprove: OnApprove;
   onApproved: () => void;
@@ -169,7 +195,9 @@ function ApproveRow({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+      <RecordLabel record={record} card={card} />
+      <StatusPill isDraft />
       <Button
         ref={button}
         type="button"
@@ -177,11 +205,14 @@ function ApproveRow({
         aria-label={`Approve ${record.kind}: ${record.name}`}
         disabled={working}
         onClick={choose}
-        className="justify-start whitespace-normal text-left"
       >
-        {working ? 'Approving…' : `Approve ${record.kind}`}
+        {working ? 'Approving…' : 'Approve'}
       </Button>
-      <RecordNotes address={record.address} message={message} />
+      {message === undefined ? null : (
+        <p role="alert" className="basis-full text-caption text-brick">
+          {message}
+        </p>
+      )}
       {longSpanDays === undefined ? null : (
         <LongSpanDialog
           dialogRef={dialog}
@@ -197,6 +228,15 @@ function ApproveRow({
   );
 }
 
+function VerifiedRow({ record, card }: { record: ChainRecord; card: SessionCardView }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+      <RecordLabel record={record} card={card} />
+      <StatusPill isDraft={false} />
+    </div>
+  );
+}
+
 export function ApproveControls({
   card,
   onApprove,
@@ -207,24 +247,29 @@ export function ApproveControls({
   /** Called once a record is verified, while its control is still on screen. */
   onApproved: () => void;
 }) {
-  const drafts = card.records.filter((record) => record.isDraft);
-  if (drafts.length === 0) return null;
+  if (!card.records.some((record) => record.isDraft)) return null;
   const asksFirst = needsSpanConfirmation(card.startDate, card.endDate);
   return (
-    <div className="flex flex-col gap-2 border-rule border-t pt-3">
-      {drafts.map((record) => (
-        <ApproveRow
-          key={recordKey(record.kind, record.id)}
-          record={record}
-          longSpanDays={
-            asksFirst && record.kind === RecordKind.Session
-              ? spanDays(card.startDate, card.endDate)
-              : undefined
-          }
-          onApprove={onApprove}
-          onApproved={onApproved}
-        />
-      ))}
-    </div>
+    <fieldset className="m-0 min-w-0 divide-y divide-rule border-rule border-t p-0">
+      <legend className="sr-only">Records to review</legend>
+      {card.records.map((record) =>
+        record.isDraft ? (
+          <ApproveRow
+            key={recordKey(record.kind, record.id)}
+            record={record}
+            card={card}
+            longSpanDays={
+              asksFirst && record.kind === RecordKind.Session
+                ? spanDays(card.startDate, card.endDate)
+                : undefined
+            }
+            onApprove={onApprove}
+            onApproved={onApproved}
+          />
+        ) : (
+          <VerifiedRow key={recordKey(record.kind, record.id)} record={record} card={card} />
+        ),
+      )}
+    </fieldset>
   );
 }

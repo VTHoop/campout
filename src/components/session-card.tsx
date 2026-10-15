@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { ApproveControls, type OnApprove } from '@/components/approve-controls';
+import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import {
   type Registration,
@@ -203,12 +204,11 @@ function Provenance({ verification }: { verification: SessionCardView['verificat
   return (
     <p
       aria-live="polite"
-      className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted"
+      className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted empty:border-0 empty:pt-0"
     >
-      <span>Draft · not yet verified</span>
       {verification.sourceUrl === undefined ? null : (
         <a href={verification.sourceUrl} className="text-blueprint underline">
-          See what we read
+          Show Source Information
         </a>
       )}
     </p>
@@ -237,8 +237,14 @@ export function SessionCard({
       <WeekTab card={card} weekNumber={weekNumber} />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="border-rule border-b pb-3">
-          <h3 id={headingId} className="text-title text-ink">
+          <h3
+            id={headingId}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title text-ink"
+          >
             {card.campName}
+            {card.verification.kind === VerificationKind.Draft ? (
+              <StatusPill isDraft label="Draft — not published" />
+            ) : null}
           </h3>
           <p className="text-caption text-ink-muted">
             {card.providerName} at {card.locationName}, {card.city}
