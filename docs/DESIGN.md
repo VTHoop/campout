@@ -91,8 +91,9 @@ Some sizes in the artboards fall between steps of the scales above. CAM-32 mappe
 5. Attention panel, only when there is something to say (see below). Today: a session covering fewer than five weekdays says `Covers 3 of 5 days`, plus `, and ends at noon` when it ends by 12:00pm.
 6. Actions.
 7. Hairline `rule`.
-8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **See what we read** link.
-   Built so far (CAM-28): a verified card says `Verified Sep 3, 2026`; a draft says `Draft · not yet verified` and links **See what we read** to the page it was read from (none when its source is a stored document). `by PH` and the link on a verified card are not built yet.
+8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **Show Source Information** link.
+   A signed-in reviewer also gets, above the provenance line, a **review row** for each record in the card's chain, top down (provider, location, camp, session): a small label for what it is, its name and facts (the location's address; the session's dates, hours, ages and grades, and price, each fact the source did not state said to be missing), a status pill and, while the record is a draft, one outlined **Approve** button named for what it approves. A pill is a fill, a glyph and a word: `– Draft` on `marigold-wash`, `✓ Verified` outlined in `category-outdoors`. A message from the database shows under the row it belongs to in `brick`. A session over 14 days opens a modal asking first ("This session runs 15 days" · Cancel / Approve). A draft card also carries a `Draft — not published` pill beside the camp name. Parents and signed-out visitors never see any of it (CAM-46).
+   Built so far (CAM-28): a verified card says `Verified Sep 3, 2026`; a draft carries the `Draft — not published` pill beside the camp name, and its provenance line is the link **Show Source Information** to the page it was read from (nothing when its source is a stored document). `by PH` and the link on a verified card are not built yet.
 
 ### Rules the card must keep
 

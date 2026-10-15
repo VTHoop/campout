@@ -1,3 +1,8 @@
+'use client';
+
+import { useRef } from 'react';
+import { ApproveControls, type OnApprove } from '@/components/approve-controls';
+import { StatusPill } from '@/components/status-pill';
 import { Button } from '@/components/ui/button';
 import {
   type Registration,
@@ -192,34 +197,54 @@ function Actions({ card }: { card: SessionCardView }) {
 function Provenance({ verification }: { verification: SessionCardView['verification'] }) {
   if (verification.kind === VerificationKind.Verified)
     return (
-      <p className="border-rule border-t pt-3 text-caption text-ink-muted">
+      <p aria-live="polite" className="border-rule border-t pt-3 text-caption text-ink-muted">
         Verified {formatVerifiedOn(verification.on)}
       </p>
     );
   return (
-    <p className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted">
-      <span>Draft · not yet verified</span>
+    <p
+      aria-live="polite"
+      className="flex flex-wrap gap-x-3 border-rule border-t pt-3 text-caption text-ink-muted empty:border-0 empty:pt-0"
+    >
       {verification.sourceUrl === undefined ? null : (
         <a href={verification.sourceUrl} className="text-blueprint underline">
-          See what we read
+          Show Source Information
         </a>
       )}
     </p>
   );
 }
 
-export function SessionCard({ card, weekNumber }: { card: SessionCardView; weekNumber: number }) {
+export function SessionCard({
+  card,
+  weekNumber,
+  onApprove,
+}: {
+  card: SessionCardView;
+  weekNumber: number;
+  /** Present only for a reviewer: approves one record, resolving to what the database said. */
+  onApprove?: OnApprove;
+}) {
   const headingId = `${card.id}-name`;
+  const item = useRef<HTMLLIElement>(null);
   return (
     <li
+      ref={item}
+      tabIndex={-1}
       aria-labelledby={headingId}
       className="flex overflow-hidden rounded-card border border-rule bg-surface"
     >
       <WeekTab card={card} weekNumber={weekNumber} />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="border-rule border-b pb-3">
-          <h3 id={headingId} className="text-title text-ink">
+          <h3
+            id={headingId}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-title text-ink"
+          >
             {card.campName}
+            {card.verification.kind === VerificationKind.Draft ? (
+              <StatusPill isDraft label="Draft — not published" />
+            ) : null}
           </h3>
           <p className="text-caption text-ink-muted">
             {card.providerName} at {card.locationName}, {card.city}
@@ -229,6 +254,13 @@ export function SessionCard({ card, weekNumber }: { card: SessionCardView; weekN
         <Categories categories={card.categories} />
         <Callout card={card} />
         <Actions card={card} />
+        {onApprove === undefined ? null : (
+          <ApproveControls
+            card={card}
+            onApprove={onApprove}
+            onApproved={() => item.current?.focus()}
+          />
+        )}
         <Provenance verification={card.verification} />
       </div>
     </li>

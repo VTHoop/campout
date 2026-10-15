@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { chainFixture } from '@/lib/catalog/session-card-fixtures';
 import {
   RegistrationKind,
   type SessionCardView,
@@ -27,6 +28,7 @@ const BASEBALL: SessionCardView = {
   categories: [Category.Sports],
   registration: { kind: RegistrationKind.Register, url: 'https://example.test/register' },
   verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
+  records: chainFixture({ sessionId: 'session-baseball', campName: 'Fixture Baseball Camp' }),
 };
 
 const UNSTATED: SessionCardView = {
@@ -39,6 +41,7 @@ const UNSTATED: SessionCardView = {
   endDate: '2026-06-12',
   categories: [Category.Arts],
   verification: { kind: VerificationKind.Verified, on: '2026-05-01' },
+  records: chainFixture({ sessionId: 'session-craft', campName: 'Fixture Craft Week' }),
 };
 
 function renderCard(card: SessionCardView, weekNumber = 10) {
@@ -197,13 +200,20 @@ describe('SessionCard', () => {
       expect(item.lastElementChild?.lastElementChild).toBe(line);
     });
 
-    it('says a draft is not verified, and never that it is', () => {
+    it('flags a draft with a pill beside the camp name, and never says it is verified', () => {
       const item = renderCard({
         ...BASEBALL,
         verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
       });
-      expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
+      const heading = within(item).getByRole('heading', { name: /Fixture Baseball Camp/ });
+      expect(within(heading).getByText('Draft — not published')).toBeInTheDocument();
       expect(within(item).queryByText(/^Verified/)).toBeNull();
+      expect(within(item).queryByText('Draft · not yet verified')).toBeNull();
+    });
+
+    it('puts no draft pill on a verified card', () => {
+      const item = renderCard(BASEBALL);
+      expect(within(item).queryByText('Draft — not published')).toBeNull();
     });
 
     it('links the page a draft was read from', () => {
@@ -211,7 +221,7 @@ describe('SessionCard', () => {
         ...BASEBALL,
         verification: { kind: VerificationKind.Draft, sourceUrl: 'https://example.test/camps' },
       });
-      expect(within(item).getByRole('link', { name: 'See what we read' })).toHaveAttribute(
+      expect(within(item).getByRole('link', { name: 'Show Source Information' })).toHaveAttribute(
         'href',
         'https://example.test/camps',
       );
@@ -219,8 +229,8 @@ describe('SessionCard', () => {
 
     it('offers no source link for a draft read from a stored document', () => {
       const item = renderCard({ ...BASEBALL, verification: { kind: VerificationKind.Draft } });
-      expect(within(item).getByText('Draft · not yet verified')).toBeInTheDocument();
-      expect(within(item).queryByRole('link', { name: 'See what we read' })).toBeNull();
+      expect(within(item).queryByRole('link', { name: 'Show Source Information' })).toBeNull();
+      expect(within(item).queryByText('Draft · not yet verified')).toBeNull();
     });
   });
 });

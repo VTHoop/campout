@@ -2,11 +2,14 @@
 
 import type { CoverageWeek } from '@campout/planner';
 import { useSearchParams } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import type { OnApprove } from '@/components/approve-controls';
 import { SessionCard } from '@/components/session-card';
 import { WeekPicker } from '@/components/week-picker';
+import { type Approvals, applyApprovals, approveRecord, recordKey } from '@/lib/catalog/approve';
 import type { SessionCardView } from '@/lib/catalog/session-cards';
 import { shortMonthDay } from '@/lib/dates';
+import { createClient } from '@/lib/supabase/browser';
 import { cardsInWeek, weekIndexFrom } from '@/lib/week-sessions';
 
 /**
@@ -28,20 +31,47 @@ function headingFor(count: number, week: CoverageWeek): string {
   return `${camps}, week of ${shortMonthDay(week.monday)}`;
 }
 
+/**
+ * A reviewer's approvals (CAM-46): `approve_record()` as the signed-in user,
+ * then every card that carries the approved record shows it verified. Held
+ * here, not in a card, because a camp's other sessions are other cards.
+ */
+function useApprovals(cards: readonly SessionCardView[], canApprove: boolean) {
+  const client = useMemo(() => (canApprove ? createClient() : undefined), [canApprove]);
+  const [approvals, setApprovals] = useState<Approvals>(new Map());
+  const onApprove = useCallback<OnApprove>(
+    async (kind, id, confirmLongSpan) => {
+      if (client === undefined) throw new Error('Approving needs a signed-in reviewer');
+      const result = await approveRecord(client, kind, id, confirmLongSpan);
+      if (result.ok) setApprovals((all) => new Map(all).set(recordKey(kind, id), result.on));
+      return result;
+    },
+    [client],
+  );
+  return {
+    cards: useMemo(() => applyApprovals(cards, approvals), [cards, approvals]),
+    onApprove: canApprove ? onApprove : undefined,
+  };
+}
+
 export function SummerWeeks({
   weeks,
   cards,
+  canApprove = false,
   children,
 }: {
   weeks: readonly CoverageWeek[];
   cards: readonly SessionCardView[];
+  /** True for a reviewer: the cards show approve controls on their draft records. */
+  canApprove?: boolean;
   children?: ReactNode;
 }) {
   const searchParams = useSearchParams();
+  const { cards: shown, onApprove } = useApprovals(cards, canApprove);
   const selected = weekIndexFrom(searchParams.get('week'), weeks.length);
   const week = weeks.at(selected);
   if (week === undefined) throw new RangeError('A summer has at least one week');
-  const weekCards = cardsInWeek(cards, week.monday);
+  const weekCards = cardsInWeek(shown, week.monday);
 
   function choose(index: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -73,7 +103,12 @@ export function SummerWeeks({
         {weekCards.length === 0 ? null : (
           <ul aria-labelledby={HEADING_ID} className="flex flex-col gap-4">
             {weekCards.map((card) => (
-              <SessionCard key={card.id} card={card} weekNumber={selected + 1} />
+              <SessionCard
+                key={card.id}
+                card={card}
+                weekNumber={selected + 1}
+                onApprove={onApprove}
+              />
             ))}
           </ul>
         )}
