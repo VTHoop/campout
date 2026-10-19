@@ -4,7 +4,7 @@
 
 | Layer | Choice | Notes |
 |---|---|---|
-| App | **Next.js 16 (App Router) + React 19**, TypeScript | Server Components read the catalog; Client Components own the grid and map. Hosted on Vercel. ADR-0003 |
+| App | **Next.js 16 (App Router) + React 19**, TypeScript | Server Components read the catalog; Client Components own the grid and map. Hosted on Vercel. ADR-0003; a user's own writes may go from the browser through a checking function, ADR-0020 |
 | Database | **Supabase Postgres** | Normalized relational. Migrations in `supabase/migrations/`, committed and reviewed. ADR-0002 |
 | Geo | **PostGIS** `geography(Point,4326)` + GiST | Proximity is one indexed `ST_DWithin`. Geocoding happens at verification time, never at query time. ADR-0007 |
 | Auth | **Supabase Auth** (magic link) | The JWT drives RLS. ADR-0004 |
@@ -109,11 +109,14 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `packages/planner/src/` | The pure coverage engine (ADR-0008) |
 | `src/app/page.tsx` | Redirects `/` to `/summer` (307) until Home exists. |
 | `src/app/summer/page.tsx` | The Summer page: the family's summer plan (CAM-11), a placeholder until then. Sends a URL carrying `?summer=` or `?week=` on to `/camps` (307), where the finder moved (CAM-35, ADR-0016). |
-| `src/app/camps/page.tsx` | The Find camps page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL, and loads the session cards. |
+| `src/app/camps/page.tsx` | The Find camps page's request boundary: reads Richmond's date from the clock and `?summer=` from the URL, and loads the session cards. It also asks `isReviewer()` and passes `canApprove` down (CAM-46). |
 | `src/app/camps/camps-view.tsx` | The Find camps page's body: the planner derives the summers in a Server Component; the chosen one drives the caption, the week picker and the cards. An unknown `?summer=` falls back to the upcoming summer. |
-| `src/components/summer-weeks.tsx` | The week picker over the selected week's session cards. A Client Component: the week lives in `?week=`, read with `useSearchParams` and changed with `history.pushState`, so choosing a week makes no server round trip. |
-| `src/components/session-card.tsx` | The session card (DESIGN.md → *The session card*). Renders a `SessionCardView`; never imports the catalog. |
-| `src/lib/catalog/session-cards.ts` | The data-access service for session cards: `listSessionCards(client)` reads sessions with their camp, provider, location and options in one select, as the caller, and `sessionCardsFromRows()` maps them to `SessionCardView`s. No status filter and no reviewer logic: RLS decides what each visitor sees (ADR-0017 §2). |
+| `src/components/summer-weeks.tsx` | The week picker over the selected week's session cards. A Client Component: the week lives in `?week=`, read with `useSearchParams` and changed with `history.pushState`, so choosing a week makes no server round trip. For a reviewer (`canApprove`) it also holds the approvals made in the view and re-derives the cards from them, calling `approveRecord()` with the browser client. |
+| `src/components/status-pill.tsx` | The `Draft` / `Verified` pill: a fill, a glyph and a word (DESIGN.md → State signals). Also the `Draft — not published` pill on a draft card. |
+| `src/components/session-card.tsx` | The session card (DESIGN.md → *The session card*). Renders a `SessionCardView`; never imports the catalog. A Client Component (it holds a ref for focus). |
+| `src/components/approve-controls.tsx` | A reviewer's review rows on a card (CAM-46): one row per record in the card's chain, an `ApproveRow` with a button for each draft, and the native `<dialog>` that asks before a session over 14 days is approved. A Client Component. |
+| `src/lib/catalog/approve.ts` | Approving from a card: `approveRecord()` calls `approve_record()` as the signed-in user and reads the verified day back; `isReviewer()` asks `is_reviewer()`; `applyApprovals()` re-derives cards once records are approved; `spanDays()`/`needsSpanConfirmation()` decide whether to ask first. No rule of its own: the database refuses. |
+| `src/lib/catalog/session-cards.ts` | The data-access service for session cards: `listSessionCards(client)` reads sessions with their camp, provider, location and options in one select, as the caller, and `sessionCardsFromRows()` maps them to `SessionCardView`s. No status filter and no reviewer logic: RLS decides what each visitor sees (ADR-0017 §2). Each card carries its `records` (provider, location, camp, session, with `isDraft`) so a reviewer's controls know what is still a draft. |
 | `src/lib/session-card-format.ts`, `src/lib/week-sessions.ts` | The card's facts as a parent reads them (hours, ages, price, week tab, partial-week callout); which cards a week shows, and which week `?week=` selects. |
 | `src/components/summer-chooser.tsx` | The summer chooser: one link per summer, the choice kept in the URL, marked with `aria-current`. |
 | `src/lib/calendars/chesterfield.ts` | Chesterfield's school years, read from the parser's drafts in `docs/data/school-calendars/` until calendars are in Postgres (CAM-4). |

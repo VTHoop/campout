@@ -28,3 +28,22 @@ export interface GradeRange {
   readonly min?: number;
   readonly max?: number;
 }
+
+/**
+ * The catalog records a reviewer can approve from a card: the database's
+ * `catalog_record_kind` enum, narrowed to the four a card shows (CAM-46).
+ */
+export enum RecordKind {
+  Provider = 'provider',
+  Camp = 'camp',
+  Location = 'location',
+  Session = 'session',
+}
+
+/** A venue's address as the database holds it. */
+export interface LocationAddress {
+  readonly street: string;
+  readonly city: string;
+  readonly state: string;
+  readonly postalCode: string;
+}

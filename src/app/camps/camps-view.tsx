@@ -21,10 +21,12 @@ export function CampsView({
   today,
   requested,
   cards,
+  canApprove = false,
 }: {
   today: CalendarDate;
   requested: string | string[] | undefined;
   cards: readonly SessionCardView[];
+  canApprove?: boolean;
 }) {
   const choices = summerChoices(CHESTERFIELD_CALENDARS, today);
   const { year, period } = chosenSummer(choices, requested);
@@ -32,7 +34,7 @@ export function CampsView({
   return (
     <main>
       {/* Keyed by summer, so switching summers starts the picker again at its first week. */}
-      <SummerWeeks key={year} weeks={period.weeks} cards={cards}>
+      <SummerWeeks key={year} weeks={period.weeks} cards={cards} canApprove={canApprove}>
         <div className="flex shrink-0 flex-col gap-2">
           <div>
             <h1 id="your-summer" className="text-ui font-semibold text-ink">
