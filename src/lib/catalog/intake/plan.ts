@@ -1,5 +1,5 @@
 import type { CampDetails, OptionDetails, SessionDetails } from '@/lib/db/details';
-import type { TablesInsert } from '@/lib/db/types';
+import type { Json, TablesInsert } from '@/lib/db/types';
 
 /**
  * The intake plan (CAM-47): what one run of the camp-intake skill drafts and
@@ -134,26 +134,54 @@ export function isExisting(record: Existing | New<unknown>): record is Existing 
   return 'existing' in record;
 }
 
+export function isNew<T extends Existing | New<unknown>>(
+  record: T,
+): record is Exclude<T, Existing> {
+  return !isExisting(record);
+}
+
 /** The evidence columns for a row: exactly one of the two is set. */
 export function evidenceColumns(source: Evidence): {
   source_url: string | null;
   source_document_path: string | null;
 } {
-  throw new Error(`not implemented: ${JSON.stringify(source)}`);
+  return 'url' in source
+    ? { source_url: source.url, source_document_path: null }
+    : { source_url: null, source_document_path: source.documentPath };
+}
+
+/** `details` as the column takes it: a plain JSON value, or absent so the column default stands. */
+function detailsColumn(details: object | undefined): Json | undefined {
+  return details === undefined ? undefined : JSON.parse(JSON.stringify(details));
 }
 
 export function providerRow(provider: New<ProviderFacts>): TablesInsert<'providers'> {
-  throw new Error(`not implemented: ${provider.ref}`);
+  return { ...provider.facts, ...evidenceColumns(provider.source) };
+}
+
+/** EWKT, longitude first, as PostGIS reads it. A null point is the database's to refuse. */
+function pointOf(coordinates: Coordinates | null): string | null {
+  return coordinates === null ? null : `SRID=4326;POINT(${coordinates.long} ${coordinates.lat})`;
 }
 
 export function locationRow(
   location: New<LocationFacts> & { readonly coordinates: Coordinates | null },
 ): TablesInsert<'locations'> {
-  throw new Error(`not implemented: ${location.ref}`);
+  return {
+    ...location.facts,
+    point: pointOf(location.coordinates),
+    ...evidenceColumns(location.source),
+  };
 }
 
 export function campRow(camp: New<CampFacts>, providerId: string): TablesInsert<'camps'> {
-  throw new Error(`not implemented: ${camp.ref} ${providerId}`);
+  const { details, ...facts } = camp.facts;
+  return {
+    ...facts,
+    provider_id: providerId,
+    details: detailsColumn(details),
+    ...evidenceColumns(camp.source),
+  };
 }
 
 export function sessionRow(
@@ -161,14 +189,25 @@ export function sessionRow(
   campId: string,
   locationId: string,
 ): TablesInsert<'sessions'> {
-  throw new Error(`not implemented: ${session.ref} ${campId} ${locationId}`);
+  const { details, ...facts } = session.facts;
+  return {
+    ...facts,
+    camp_id: campId,
+    location_id: locationId,
+    details: detailsColumn(details),
+    ...evidenceColumns(session.source),
+  };
 }
 
 export function optionRows(
   session: PlannedSession,
   sessionId: string,
 ): readonly TablesInsert<'session_options'>[] {
-  throw new Error(`not implemented: ${session.ref} ${sessionId}`);
+  return session.options.map(({ details, ...facts }) => ({
+    session_id: sessionId,
+    ...facts,
+    details: detailsColumn(details),
+  }));
 }
 
 /**
@@ -178,5 +217,8 @@ export function optionRows(
  * the database's own value.
  */
 export function addressKey(street: string, postalCode: string): string {
-  throw new Error(`not implemented: ${street} ${postalCode}`);
+  return `${street} ${postalCode}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }

@@ -13,12 +13,29 @@ export interface Difference {
   readonly sourceUrl: string;
 }
 
+/** JSON with object keys sorted, so two values Postgres would store alike compare alike. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value ?? null, (_key, inner: unknown) =>
+    inner !== null && typeof inner === 'object' && !Array.isArray(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([a], [b]) => a.localeCompare(b)))
+      : inner,
+  );
+}
+
 /** Each field the update proposes whose value differs from the held row's. */
 export function differences(
   held: Readonly<Record<string, unknown>>,
   update: PlannedUpdate,
 ): readonly Difference[] {
-  throw new Error(`not implemented: ${Object.keys(held).length} ${update.id}`);
+  const ours = new Map(Object.entries(held));
+  return Object.entries(update.proposed)
+    .filter(([field, source]) => canonical(ours.get(field)) !== canonical(source))
+    .map(([field, source]) => ({
+      field,
+      ours: ours.get(field) ?? null,
+      source,
+      sourceUrl: update.sourceUrl,
+    }));
 }
 
 /** The changes to write: approved fields that still differ, and nothing else. */
@@ -26,5 +43,10 @@ export function approvedChanges(
   held: Readonly<Record<string, unknown>>,
   update: PlannedUpdate,
 ): Record<string, unknown> {
-  throw new Error(`not implemented: ${Object.keys(held).length} ${update.id}`);
+  const approved = new Set(update.approved);
+  return Object.fromEntries(
+    differences(held, update)
+      .filter((difference) => approved.has(difference.field))
+      .map((difference) => [difference.field, difference.source]),
+  );
 }

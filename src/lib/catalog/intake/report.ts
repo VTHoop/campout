@@ -1,4 +1,4 @@
-import { IntakeKind, type IntakePlan } from './plan';
+import type { IntakeKind, IntakePlan } from './plan';
 
 /**
  * The run report (CAM-47): what was drafted, what was updated, what was
@@ -27,8 +27,37 @@ export interface IntakeResult {
   readonly refusal?: string;
 }
 
+/** A titled list, two spaces in, or one line saying it is empty. */
+function section<T>(title: string, items: readonly T[], lines: (item: T) => string[]): string[] {
+  if (items.length === 0) return [`${title} (0): nothing`];
+  return [`${title} (${items.length}):`, ...items.flatMap(lines).map((line) => `  ${line}`)];
+}
+
+function updatedLines(updated: Updated): string[] {
+  const back = updated.setBackToDraft;
+  return [
+    `${updated.kind} ${updated.id}: ${updated.fields.join(', ')}`,
+    ...(back ? [`  set back to draft: re-approve ${back.kind} ${back.id} from its card`] : []),
+  ];
+}
+
+function refusalLines(refusal: string | undefined): string[] {
+  if (refusal === undefined) return [];
+  return [
+    `Stopped at the first refusal: ${refusal}`,
+    'Everything under Drafted and Updated was written, as drafts.',
+    '',
+  ];
+}
+
 export function formatReport(plan: IntakePlan, result: IntakeResult): string {
-  throw new Error(
-    `not implemented: ${plan.skipped.length} ${result.drafted.length} ${IntakeKind.Camp}`,
-  );
+  return [
+    ...refusalLines(result.refusal),
+    ...section('Drafted', result.drafted, (row) => [`${row.kind}  ${row.name}  ${row.id}`]),
+    ...section('Updated', result.updated, updatedLines),
+    ...section('Skipped', plan.skipped, (skip) => [`${skip.what}: ${skip.reason}`]),
+    ...section('Left blank', plan.blanks, (blank) => [
+      `${blank.record} · ${blank.field}: ${blank.question}`,
+    ]),
+  ].join('\n');
 }
