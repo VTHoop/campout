@@ -47,6 +47,14 @@ describe('differences', () => {
   });
 });
 
+describe('differences in details', () => {
+  it('does not list a details object Postgres would store the same, keys in another order', () => {
+    const held = { details: { lunch: { provision: 'bring_own' }, activities: ['swimming'] } };
+    const proposed = { details: { activities: ['swimming'], lunch: { provision: 'bring_own' } } };
+    expect(differences(held, update(proposed))).toEqual([]);
+  });
+});
+
 describe('approvedChanges', () => {
   it('keeps only the fields the owner said yes to', () => {
     expect(

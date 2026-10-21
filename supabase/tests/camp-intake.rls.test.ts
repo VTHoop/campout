@@ -39,6 +39,7 @@ let marker: string;
 const markers: string[] = [];
 
 const FLYER_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+const BROCHURE = 'https://example.test/intake/brochure.pdf';
 
 function options() {
   return {
@@ -79,6 +80,21 @@ async function removeMarked(like: string): Promise<void> {
   await admin.from('providers').delete().in('id', providers);
   await admin.from('locations').update({ status: 'draft' }).ilike('label', `%${like}%`);
   await admin.from('locations').delete().ilike('label', `%${like}%`);
+}
+
+/** A plan whose one update renames the camp, approved, as the brochure has it. */
+function renameCamp(campId: string): IntakePlan {
+  return planOf({
+    updates: [
+      {
+        kind: IntakeKind.Camp,
+        id: campId,
+        sourceUrl: BROCHURE,
+        proposed: { name: `Intake Junior Camp ${marker}` },
+        approved: ['name'],
+      },
+    ],
+  });
 }
 
 /** Write the whole plan and approve its chain, as a reviewer would from the card. */
@@ -406,7 +422,7 @@ describe('updates', () => {
           {
             kind: IntakeKind.Camp,
             id: campId,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
+            sourceUrl: BROCHURE,
             proposed: { name: `Intake Junior Camp ${marker}`, summary: 'Ages 6 to 9.' },
             approved: ['name'],
           },
@@ -424,21 +440,7 @@ describe('updates', () => {
     const first = await writeIntake(admin, wholePlan(marker), options());
     const campId = idOf(first, IntakeKind.Camp);
 
-    const result = await writeIntake(
-      admin,
-      planOf({
-        updates: [
-          {
-            kind: IntakeKind.Camp,
-            id: campId,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
-            proposed: { name: `Intake Junior Camp ${marker}` },
-            approved: ['name'],
-          },
-        ],
-      }),
-      options(),
-    );
+    const result = await writeIntake(admin, renameCamp(campId), options());
 
     expect(result).toEqual({
       drafted: [],
@@ -453,21 +455,7 @@ describe('updates', () => {
     const written = await writeAndApprove(wholePlan(marker));
     const campId = idOf(written, IntakeKind.Camp);
 
-    const result = await writeIntake(
-      admin,
-      planOf({
-        updates: [
-          {
-            kind: IntakeKind.Camp,
-            id: campId,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
-            proposed: { name: `Intake Junior Camp ${marker}` },
-            approved: ['name'],
-          },
-        ],
-      }),
-      options(),
-    );
+    const result = await writeIntake(admin, renameCamp(campId), options());
 
     expect(result.updated).toEqual([
       {
@@ -493,7 +481,7 @@ describe('updates', () => {
           {
             kind: IntakeKind.Option,
             id: optionId,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
+            sourceUrl: BROCHURE,
             proposed: { price_cents: 34500 },
             approved: ['price_cents'],
           },
@@ -525,20 +513,7 @@ describe('updates', () => {
       idOf(written, IntakeKind.Option),
     );
 
-    const preview = await previewIntake(
-      admin,
-      planOf({
-        updates: [
-          {
-            kind: IntakeKind.Camp,
-            id: campId,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
-            proposed: { name: `Intake Junior Camp ${marker}` },
-            approved: ['name'],
-          },
-        ],
-      }),
-    );
+    const preview = await previewIntake(admin, renameCamp(campId));
 
     expect(preview.unpublishes).toEqual([{ kind: IntakeKind.Camp, id: campId, plannedEntries: 1 }]);
     expect(preview.differences).toEqual([
@@ -548,7 +523,7 @@ describe('updates', () => {
             field: 'name',
             ours: `Intake Day Camp ${marker}`,
             source: `Intake Junior Camp ${marker}`,
-            sourceUrl: 'https://example.test/intake/brochure.pdf',
+            sourceUrl: BROCHURE,
           },
         ],
       }),
