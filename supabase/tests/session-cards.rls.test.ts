@@ -217,6 +217,21 @@ describe('approving from the card', () => {
       });
     }));
 
+  it('shows a camp put back to draft under a verified session as a draft, and re-approves it (CAM-47)', () =>
+    withSeededSession(async (ids, admin) => {
+      await insertId(admin, 'session_options', optionRow(ids.sessionId));
+      await approveParents(ids);
+      await approve(reviewer, 'session', ids.sessionId);
+      const { error } = await admin.from('camps').update({ status: 'draft' }).eq('id', ids.campId);
+      if (error) throw new Error(`Could not put the camp back to draft: ${error.message}`);
+
+      const before = await cardOf(reviewer, ids);
+      expect(before.records.map((record) => record.isDraft)).toEqual([false, false, true, false]);
+
+      expect(await approveAs(reviewer, RecordKind.Camp, ids.campId)).toMatchObject({ ok: true });
+      expect((await cardOf(reviewer, ids)).records.every((record) => !record.isDraft)).toBe(true);
+    }));
+
   it('refuses a parent, and the record stays a draft', () =>
     withSeededSession(async (ids) => {
       expect(await approveAs(parent, RecordKind.Provider, ids.providerId)).toEqual({
