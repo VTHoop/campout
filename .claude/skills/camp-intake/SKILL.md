@@ -47,6 +47,10 @@ These start from the spec and grow by retro (§ Workflow 8). Each rule learned f
 6. **A session missing a required fact is not drafted.** It goes in `skipped` with the reason (`"no dates stated"`), and the report lists it.
 7. **Money is integer cents; a time-limited discount goes in `price_note`**, never in the price.
 8. **Write times as `HH:MM:SS`** in updates, the way `held` prints them, or every time shows as a difference.
+9. **DaySmart activity finders render only in a browser** (SCOR, 2026-10-21). Each level (Full Day, Half Day AM, Half Day PM, …) is its own listing, ten results a page, and the price shown is a day rate. A session cites its level's URL, `season_id` included; a week offered several ways cites the full-day level.
+10. **A record we hold sets the shape** (SCOR, 2026-10-21). New sessions under a held camp follow the held sessions' structure — SCOR's carry one full-day option with half days in its `price_note` — unless the owner says otherwise at the checkpoint.
+11. **A camps page can keep last year's section** (SCOR, 2026-10-21: its January–April holiday dates fit 2025-26). Check that every date falls on a weekday in the target year before drafting it; a list that doesn't is stale, and is skipped with that reason.
+12. **"JWT issued at future" from the script is clock skew** (SCOR, 2026-10-21). Nothing was written; wait a few seconds and run it again.
 
 # Workflow
 
@@ -61,7 +65,7 @@ Write `scratch/intake/<provider-slug>-<date>.json`, an `IntakePlan`:
 
 - `providers`, `locations`, `camps`: each either `{ ref, existing: <id> }` for a record we hold, or `{ ref, source, facts }` to draft. A new location also carries `coordinates: { lat, long }`, or `null` until the owner supplies them. A new camp names its `providerRef`.
 - `sessions`: `{ ref, campRef, locationRef, source, facts, options: [...] }`, one to three options (`full_day`, `morning`, `afternoon`), each with its price.
-- `updates`: `{ kind, id, sourceUrl, proposed: { field: value }, approved: [] }` for each record the source disagrees with. `approved` starts empty.
+- `updates`: `{ kind, id, sourceUrl, proposed: { field: value }, approved: [] }` for each record the source disagrees with. `approved` starts empty. Updates apply in order, so move sessions (`camp_id`) before archiving the camp they left (`{ "status": "archived" }`, a status-only change the guard allows; `verified` it refuses).
 - `skipped`, `blanks`: as Rules 5 and 6 say.
 
 Refs are names you choose (`scor-summer-camp`, `jul-13`), unique per kind. The report prints them.
