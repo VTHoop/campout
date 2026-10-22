@@ -36,7 +36,7 @@ function section<T>(title: string, items: readonly T[], lines: (item: T) => stri
 function updatedLines(updated: Updated): string[] {
   const back = updated.setBackToDraft;
   return [
-    `${updated.kind} ${updated.id}: ${updated.fields.join(', ')}`,
+    `${updated.kind} ${updated.id}: ${updated.fields.join(', ') || 'nothing written'}`,
     ...(back ? [`  set back to draft: re-approve ${back.kind} ${back.id} from its card`] : []),
   ];
 }

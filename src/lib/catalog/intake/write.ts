@@ -4,6 +4,7 @@ import { type HeldCatalog, type MatchProposal, proposeMatches } from './matches'
 import {
   campRow,
   type Existing,
+  evidenceColumns,
   IntakeKind,
   type IntakePlan,
   isExisting,
@@ -111,19 +112,40 @@ async function idsWhere(
   return (data as { id: string }[]).map((row) => row.id);
 }
 
-export async function readHeldCatalog(client: SupabaseClient): Promise<HeldCatalog> {
+/**
+ * Every row of a table, a response at a time. PostgREST caps one response
+ * (1000 rows by default), and a match proposal that silently stopped there
+ * would miss the duplicate the checkpoint exists to catch.
+ */
+async function readAll<T>(
+  client: SupabaseClient,
+  table: CatalogTable,
+  columns: string,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (;;) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .order('id')
+      .range(rows.length, rows.length + 999);
+    if (error) throw new Error(`Could not read ${table}: ${error.message}`);
+    if (data.length === 0) return rows;
+    rows.push(...(data as T[]));
+  }
+}
+
+async function readHeldCatalog(client: SupabaseClient): Promise<HeldCatalog> {
   const [providers, camps, locations] = await Promise.all([
-    client.from('providers').select('id, name, status'),
-    client.from('camps').select('id, name, provider_id, status'),
-    client.from('locations').select('id, label, street, postal_code, address_key, status'),
+    readAll<HeldCatalog['providers'][number]>(client, 'providers', 'id, name, status'),
+    readAll<HeldCatalog['camps'][number]>(client, 'camps', 'id, name, provider_id, status'),
+    readAll<HeldCatalog['locations'][number]>(
+      client,
+      'locations',
+      'id, label, street, postal_code, address_key, status',
+    ),
   ]);
-  const error = providers.error ?? camps.error ?? locations.error;
-  if (error) throw new Error(`Could not read the catalog: ${error.message}`);
-  return {
-    providers: providers.data ?? [],
-    camps: camps.data ?? [],
-    locations: locations.data ?? [],
-  };
+  return { providers, camps, locations };
 }
 
 /** The record an update would unpublish: the row itself, or an option's session. */
@@ -295,13 +317,28 @@ async function applyUpdate(run: IntakeRun, update: PlannedUpdate): Promise<void>
   const target = await targetOf(run.client, update, held);
   const back = target.status === 'verified' ? { kind: target.kind, id: target.id } : undefined;
   if (back) await run.update(back.kind, back.id, { status: 'draft' });
+  // Recorded before the correction is written, so a refusal still reports the unpublish.
+  const entry = { kind: update.kind, id: update.id, ...(back ? { setBackToDraft: back } : {}) };
+  run.updated.push({ ...entry, fields: [] });
+  await writeCorrection(run, update, target, changes);
+  run.updated.pop();
+  run.updated.push({ ...entry, fields });
+}
+
+/** The changes, with the update's source as the evidence. An option's evidence is its session's. */
+async function writeCorrection(
+  run: IntakeRun,
+  update: PlannedUpdate,
+  target: Target,
+  changes: Record<string, unknown>,
+): Promise<void> {
+  const evidence = evidenceColumns(update.source);
+  if (update.kind !== IntakeKind.Option) {
+    await run.update(update.kind, update.id, { ...changes, ...evidence });
+    return;
+  }
   await run.update(update.kind, update.id, changes);
-  run.updated.push({
-    kind: update.kind,
-    id: update.id,
-    fields,
-    ...(back ? { setBackToDraft: back } : {}),
-  });
+  await run.update(target.kind, target.id, evidence);
 }
 
 async function uploadDocuments(
