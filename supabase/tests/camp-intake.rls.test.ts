@@ -43,7 +43,6 @@ const BROCHURE = 'https://example.test/intake/brochure.pdf';
 
 function options() {
   return {
-    readDocument: vi.fn(() => Promise.resolve(FLYER_BYTES)),
     uploadDocument: vi.fn(() => Promise.resolve()),
   };
 }
@@ -239,7 +238,7 @@ describe('drafting', () => {
     const path = `intake-${marker}-flyer.jpg`;
     const plan = planOf({
       ...wholePlan(marker),
-      documents: [{ path, file: 'scratch/flyer.jpg' }],
+      documents: [{ path, base64: '/9j/4A==' }],
       providers: [providerPlan(marker, { source: { documentPath: path } })],
     });
     const io = options();
@@ -249,7 +248,7 @@ describe('drafting', () => {
 
     const result = await writeIntake(admin, plan, io);
 
-    expect(io.readDocument).toHaveBeenCalledWith('scratch/flyer.jpg');
+    expect(io.uploadDocument).toHaveBeenCalledTimes(1);
     expect(io.uploadDocument).toHaveBeenCalledWith(path, FLYER_BYTES);
     expect(
       (await rowById('providers', idOf(result, IntakeKind.Provider))).source_document_path,

@@ -31,8 +31,6 @@ import type { Drafted, IntakeResult, Updated } from './report';
  */
 
 export interface WriteOptions {
-  /** The bytes of a local source document. */
-  readonly readDocument: (file: string) => Promise<Uint8Array>;
   /** Stores a document in `camp-sources` under `path`. The real one lives in the script. */
   readonly uploadDocument: (path: string, bytes: Uint8Array) => Promise<void>;
   readonly log?: (line: string) => void;
@@ -308,10 +306,13 @@ async function applyUpdate(run: IntakeRun, update: PlannedUpdate): Promise<void>
 
 async function uploadDocuments(
   documents: readonly SourceDocument[],
-  { readDocument, uploadDocument }: WriteOptions,
+  { uploadDocument }: WriteOptions,
 ): Promise<void> {
   for (const document of documents)
-    await uploadDocument(document.path, await readDocument(document.file));
+    await uploadDocument(
+      document.path,
+      Uint8Array.from(atob(document.base64), (char) => char.charCodeAt(0)),
+    );
 }
 
 /** Writes the plan's drafts and approved corrections, or nothing while a match is unanswered. */

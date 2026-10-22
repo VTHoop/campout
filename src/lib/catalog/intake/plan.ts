@@ -100,10 +100,14 @@ export interface PlannedUpdate {
   readonly approved: readonly string[];
 }
 
-/** A local file to store in `camp-sources` under `path`, before any row cites it. */
+/**
+ * A document to store in `camp-sources` under `path`, before any row cites it.
+ * The plan carries its bytes, base64, so the script that runs it reads no file
+ * by a path it was handed.
+ */
 export interface SourceDocument {
   readonly path: string;
-  readonly file: string;
+  readonly base64: string;
 }
 
 /** Something the run did not draft, and why: a session missing a required fact, say. */

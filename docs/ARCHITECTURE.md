@@ -140,7 +140,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `supabase/tests/` | The RLS policy suite — two households, two JWTs, real Postgres (ADR-0004) |
 | `vitest.config.ts` | Two projects (`unit`, `rls`) and the two ratcheted coverage floors |
 | `scripts/check-code-health.ts` | The absolute CodeScene ratchet. **Needs a project id before it does anything** — it exits 2 until then, rather than passing silently. |
-| `scripts/camp-intake.ts` | `pnpm camp:intake`: the camp-intake skill's local half. Previews a plan (the checkpoint) or, with `--yes`, writes it with the secret key. Local only, never on Vercel. |
+| `scripts/camp-intake.ts` | `pnpm camp:intake`: the camp-intake skill's local half. Reads a plan on stdin and previews it (the checkpoint) or, with `--yes`, writes it with the secret key. It opens no file by path: a plan carries its source documents, base64. Local only, never on Vercel. |
 | `.env.example` | Required env var names, no values |
 
 ## Known quirk: the coverage text report

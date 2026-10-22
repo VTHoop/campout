@@ -25,14 +25,14 @@ Not for duplicate clean-up beyond the run's own match proposal, or bulk entry th
 The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` from `.env.local`. In a worktree, which has no `.env.local`, point it at the main checkout's:
 
 ```bash
-pnpm exec tsx --env-file=<main checkout>/.env.local scripts/camp-intake.ts <command>
+pnpm exec tsx --env-file=<main checkout>/.env.local scripts/camp-intake.ts <command> [< PLAN_FILE]
 ```
 
 | Command | Does |
 |---|---|
-| `held <provider name>` | Prints the provider, its camps, sessions and options, and their locations, as JSON. |
-| `<plan.json>` | **The checkpoint.** Prints proposed matches, differences, records an update would put back to draft (with plan-entry counts), and what would be drafted. Writes nothing. |
-| `<plan.json> --yes` | Writes, then prints the run report. Refuses to write anything while a proposed match is unanswered. |
+| `held PROVIDER_NAME` | Prints the provider, its camps, sessions and options, and their locations, as JSON. |
+| `plan < PLAN_FILE` | **The checkpoint.** Prints proposed matches, differences, records an update would put back to draft (with plan-entry counts), and what would be drafted. Writes nothing. |
+| `plan --yes < PLAN_FILE` | Writes, then prints the run report. Refuses to write anything while a proposed match is unanswered. |
 
 Plans live in `scratch/intake/`, which git ignores: the database is the only copy of the data (ADR-0017 §1). Name them `<provider-slug>-<YYYY-MM-DD>.json`.
 
@@ -40,7 +40,7 @@ Plans live in `scratch/intake/`, which git ignores: the database is the only cop
 These start from the spec and grow by retro (§ Workflow 8). Each rule learned from a run names the source it came from.
 
 1. **Facts, never wording** (ADR-0010). Dates, hours, ages, grades, prices, addresses, categories. A camp's `summary` is two sentences we wrote. `details` holds facts in the fixed vocabulary (spec → `details`); an unknown key is refused by the database. The only wording kept is `eligibility_wording`.
-2. **Evidence is the exact page.** Each record's `source` is the page its own facts came from — the sessions page, not the home page. When there is no durable URL (a flyer, a PDF behind a redirect, a page that changes in place), save a copy, list it under `documents` (`path` in `camp-sources`, `file` on disk), and give the record `{ "documentPath": … }`.
+2. **Evidence is the exact page.** Each record's `source` is the page its own facts came from — the sessions page, not the home page. When there is no durable URL (a flyer, a PDF behind a redirect, a page that changes in place), save a copy, list it under `documents` (`path` in `camp-sources`, and the file's bytes as `base64`: write the plan with a short script, never paste the bytes), and give the record `{ "documentPath": … }`.
 3. **Check `robots.txt` before fetching**, and stay within it. A JavaScript app (an activity finder) needs a real browser. Anything behind a login is not ours to publish.
 4. **A session meets every weekday of its range** (spec → Scope). Split anything else, or skip it with a reason. Evening and weekend offerings and on-demand days are not listed. A session over 14 days is usually a mistake; ask.
 5. **Never fill a fact the source does not state.** Hours, care times, ages and prices stay blank rather than defaulted. If you checked and the camp offers no early drop-off, that is a blank too — but only after checking. A blank the owner could not answer goes in `blanks` with the question.
@@ -71,7 +71,7 @@ Write `scratch/intake/<provider-slug>-<date>.json`, an `IntakePlan`:
 Refs are names you choose (`scor-summer-camp`, `jul-13`), unique per kind. The report prints them.
 
 ## 4. Preview
-Run the script on the plan without `--yes`. Fix any error that is a bug in the plan (a ref that names nothing) before going on.
+Run `plan < PLAN_FILE` without `--yes`. Fix any error that is a bug in the plan (a ref that names nothing) before going on.
 
 ## 5. The checkpoint — stop once, and write nothing
 Show the owner, in one message:
@@ -86,7 +86,7 @@ Show the owner, in one message:
 **Wait for the answers.** Then apply them to the plan and preview again. The preview must show no unanswered match; the script refuses to write until it does.
 
 ## 6. Write
-Run with `--yes`. **The first row the database refuses stops the run**, with the database's words, and everything before it stays as drafts. Do not retry on your own: show the owner the refusal and the report, and ask. A re-run proposes the drafts just written as matches, so confirm them as `existing` rather than drafting them twice.
+Run `plan --yes < PLAN_FILE`. **The first row the database refuses stops the run**, with the database's words, and everything before it stays as drafts. Do not retry on your own: show the owner the refusal and the report, and ask. A re-run proposes the drafts just written as matches, so confirm them as `existing` rather than drafting them twice.
 
 ## 7. Report
 Show the run report: what was drafted, what was updated, what was skipped and why, and which facts were left blank. Then tell the owner what to approve, top down from the card: provider and location, then camp, then session. Name each record that was put back to draft.

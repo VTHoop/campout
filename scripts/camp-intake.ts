@@ -1,14 +1,14 @@
 // Camp intake (CAM-47): the local half of the camp-intake skill.
 // Run from the workspace root:
-//   pnpm camp:intake held <provider name>   print what we hold for a provider, as JSON
-//   pnpm camp:intake <plan.json>            the checkpoint: matches, differences, warnings; writes nothing
-//   pnpm camp:intake <plan.json> --yes      write the drafts and approved corrections, then report
+//   pnpm camp:intake held PROVIDER_NAME          print what we hold for a provider, as JSON
+//   pnpm camp:intake plan < PLAN_FILE            the checkpoint: matches, differences, warnings; writes nothing
+//   pnpm camp:intake plan --yes < PLAN_FILE      write the drafts and approved corrections, then report
 //
 // Local only, with the secret key (ADR-0017 §2, ADR-0020): never in app code, never
 // on Vercel. The key writes drafts and nothing more: the guard trigger refuses any
 // row it would verify. Plans live in scratch/intake/, which git ignores (ADR-0017 §1:
-// the database is the only copy of the data).
-import { readFile } from 'node:fs/promises';
+// the database is the only copy of the data). The plan comes in on stdin, and carries
+// its source documents inside it, so the script opens no file by a path it was given.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { IntakePlan } from '../src/lib/catalog/intake/plan';
 import { formatReport } from '../src/lib/catalog/intake/report';
@@ -30,19 +30,16 @@ const CONTENT_TYPES: ReadonlyMap<string, string> = new Map([
   ['html', 'text/html'],
 ]);
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`${name} is not set. Put it in .env.local (see .env.example).`);
-    process.exit(2);
-  }
-  return value;
+function required(value: string | undefined, name: string): string {
+  if (value) return value;
+  console.error(`${name} is not set. Put it in .env.local (see .env.example).`);
+  process.exit(2);
 }
 
 function secretClient(): SupabaseClient {
-  const url = required('NEXT_PUBLIC_SUPABASE_URL');
+  const url = required(process.env.NEXT_PUBLIC_SUPABASE_URL, 'NEXT_PUBLIC_SUPABASE_URL');
   console.log(`Project: ${new URL(url).host}`);
-  return createClient(url, required('SUPABASE_SECRET_KEY'), {
+  return createClient(url, required(process.env.SUPABASE_SECRET_KEY, 'SUPABASE_SECRET_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -100,8 +97,14 @@ async function upload(client: SupabaseClient, path: string, bytes: Uint8Array): 
   if (error) throw new Error(`Could not upload ${path}: ${error.message}`);
 }
 
-async function runPlan(client: SupabaseClient, planPath: string, write: boolean): Promise<void> {
-  const plan = JSON.parse(await readFile(planPath, 'utf8')) as IntakePlan;
+async function readStdin(): Promise<string> {
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Uint8Array);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function runPlan(client: SupabaseClient, write: boolean): Promise<void> {
+  const plan = JSON.parse(await readStdin()) as IntakePlan;
   printPreview(await previewIntake(client, plan), plan);
   if (!write) {
     console.log('\nCheckpoint: nothing written. Re-run with --yes once the owner has confirmed.');
@@ -109,9 +112,10 @@ async function runPlan(client: SupabaseClient, planPath: string, write: boolean)
   }
   try {
     const result = await writeIntake(client, plan, {
-      readDocument: async (file) => new Uint8Array(await readFile(file)),
       uploadDocument: (path, bytes) => upload(client, path, bytes),
-      log: (line) => console.log(`  ${line}`),
+      log: (line) => {
+        console.log(`  ${line}`);
+      },
     });
     console.log(`\n${formatReport(plan, result)}`);
   } catch (error) {
@@ -128,10 +132,12 @@ async function runPlan(client: SupabaseClient, planPath: string, write: boolean)
 }
 
 const [command, ...rest] = process.argv.slice(2);
-if (!command) {
-  console.error('Usage: pnpm camp:intake held <provider name> | <plan.json> [--yes]');
+if (command !== 'held' && command !== 'plan') {
+  console.error(
+    'Usage: pnpm camp:intake held PROVIDER_NAME, or pnpm camp:intake plan [--yes] < PLAN_FILE',
+  );
   process.exit(2);
 }
 const client = secretClient();
 if (command === 'held') await printHeld(client, rest.join(' '));
-else await runPlan(client, command, rest.includes('--yes'));
+else await runPlan(client, rest.includes('--yes'));
