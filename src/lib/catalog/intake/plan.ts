@@ -95,7 +95,8 @@ export enum IntakeKind {
 export interface PlannedUpdate {
   readonly kind: IntakeKind;
   readonly id: string;
-  readonly sourceUrl: string;
+  /** Where the source said it. Written as the row's evidence along with the changes. */
+  readonly source: Evidence;
   readonly proposed: Readonly<Record<string, unknown>>;
   readonly approved: readonly string[];
 }

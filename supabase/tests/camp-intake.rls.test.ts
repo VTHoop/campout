@@ -88,7 +88,7 @@ function renameCamp(campId: string): IntakePlan {
       {
         kind: IntakeKind.Camp,
         id: campId,
-        sourceUrl: BROCHURE,
+        source: { url: BROCHURE },
         proposed: { name: `Intake Junior Camp ${marker}` },
         approved: ['name'],
       },
@@ -421,7 +421,7 @@ describe('updates', () => {
           {
             kind: IntakeKind.Camp,
             id: campId,
-            sourceUrl: BROCHURE,
+            source: { url: BROCHURE },
             proposed: { name: `Intake Junior Camp ${marker}`, summary: 'Ages 6 to 9.' },
             approved: ['name'],
           },
@@ -480,7 +480,7 @@ describe('updates', () => {
           {
             kind: IntakeKind.Option,
             id: optionId,
-            sourceUrl: BROCHURE,
+            source: { url: BROCHURE },
             proposed: { price_cents: 34500 },
             approved: ['price_cents'],
           },
@@ -522,7 +522,7 @@ describe('updates', () => {
             field: 'name',
             ours: `Intake Day Camp ${marker}`,
             source: `Intake Junior Camp ${marker}`,
-            sourceUrl: BROCHURE,
+            evidence: BROCHURE,
           },
         ],
       }),

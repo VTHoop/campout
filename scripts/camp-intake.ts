@@ -71,7 +71,7 @@ function printPreview(preview: IntakePreview, plan: IntakePlan): void {
     for (const d of differences) {
       const answer = update.approved.includes(d.field) ? 'approved' : 'not approved';
       console.log(
-        `  ${update.kind} ${update.id} · ${d.field} · ours ${JSON.stringify(d.ours)} · source ${JSON.stringify(d.source)} · ${d.sourceUrl}  [${answer}]`,
+        `  ${update.kind} ${update.id} · ${d.field} · ours ${JSON.stringify(d.ours)} · source ${JSON.stringify(d.source)} · ${d.evidence}  [${answer}]`,
       );
     }
   console.log(`\nPut back to draft (${preview.unpublishes.length}):`);

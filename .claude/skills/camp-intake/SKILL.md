@@ -79,7 +79,7 @@ Show the owner, in one message:
 - **Matches.** Every proposed match, with your recommendation. A confirmed match becomes `{ ref, existing: <id> }`, and new camps and sessions go under it. A rejected one goes in that record's `distinctFrom`.
 - **Coordinates.** For each new location, ask for its latitude and longitude. There is no geocoder (CAM-45); never guess a pin. A location is not drafted without them: the database refuses a null point.
 - **Open questions.** Each fact the source leaves ambiguous. An answer goes into the facts; no answer goes in `blanks`.
-- **Differences.** Each as field · ours · source · source URL. Nothing changes without the owner's yes for that field, which goes in `approved`.
+- **Differences.** Each as field · ours · source · evidence. Nothing changes without the owner's yes for that field, which goes in `approved`.
 - **Put back to draft.** A verified record is corrected by putting it back to draft (`reviewer_edit()` needs a signed-in reviewer; a secret-key run has none), and the owner re-approves it from its card. Say how many plan entries that hides, from the preview: a planned session no longer listed can break a family's page (CAM-49).
 - **Skips.** What you will not draft, and why.
 

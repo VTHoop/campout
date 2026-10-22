@@ -16,7 +16,7 @@ function update(
   proposed: Record<string, unknown>,
   approved: readonly string[] = [],
 ): PlannedUpdate {
-  return { kind: IntakeKind.Camp, id: 'camp-id', sourceUrl: BROCHURE, proposed, approved };
+  return { kind: IntakeKind.Camp, id: 'camp-id', source: { url: BROCHURE }, proposed, approved };
 }
 
 describe('differences', () => {
@@ -24,8 +24,8 @@ describe('differences', () => {
     expect(
       differences(HELD, update({ name: 'Intake Junior Tennis', summary: 'Ages 6–9.' })),
     ).toEqual([
-      { field: 'name', ours: 'Intake Tennis', source: 'Intake Junior Tennis', sourceUrl: BROCHURE },
-      { field: 'summary', ours: null, source: 'Ages 6–9.', sourceUrl: BROCHURE },
+      { field: 'name', ours: 'Intake Tennis', source: 'Intake Junior Tennis', evidence: BROCHURE },
+      { field: 'summary', ours: null, source: 'Ages 6–9.', evidence: BROCHURE },
     ]);
   });
 
@@ -41,7 +41,7 @@ describe('differences', () => {
         field: 'categories',
         ours: ['sports'],
         source: ['sports', 'outdoors'],
-        sourceUrl: BROCHURE,
+        evidence: BROCHURE,
       },
     ]);
   });

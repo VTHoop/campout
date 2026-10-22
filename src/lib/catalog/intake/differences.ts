@@ -1,8 +1,8 @@
-import type { PlannedUpdate } from './plan';
+import type { Evidence, PlannedUpdate } from './plan';
 
 /**
  * Where a source disagrees with a record we hold (CAM-47). The run lists each
- * difference at the checkpoint, field · ours · source · source URL, and writes
+ * difference at the checkpoint, field · ours · source · evidence, and writes
  * only the ones the owner said yes to.
  */
 
@@ -10,7 +10,12 @@ export interface Difference {
   readonly field: string;
   readonly ours: unknown;
   readonly source: unknown;
-  readonly sourceUrl: string;
+  /** The page, or the stored document in `camp-sources`, the source said it in. */
+  readonly evidence: string;
+}
+
+function evidenceLabel(source: Evidence): string {
+  return 'url' in source ? source.url : `camp-sources/${source.documentPath}`;
 }
 
 /** JSON with object keys sorted, so two values Postgres would store alike compare alike. */
@@ -34,7 +39,7 @@ export function differences(
       field,
       ours: ours.get(field) ?? null,
       source,
-      sourceUrl: update.sourceUrl,
+      evidence: evidenceLabel(update.source),
     }));
 }
 
