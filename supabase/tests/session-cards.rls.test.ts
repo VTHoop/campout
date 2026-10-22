@@ -232,6 +232,30 @@ describe('approving from the card', () => {
       expect((await cardOf(reviewer, ids)).records.every((record) => !record.isDraft)).toBe(true);
     }));
 
+  it.each([
+    ['provider', 'providers', [true, false, false, false]],
+    ['location', 'locations', [false, true, false, false]],
+  ] as const)(
+    'shows a %s put back to draft under a verified session as a draft, and re-approves it (CAM-47)',
+    (kind, table, drafts) =>
+      withSeededSession(async (ids, admin) => {
+        await insertId(admin, 'session_options', optionRow(ids.sessionId));
+        await approveParents(ids);
+        await approve(reviewer, 'session', ids.sessionId);
+        const id = kind === 'provider' ? ids.providerId : ids.locationId;
+        const { error } = await admin.from(table).update({ status: 'draft' }).eq('id', id);
+        if (error) throw new Error(`Could not put the ${kind} back to draft: ${error.message}`);
+
+        expect((await cardOf(reviewer, ids)).records.map((record) => record.isDraft)).toEqual(
+          drafts,
+        );
+
+        const recordKind = kind === 'provider' ? RecordKind.Provider : RecordKind.Location;
+        expect(await approveAs(reviewer, recordKind, id)).toMatchObject({ ok: true });
+        expect((await cardOf(reviewer, ids)).records.every((record) => !record.isDraft)).toBe(true);
+      }),
+  );
+
   it('refuses a parent, and the record stays a draft', () =>
     withSeededSession(async (ids) => {
       expect(await approveAs(parent, RecordKind.Provider, ids.providerId)).toEqual({

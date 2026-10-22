@@ -8,7 +8,12 @@ import {
   sessionPlan,
   wholePlan,
 } from '../../src/lib/catalog/intake/intake-fixtures';
-import { addressKey, IntakeKind, type IntakePlan } from '../../src/lib/catalog/intake/plan';
+import {
+  addressKey,
+  type Evidence,
+  IntakeKind,
+  type IntakePlan,
+} from '../../src/lib/catalog/intake/plan';
 import {
   IntakeRefusedError,
   previewIntake,
@@ -529,5 +534,134 @@ describe('updates', () => {
     ]);
     expect((await rowById('camps', campId)).status).toBe('verified');
     await admin.from('households').delete().eq('id', householdId);
+  });
+});
+
+describe('updates: evidence and refusals (review 28)', () => {
+  function update(
+    kind: IntakeKind,
+    id: string,
+    proposed: Record<string, unknown>,
+    source: Evidence,
+  ) {
+    return planOf({ updates: [{ kind, id, source, proposed, approved: Object.keys(proposed) }] });
+  }
+
+  it("writes a correction's source as the row's evidence, a stored document included", async () => {
+    const written = await writeIntake(admin, wholePlan(marker), options());
+    const campId = idOf(written, IntakeKind.Camp);
+    const path = `intake-${marker}-brochure.pdf`;
+
+    await writeIntake(
+      admin,
+      update(
+        IntakeKind.Camp,
+        campId,
+        { name: `Intake Junior Camp ${marker}` },
+        { documentPath: path },
+      ),
+      options(),
+    );
+
+    expect(await rowById('camps', campId)).toMatchObject({
+      name: `Intake Junior Camp ${marker}`,
+      source_url: null,
+      source_document_path: path,
+    });
+  });
+
+  it("writes an option correction's source onto its session, which carries the option's evidence", async () => {
+    const written = await writeIntake(admin, wholePlan(marker), options());
+
+    await writeIntake(
+      admin,
+      update(
+        IntakeKind.Option,
+        idOf(written, IntakeKind.Option),
+        { price_cents: 34500 },
+        { url: BROCHURE },
+      ),
+      options(),
+    );
+
+    expect((await rowById('sessions', idOf(written, IntakeKind.Session))).source_url).toBe(
+      BROCHURE,
+    );
+  });
+
+  it('reports a verified record it put back to draft even when the database then refuses the correction', async () => {
+    const written = await writeAndApprove(wholePlan(marker));
+    const campId = idOf(written, IntakeKind.Camp);
+
+    const error = await writeIntake(
+      admin,
+      update(IntakeKind.Camp, campId, { categories: ['day_camp', 'sports'] }, { url: BROCHURE }),
+      options(),
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(IntakeRefusedError);
+    expect((error as IntakeRefusedError).result.updated).toEqual([
+      {
+        kind: IntakeKind.Camp,
+        id: campId,
+        fields: [],
+        setBackToDraft: { kind: IntakeKind.Camp, id: campId },
+      },
+    ]);
+    expect((await rowById('camps', campId)).status).toBe('draft');
+  });
+
+  it('cannot publish a row: the guard refuses an update to verified, and the row stays a draft', async () => {
+    const written = await writeIntake(admin, wholePlan(marker), options());
+    const campId = idOf(written, IntakeKind.Camp);
+
+    await expect(
+      writeIntake(
+        admin,
+        update(IntakeKind.Camp, campId, { status: 'verified' }, { url: BROCHURE }),
+        options(),
+      ),
+    ).rejects.toBeInstanceOf(IntakeRefusedError);
+    expect((await rowById('camps', campId)).status).toBe('draft');
+  });
+
+  it.each([
+    [IntakeKind.Provider, { name: `Intake League Renamed` }],
+    [IntakeKind.Location, { label: `Intake Center Renamed` }],
+  ] as const)(
+    'warns, with a count, before unpublishing a verified %s a family planned under',
+    async (kind, proposed) => {
+      const written = await writeAndApprove(wholePlan(marker));
+      const id = idOf(written, kind);
+      const householdId = await planIntoNewHousehold(
+        parent,
+        `Intake Family ${marker}`,
+        idOf(written, IntakeKind.Session),
+        idOf(written, IntakeKind.Option),
+      );
+
+      const preview = await previewIntake(admin, update(kind, id, proposed, { url: BROCHURE }));
+
+      expect(preview.unpublishes).toEqual([{ kind, id, plannedEntries: 1 }]);
+      await admin.from('households').delete().eq('id', householdId);
+    },
+  );
+});
+
+describe('a catalog past one response (review 28)', () => {
+  it('proposes matches from every held row, not only the first 1000', async () => {
+    const rows = Array.from({ length: 1001 }, (_, i) => ({
+      name: `Intake League ${marker} ${i}`,
+      source_url: 'https://example.test/intake',
+    }));
+    const { error } = await admin.from('providers').insert(rows);
+    if (error) throw new Error(`Could not seed providers: ${error.message}`);
+
+    try {
+      const preview = await previewIntake(admin, wholePlan(marker));
+      expect(preview.matches[0]?.candidates).toHaveLength(1001);
+    } finally {
+      await admin.from('providers').delete().ilike('name', `%${marker}%`);
+    }
   });
 });

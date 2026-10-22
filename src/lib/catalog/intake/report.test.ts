@@ -62,6 +62,23 @@ describe('formatReport', () => {
     expect(report).toContain('Left blank (0): nothing');
   });
 
+  it('says nothing was written to a record put back to draft before a refusal, and what to re-approve', () => {
+    const report = formatReport(planOf({}), {
+      drafted: [],
+      updated: [
+        {
+          kind: IntakeKind.Camp,
+          id: 'camp-3',
+          fields: [],
+          setBackToDraft: { kind: IntakeKind.Camp, id: 'camp-3' },
+        },
+      ],
+      refusal: 'new row violates check constraint',
+    });
+    expect(report).toContain('camp camp-3: nothing written');
+    expect(report).toContain('set back to draft: re-approve camp camp-3 from its card');
+  });
+
   it('opens with the refusal, and says what was written before it stays as drafts', () => {
     const report = formatReport(PLAN, { ...RESULT, refusal: 'new row violates check constraint' });
     expect(report.split('\n')[0]).toBe(
