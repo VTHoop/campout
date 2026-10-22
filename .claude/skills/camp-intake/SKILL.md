@@ -65,7 +65,7 @@ Write `scratch/intake/<provider-slug>-<date>.json`, an `IntakePlan`:
 
 - `providers`, `locations`, `camps`: each either `{ ref, existing: <id> }` for a record we hold, or `{ ref, source, facts }` to draft. A new location also carries `coordinates: { lat, long }`, or `null` until the owner supplies them. A new camp names its `providerRef`.
 - `sessions`: `{ ref, campRef, locationRef, source, facts, options: [...] }`, one to three options (`full_day`, `morning`, `afternoon`), each with its price.
-- `updates`: `{ kind, id, sourceUrl, proposed: { field: value }, approved: [] }` for each record the source disagrees with. `approved` starts empty. Updates apply in order, so move sessions (`camp_id`) before archiving the camp they left (`{ "status": "archived" }`, a status-only change the guard allows; `verified` it refuses).
+- `updates`: `{ kind, id, source, proposed: { field: value }, approved: [] }`, where `source` is the update's evidence (`{ url }` or `{ documentPath }`) and is written to the row with the changes, for each record the source disagrees with. `approved` starts empty. Updates apply in order, so move sessions (`camp_id`) before archiving the camp they left (`{ "status": "archived" }`, a status-only change the guard allows; `verified` it refuses).
 - `skipped`, `blanks`: as Rules 5 and 6 say.
 
 Refs are names you choose (`scor-summer-camp`, `jul-13`), unique per kind. The report prints them.
@@ -80,7 +80,7 @@ Show the owner, in one message:
 - **Coordinates.** For each new location, ask for its latitude and longitude. There is no geocoder (CAM-45); never guess a pin. A location is not drafted without them: the database refuses a null point.
 - **Open questions.** Each fact the source leaves ambiguous. An answer goes into the facts; no answer goes in `blanks`.
 - **Differences.** Each as field · ours · source · evidence. Nothing changes without the owner's yes for that field, which goes in `approved`.
-- **Put back to draft.** A verified record is corrected by putting it back to draft (`reviewer_edit()` needs a signed-in reviewer; a secret-key run has none), and the owner re-approves it from its card. Say how many plan entries that hides, from the preview: a planned session no longer listed can break a family's page (CAM-49).
+- **Put back to draft.** A verified record is corrected by putting it back to draft (ADR-0021: `reviewer_edit()` needs a signed-in reviewer; a secret-key run has none), and the owner re-approves it from its card. Say how many plan entries that hides, from the preview: a planned session no longer listed can break a family's page (CAM-49).
 - **Skips.** What you will not draft, and why.
 
 **Wait for the answers.** Then apply them to the plan and preview again. The preview must show no unanswered match; the script refuses to write until it does.

@@ -96,7 +96,8 @@ New camps reach the catalog through the `camp-intake` skill (CAM-47): it reads a
 - **The plan cannot ask to publish.** No plan type has a `status`, `verified_at` or `verified_by` field, and the guard trigger refuses any write that would verify a row.
 - **The database is the only validator.** `writeIntake()` inserts parents first and stops at the first row the database refuses (`IntakeRefusedError`, carrying what was written before it). Nothing in TypeScript re-checks a fact.
 - **One checkpoint, enforced.** `previewIntake()` reads and writes nothing: proposed matches, differences, and verified records an update would put back to draft, with their plan-entry counts. `writeIntake()` refuses outright (`UnansweredMatchError`) while a proposed match is neither confirmed (`existing`) nor ruled out (`distinctFrom`).
-- **A verified record goes back to draft to be corrected.** `reviewer_edit()` needs a signed-in reviewer and the run has none, so the writer makes a status-only change first, which the guard allows, then corrects the draft. A verified session's option is corrected by putting its session back. The owner re-approves from the card.
+- **A verified record goes back to draft to be corrected** (ADR-0021). `reviewer_edit()` needs a signed-in reviewer and the run has none, so the writer makes a status-only change first, which the guard allows, then writes the changes with the update's evidence. A verified session's option is corrected by putting its session back, and the session carries the evidence. The preview counts the plan entries that would stop resolving; the report names every record put back, even when the correction after it is refused. The owner re-approves from the card.
+- **The held catalog is read a response at a time**, so a match proposal never stops at PostgREST's row cap.
 - **`addressKey()` mirrors `locations.address_key`.** A test holds it to the value Postgres derives.
 
 ## Approving from a card
