@@ -134,9 +134,26 @@ export async function withSeededSession(
   });
 }
 
+export interface Family {
+  householdId: string;
+  childId: string;
+}
+
+/** A household of `user`'s with one invented child. */
+export async function familyOf(user: TestUser, name: string): Promise<Family> {
+  const householdId = await createHousehold(user, name);
+  const { data, error } = await user.client
+    .from('children')
+    .insert({ household_id: householdId, display_name: 'Sam', age_years: 8, grade: 3 })
+    .select('id')
+    .single();
+  if (error) throw new Error(`Could not add a child: ${error.message}`);
+  return { householdId, childId: (data as { id: string }).id };
+}
+
 /**
- * A household of `user`'s with one invented child, planned into `sessionId`'s
- * `optionId`. Returns the household's id; deleting it removes the plan entry.
+ * A new family of `user`'s, planned into `sessionId`'s `optionId`. Returns
+ * the household's id; deleting it removes the plan entry.
  */
 export async function planIntoNewHousehold(
   user: TestUser,
@@ -144,16 +161,10 @@ export async function planIntoNewHousehold(
   sessionId: string,
   optionId: string,
 ): Promise<string> {
-  const householdId = await createHousehold(user, name);
-  const { data: child, error } = await user.client
-    .from('children')
-    .insert({ household_id: householdId, display_name: 'Sam', age_years: 8, grade: 3 })
-    .select('id')
-    .single();
-  if (error) throw new Error(`Could not add a child: ${error.message}`);
+  const { householdId, childId } = await familyOf(user, name);
   const planned = await user.client.from('plan_entries').insert({
     household_id: householdId,
-    child_id: (child as { id: string }).id,
+    child_id: childId,
     session_id: sessionId,
     option_id: optionId,
   });
