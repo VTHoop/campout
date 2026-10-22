@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/db/types';
 import { approvedChanges, type Difference, differences } from './differences';
 import { type HeldCatalog, type MatchProposal, proposeMatches } from './matches';
 import {
@@ -72,7 +73,8 @@ export interface IntakePreview {
   readonly unpublishes: readonly UnpublishWarning[];
 }
 
-type CatalogTable = 'providers' | 'camps' | 'locations' | 'sessions' | 'session_options';
+type CatalogTable = keyof Database['public']['Tables'];
+type RecordStatus = Database['public']['Enums']['record_status'];
 
 const TABLES: ReadonlyMap<string, CatalogTable> = new Map(
   Object.entries({
@@ -142,24 +144,33 @@ async function readHeldCatalog(client: SupabaseClient): Promise<HeldCatalog> {
     readAll<HeldCatalog['locations'][number]>(
       client,
       'locations',
-      'id, label, street, postal_code, address_key, status',
+      'id, label, address_key, status',
     ),
   ]);
   return { providers, camps, locations };
+}
+
+const STATUSES: ReadonlySet<unknown> = new Set<RecordStatus>(['draft', 'verified', 'archived']);
+
+/** Refuse rather than guess: a row read back with no known status is not one we can reason about. */
+function statusOf(row: Row): RecordStatus {
+  if (!STATUSES.has(row.status))
+    throw new Error(`A row came back with status ${String(row.status)}`);
+  return row.status as RecordStatus;
 }
 
 /** The record an update would unpublish: the row itself, or an option's session. */
 interface Target {
   readonly kind: IntakeKind;
   readonly id: string;
-  readonly status: unknown;
+  readonly status: RecordStatus;
 }
 
 async function targetOf(client: SupabaseClient, update: PlannedUpdate, held: Row): Promise<Target> {
-  if (update.kind !== IntakeKind.Option) return { ...update, status: held.status };
+  if (update.kind !== IntakeKind.Option) return { ...update, status: statusOf(held) };
   const id = String(held.session_id);
   const session = await readRow(client, IntakeKind.Session, id);
-  return { kind: IntakeKind.Session, id, status: session.status };
+  return { kind: IntakeKind.Session, id, status: statusOf(session) };
 }
 
 /** The sessions a record's return to draft would hide from parents. */
@@ -316,7 +327,7 @@ async function applyUpdate(run: IntakeRun, update: PlannedUpdate): Promise<void>
   if (fields.length === 0) return;
   const target = await targetOf(run.client, update, held);
   const back = target.status === 'verified' ? { kind: target.kind, id: target.id } : undefined;
-  if (back) await run.update(back.kind, back.id, { status: 'draft' });
+  if (back) await run.update(back.kind, back.id, { status: 'draft' satisfies RecordStatus });
   // Recorded before the correction is written, so a refusal still reports the unpublish.
   const entry = { kind: update.kind, id: update.id, ...(back ? { setBackToDraft: back } : {}) };
   run.updated.push({ ...entry, fields: [] });

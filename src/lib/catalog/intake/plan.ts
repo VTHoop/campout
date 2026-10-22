@@ -78,7 +78,11 @@ export interface PlannedSession {
   readonly options: readonly OptionFacts[];
 }
 
-/** The records a run drafts or corrects: the four a card approves, and a session's option. */
+/**
+ * The records a run drafts or corrects: the four a card approves, and a
+ * session's option. Five of the database's `catalog_record_kind` values,
+ * locked as a subset in `src/lib/db/enum-mirrors.ts`.
+ */
 export enum IntakeKind {
   Provider = 'provider',
   Camp = 'camp',

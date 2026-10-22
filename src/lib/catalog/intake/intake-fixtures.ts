@@ -18,7 +18,7 @@ import type {
  */
 
 export const PAGE = { url: 'https://example.test/intake/camps' } as const satisfies Evidence;
-export const COORDINATES: Coordinates = { lat: 37.5407, long: -77.436 };
+const COORDINATES: Coordinates = { lat: 37.5407, long: -77.436 };
 
 export function providerPlan(
   marker: string,

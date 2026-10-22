@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { RecordKind } from '../types';
 import { campPlan, locationPlan, planOf, providerPlan } from './intake-fixtures';
 import { type HeldCatalog, proposeMatches } from './matches';
+import { IntakeKind } from './plan';
 
 const HELD: HeldCatalog = {
   providers: [
@@ -16,8 +16,6 @@ const HELD: HeldCatalog = {
     {
       id: 'l-scor',
       label: 'SCOR Sports Center',
-      street: '1 Fixture Pkwy',
-      postal_code: '23112',
       address_key: '1 fixture pkwy 23112',
       status: 'verified',
     },
@@ -31,7 +29,7 @@ describe('proposeMatches', () => {
   it('proposes a held provider whose name is the same but for case and punctuation', () => {
     expect(proposeMatches(planOf({ providers: [provider('S.C.O.R.')] }), HELD)).toEqual([
       {
-        kind: RecordKind.Provider,
+        kind: IntakeKind.Provider,
         ref: 'provider',
         name: 'S.C.O.R.',
         candidates: [{ id: 'p-scor', name: 'SCOR', status: 'verified' }],
@@ -60,7 +58,7 @@ describe('proposeMatches', () => {
     });
     expect(proposeMatches(planOf({ locations: [location] }), HELD)).toEqual([
       {
-        kind: RecordKind.Location,
+        kind: IntakeKind.Location,
         ref: 'location',
         name: 'Some Other Name',
         candidates: [{ id: 'l-scor', name: 'SCOR Sports Center', status: 'verified' }],
@@ -75,7 +73,7 @@ describe('proposeMatches', () => {
     });
     expect(proposeMatches(plan, HELD)).toEqual([
       {
-        kind: RecordKind.Camp,
+        kind: IntakeKind.Camp,
         ref: 'camp',
         name: 'Summer Day Camp',
         candidates: [{ id: 'c-summer', name: 'Summer Day Camp', status: 'verified' }],

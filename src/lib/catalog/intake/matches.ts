@@ -1,5 +1,5 @@
-import { RecordKind } from '../types';
-import { addressKey, type IntakePlan, isExisting, isNew } from './plan';
+import type { Database } from '@/lib/db/types';
+import { addressKey, IntakeKind, type IntakePlan, isExisting, isNew } from './plan';
 
 /**
  * Likely matches between what a run would draft and what we already hold
@@ -9,7 +9,7 @@ import { addressKey, type IntakePlan, isExisting, isNew } from './plan';
  * beyond this belongs to the review queue (CAM-3).
  */
 
-type Status = 'draft' | 'verified' | 'archived';
+type Status = Database['public']['Enums']['record_status'];
 
 /** The few columns of each held record a match needs. */
 export interface HeldCatalog {
@@ -18,8 +18,6 @@ export interface HeldCatalog {
   readonly locations: readonly {
     id: string;
     label: string;
-    street: string;
-    postal_code: string;
     address_key: string | null;
     status: Status;
   }[];
@@ -33,7 +31,7 @@ export interface Candidate {
 
 /** A record the plan would draft, and the held records it may duplicate. */
 export interface MatchProposal {
-  readonly kind: RecordKind;
+  readonly kind: IntakeKind;
   readonly ref: string;
   readonly name: string;
   readonly candidates: readonly Candidate[];
@@ -51,7 +49,7 @@ function similar(a: string, b: string): boolean {
 }
 
 function proposal(
-  kind: RecordKind,
+  kind: IntakeKind,
   planned: { readonly ref: string; readonly distinctFrom?: readonly string[] },
   name: string,
   candidates: readonly Candidate[],
@@ -68,7 +66,7 @@ function proposal(
 function providerProposals(plan: IntakePlan, held: HeldCatalog): MatchProposal[] {
   return plan.providers.filter(isNew).map((provider) =>
     proposal(
-      RecordKind.Provider,
+      IntakeKind.Provider,
       provider,
       provider.facts.name,
       held.providers.filter((candidate) => similar(candidate.name, provider.facts.name)),
@@ -80,7 +78,7 @@ function locationProposals(plan: IntakePlan, held: HeldCatalog): MatchProposal[]
   return plan.locations.filter(isNew).map((location) => {
     const key = addressKey(location.facts.street, location.facts.postal_code);
     return proposal(
-      RecordKind.Location,
+      IntakeKind.Location,
       location,
       location.facts.label,
       held.locations
@@ -98,7 +96,7 @@ function campProposals(plan: IntakePlan, held: HeldCatalog): MatchProposal[] {
   return plan.camps.filter(isNew).map((camp) => {
     const providerId = heldProviders.get(camp.providerRef);
     return proposal(
-      RecordKind.Camp,
+      IntakeKind.Camp,
       camp,
       camp.facts.name,
       held.camps
