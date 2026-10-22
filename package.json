@@ -23,6 +23,7 @@
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/db/types.ts",
+    "camp:intake": "tsx --env-file-if-exists=.env.local scripts/camp-intake.ts",
     "codescene:check": "tsx --env-file-if-exists=.env.local scripts/check-code-health.ts"
   },
   "dependencies": {

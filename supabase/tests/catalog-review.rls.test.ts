@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { SeededSession } from './catalog-fixtures';
+import type { Family, SeededSession } from './catalog-fixtures';
 import {
   approve,
   approveChain,
   createReviewer,
+  familyOf,
   insertId,
   LOCATION,
   optionRow,
@@ -16,7 +17,6 @@ import {
 import type { TestUser } from './helpers';
 import {
   anonClient,
-  createHousehold,
   createTestUser,
   deleteTestUsers,
   isLiveProject,
@@ -668,22 +668,6 @@ describe('catalog_history', () => {
 });
 
 // --------------------------------------------------------------------- plans
-
-interface Family {
-  householdId: string;
-  childId: string;
-}
-
-async function familyOf(user: TestUser, name: string): Promise<Family> {
-  const householdId = await createHousehold(user, name);
-  const { data, error } = await user.client
-    .from('children')
-    .insert({ household_id: householdId, display_name: 'Sam', age_years: 8, grade: 3 })
-    .select('id')
-    .single();
-  if (error) throw new Error(`Could not add a child: ${error.message}`);
-  return { householdId, childId: (data as { id: string }).id };
-}
 
 let family: Family;
 let otherFamily: Family;

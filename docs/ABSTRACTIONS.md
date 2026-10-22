@@ -89,6 +89,17 @@ Nothing reaches a parent until a reviewer approves it (ADR-0017). Four pieces, a
 
 **The general rule:** anything that changes what a parent sees goes through one of the two functions. A new reviewer action (adding an option to a verified session, say) is a new function that opens the gate, never a loosened trigger.
 
+## Camp intake writes drafts, through the database's gate
+
+New camps reach the catalog through the `camp-intake` skill (CAM-47): it reads a camp's source into an `IntakePlan` (`src/lib/catalog/intake/plan.ts`), and `scripts/camp-intake.ts` writes it locally with the secret key.
+
+- **The plan cannot ask to publish.** No plan type has a `status`, `verified_at` or `verified_by` field, and the guard trigger refuses any write that would verify a row.
+- **The database is the only validator.** `writeIntake()` inserts parents first and stops at the first row the database refuses (`IntakeRefusedError`, carrying what was written before it). Nothing in TypeScript re-checks a fact.
+- **One checkpoint, enforced.** `previewIntake()` reads and writes nothing: proposed matches, differences, and verified records an update would put back to draft, with their plan-entry counts. `writeIntake()` refuses outright (`UnansweredMatchError`) while a proposed match is neither confirmed (`existing`) nor ruled out (`distinctFrom`).
+- **A verified record goes back to draft to be corrected** (ADR-0021). `reviewer_edit()` needs a signed-in reviewer and the run has none, so the writer makes a status-only change first, which the guard allows, then writes the changes with the update's evidence. A verified session's option is corrected by putting its session back, and the session carries the evidence. The preview counts the plan entries that would stop resolving; the report names every record put back, even when the correction after it is refused. The owner re-approves from the card.
+- **The held catalog is read a response at a time**, so a match proposal never stops at PostgREST's row cap.
+- **`addressKey()` mirrors `locations.address_key`.** A test holds it to the value Postgres derives.
+
 ## Approving from a card
 
 A reviewer publishes a record from its card on `/camps` (CAM-46); the page asks `is_reviewer()` (`isReviewer()` in `src/lib/catalog/approve.ts`) and passes `canApprove` down, but the database still decides every call. `approveRecord(client, kind, id, confirmLongSpan)` calls `approve_record()` as the signed-in user from the browser client and returns either the Richmond day it was verified or the function's refusal, worded as the function wrote it. The app adds no refusal rule of its own: `needsSpanConfirmation()` only decides whether to ask before sending `confirm_long_span` (the database's 14-day rule, restated so the card can ask first).

@@ -117,6 +117,7 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `src/components/approve-controls.tsx` | A reviewer's review rows on a card (CAM-46): one row per record in the card's chain, an `ApproveRow` with a button for each draft, and the native `<dialog>` that asks before a session over 14 days is approved. A Client Component. |
 | `src/lib/catalog/approve.ts` | Approving from a card: `approveRecord()` calls `approve_record()` as the signed-in user and reads the verified day back; `isReviewer()` asks `is_reviewer()`; `applyApprovals()` re-derives cards once records are approved; `spanDays()`/`needsSpanConfirmation()` decide whether to ask first. No rule of its own: the database refuses. |
 | `src/lib/catalog/session-cards.ts` | The data-access service for session cards: `listSessionCards(client)` reads sessions with their camp, provider, location and options in one select, as the caller, and `sessionCardsFromRows()` maps them to `SessionCardView`s. No status filter and no reviewer logic: RLS decides what each visitor sees (ADR-0017 §2). Each card carries its `records` (provider, location, camp, session, with `isDraft`) so a reviewer's controls know what is still a draft. |
+| `src/lib/catalog/intake/` | Camp intake (CAM-47): the `IntakePlan` type and its row builders (`plan.ts`), match proposals by name and `address_key` (`matches.ts`), field-by-field differences (`differences.ts`), the run report (`report.ts`), and the writer (`write.ts`), which drafts parents first, puts a verified record back to draft before correcting it, and stops at the first row the database refuses. It takes a client; it never makes one. |
 | `src/lib/session-card-format.ts`, `src/lib/week-sessions.ts` | The card's facts as a parent reads them (hours, ages, price, week tab, partial-week callout); which cards a week shows, and which week `?week=` selects. |
 | `src/components/summer-chooser.tsx` | The summer chooser: one link per summer, the choice kept in the URL, marked with `aria-current`. |
 | `src/lib/calendars/chesterfield.ts` | Chesterfield's school years, read from the parser's drafts in `docs/data/school-calendars/` until calendars are in Postgres (CAM-4). |
@@ -135,9 +136,11 @@ At `packages/planner/`. Pure, framework-free TypeScript — no database client, 
 | `.claude/hooks/privacy-guard.sh` | Child-data, RLS, and service-role guard (blocks the turn) |
 | `.claude/agents/refinement-answerer.md` | Settles `/refine-ticket`'s open questions against the ADRs and docs before the owner is asked |
 | `.claude/skills/start-ticket/`, `address-review/`, `next-up/` | The ticket loop's kickoffs: begin an issue, answer a PR review, pick the next issues (AGENTS.md §1, ADR-0019) |
+| `.claude/skills/camp-intake/` | Drafts a camp from its source into Supabase, with one checkpoint before any write (CAM-47) |
 | `supabase/tests/` | The RLS policy suite — two households, two JWTs, real Postgres (ADR-0004) |
 | `vitest.config.ts` | Two projects (`unit`, `rls`) and the two ratcheted coverage floors |
 | `scripts/check-code-health.ts` | The absolute CodeScene ratchet. **Needs a project id before it does anything** — it exits 2 until then, rather than passing silently. |
+| `scripts/camp-intake.ts` | `pnpm camp:intake`: the camp-intake skill's local half. Reads a plan on stdin and previews it (the checkpoint) or, with `--yes`, writes it with the secret key. It opens no file by path: a plan carries its source documents, base64. Local only, never on Vercel. |
 | `.env.example` | Required env var names, no values |
 
 ## Known quirk: the coverage text report

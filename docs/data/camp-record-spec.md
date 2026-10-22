@@ -201,7 +201,7 @@ A record is ready to go live when:
 
 ## Review and approval
 
-Every record starts as a **draft**, written by a script or by hand with the secret key (ADR-0017). A draft is invisible to everyone but reviewers. Users listed in `reviewers` read every draft, along with `catalog_history`.
+Every record starts as a **draft**, written by a script or by hand with the secret key (ADR-0017). New camps and corrections come in through the `camp-intake` skill (`.claude/skills/camp-intake/`, CAM-47), which stops for the owner before writing anything. A draft is invisible to everyone but reviewers. Users listed in `reviewers` read every draft, along with `catalog_history`.
 
 - **`approve_record(kind, id)` is the only way to `verified`.** It's for providers, camps, locations, sessions and calendars, and records the reviewer and the time. It refuses:
   - a camp whose provider isn't verified;

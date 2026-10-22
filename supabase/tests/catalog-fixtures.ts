@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TestUser } from './helpers';
-import { createTestUser, serviceClient } from './helpers';
+import { createHousehold, createTestUser, serviceClient } from './helpers';
 
 /**
  * Invented catalog rows for the RLS suite, in the provider → camp → session
@@ -132,6 +132,44 @@ export async function withSeededSession(
     const sessionId = await insertId(admin, 'sessions', sessionRow(ids.campId, ids.locationId));
     await assert({ ...ids, sessionId }, admin);
   });
+}
+
+export interface Family {
+  householdId: string;
+  childId: string;
+}
+
+/** A household of `user`'s with one invented child. */
+export async function familyOf(user: TestUser, name: string): Promise<Family> {
+  const householdId = await createHousehold(user, name);
+  const { data, error } = await user.client
+    .from('children')
+    .insert({ household_id: householdId, display_name: 'Sam', age_years: 8, grade: 3 })
+    .select('id')
+    .single();
+  if (error) throw new Error(`Could not add a child: ${error.message}`);
+  return { householdId, childId: (data as { id: string }).id };
+}
+
+/**
+ * A new family of `user`'s, planned into `sessionId`'s `optionId`. Returns
+ * the household's id; deleting it removes the plan entry.
+ */
+export async function planIntoNewHousehold(
+  user: TestUser,
+  name: string,
+  sessionId: string,
+  optionId: string,
+): Promise<string> {
+  const { householdId, childId } = await familyOf(user, name);
+  const planned = await user.client.from('plan_entries').insert({
+    household_id: householdId,
+    child_id: childId,
+    session_id: sessionId,
+    option_id: optionId,
+  });
+  if (planned.error) throw new Error(`Could not plan the session: ${planned.error.message}`);
+  return householdId;
 }
 
 /** A signed-in user listed in `reviewers`, so is_reviewer() is true for their client. */

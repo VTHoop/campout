@@ -1,4 +1,5 @@
 import type { CalendarType, ClosureTag, SchoolDistrict } from '@campout/planner';
+import type { IntakeKind } from '@/lib/catalog/intake/plan';
 import type { Category, RecordKind } from '@/lib/catalog/types';
 import type { Database } from './types';
 
@@ -27,5 +28,9 @@ export type ClosureTagLocked = Locked<SameSet<`${ClosureTag}`, Enums['closure_ta
  */
 export type RecordKindLocked = Locked<
   [`${RecordKind}`] extends [Enums['catalog_record_kind']] ? true : false
+>;
+/** Intake's five kinds are a subset of `catalog_record_kind` too (CAM-47). */
+export type IntakeKindLocked = Locked<
+  [`${IntakeKind}`] extends [Enums['catalog_record_kind']] ? true : false
 >;
 export type CategoryLocked = Locked<SameSet<`${Category}`, Enums['camp_category']>>;
