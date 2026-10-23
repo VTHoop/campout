@@ -76,29 +76,26 @@ A horizontal card: `rounded-card`, a hairline `rule` border, `surface` on `paper
 
 Some sizes in the artboards fall between steps of the scales above. CAM-32 mapped each onto an existing token rather than adding new ones: 13px and the date block's 10–12px text are `text-caption`; the 20–27px date range is `text-title` on a phone and `text-heading` from `lg`; the 78px/112px column is `w-20`/`w-28`.
 
-**The date block** — a fixed-width left column (112px desktop, 78px phone) with its own right border.
+**The date block** — a fixed-width left column (96px desktop, 80px phone) in `tint`, centred, with its own right border. It says *when*, and no more: the week's number is already on the week picker, so a summer card carries no `Week N`. The spoken label keeps it ("Week 3, June 15 to 19, Monday to Friday").
 
-- Top strip: `ink` background, `paper` text, 11–12px/600. It carries **why school is closed** — `Week 3` in summer, `Yom Kippur` or `Teacher day` or `Thanksgiving` the rest of the year. One component for every kind of time off (ADR-0013).
-- Body: `tint` background, centred. Month in 11–12px `ink-muted`, then the day or range in Bricolage 20–27px/700 tabular, then the weekday span in 10–11px `ink-muted`.
-- A partial span (`Mon–Wed`, `Mon–Thu`) sets the weekday line in `brick` at 600. It is the first hint that a week is not fully covered.
+- Month in `text-caption` `ink-muted`, then the day or range in Bricolage, `text-title` on a phone and `text-heading` from `sm`, bold and tabular, then the weekday span in `text-caption`.
+- A partial span (`Mon–Wed`, `Fri only`) sets the weekday line in `brick` at 600 **and** draws a **week bar** above it: five small segments, Monday to Friday, filled where the session runs and hollow where it does not. A full week has no bar. The bar is a decoration; the span text and the spoken label carry the days.
+- The strip across the top that said why school was closed (`Week 3`, `Yom Kippur`, `Teacher day`) returns with the year-round view, where it is the date block's only job (ADR-0013).
 
 **The body**, in this order:
 
-1. Camp name — `text-title`. Provider and location beneath in 13px `ink-muted`.
-2. Hairline `rule`.
-3. Facts row, `text-ui` at 600, `tabular-nums`, wrapping: hours · ages · price · distance. Distance sets `ink-muted` weight 500 — it is ours, not the camp's.
-4. Category: dot plus word, 13px `ink-muted`.
-5. Attention panel, only when there is something to say (see below). Today: a session covering fewer than five weekdays says `Covers 3 of 5 days`, plus `, and ends at noon` when it ends by 12:00pm.
-6. Actions.
-7. Hairline `rule`.
-8. Provenance: `text-caption` in `ink-muted`, `Verified Sep 3, 2026 by PH, from …` plus a **Show Source Information** link.
-   A signed-in reviewer also gets, above the provenance line, a **review row** for each record in the card's chain, top down (provider, location, camp, session): a small label for what it is, its name and facts (the location's address; the session's dates, hours, ages and grades, and price, each fact the source did not state said to be missing), a status pill and, while the record is a draft, one outlined **Approve** button named for what it approves. A pill is a fill, a glyph and a word: `– Draft` on `marigold-wash`, `✓ Verified` outlined in `category-outdoors`. A message from the database shows under the row it belongs to in `brick`. A session over 14 days opens a modal asking first ("This session runs 15 days" · Cancel / Approve). A draft card also carries a `Draft — not published` pill beside the camp name. Parents and signed-out visitors never see any of it (CAM-46).
-   Built so far (CAM-28): a verified card says `Verified Sep 3, 2026`; a draft carries the `Draft — not published` pill beside the camp name, and its provenance line is the link **Show Source Information** to the page it was read from (nothing when its source is a stored document). `by PH` and the link on a verified card are not built yet.
+1. **Title row** — camp name in `text-title`; the price at its right in Bricolage `text-heading` (under the name on a phone). A price the camp did not state reads `Price not stated` in italic `ink-muted`. A `Draft — not published` pill sits beside the name.
+2. **Location line**, `text-caption` in `ink-muted`: provider and city, the distance, then the category as a dot and a word. The location is named (`Provider at Location, City`) only when it has a name of its own — a trailing parenthetical such as `(SCOR)` on the provider, case and surrounding whitespace do not make a different name. The distance reads `— mi` until CAM-45 measures it, as `Hours not stated` does for a missing fact; it sets in `ink-muted` weight 500 because it is ours, not the camp's. No street address on the card.
+3. **Facts**, labelled: `Hours`, `Ages` and/or `Grades`, each a small `ink-muted` label over its value in `text-ui` at 600, `tabular-nums`. A session that ends before 3:00pm adds **Ends early** under the hours with a clock glyph. 3:00pm stands in for the household's workday and is one constant, so the planner can replace it. An unstated age or grade is left out, an unstated hours reads `Hours not stated`.
+4. The price note, then the registration notes, each verbatim in `text-caption` `ink-muted`.
+5. A signed-in reviewer also gets a **review row** for each record in the card's chain, top down (provider, location, camp, session): a small label for what it is, its name and facts (the location's address; the session's dates, hours, ages and grades, and price, each fact the source did not state said to be missing), a status pill and, while the record is a draft, one outlined **Approve** button named for what it approves. A pill is a fill, a glyph and a word: `– Draft` on `marigold-wash`, `✓ Verified` outlined in `category-outdoors`. A message from the database shows under the row it belongs to in `brick`. A session over 14 days opens a modal asking first ("This session runs 15 days" · Cancel / Approve). Parents and signed-out visitors never see any of it (CAM-46).
+6. **Footer**, under a hairline `rule`: provenance on the left, then where to register. Provenance is `text-caption` in `ink-muted`: `Verified Sep 3, 2026` on a verified card, or the **Show Source Information** link on a draft read from a page. Registration is a text link in `blueprint`, underlined, at least 44px tall, with an external-link glyph when it leaves the site. `Add to plan`, a filled `blueprint` button, takes the right edge when the planner exists. On a phone the footer stacks with the actions first and `Verified` last, and `Add to plan` fills the width.
+   Built so far (CAM-28): a verified card says `Verified Oct 20, 2026`; `by PH` and the link on a verified card are not built yet.
 
 ### Rules the card must keep
 
 - **A missing fact is stated, not hidden.** `Hours not stated` / `Price not stated` in italic `ink-muted`. Blank reads as free, or as all day. This mirrors the optional fields on `Session`.
-- **`Add to plan` is the primary button** (filled `blueprint`). Registration is a secondary outlined link, labelled `Register on the camp's site`, or `Call 804-378-1616` where there is no URL, or `Camp's site` where there is only the provider's website; none when there is none of those. Campout never takes a payment, so it must never look like it could.
+- **`Add to plan` is the primary button** (filled `blueprint`). Registration is a secondary text link, labelled `Register on the camp's site`, or `Call 804-378-1616` where there is no URL, or `Camp's site` where there is only the provider's website; none when there is none of those. Campout never takes a payment, so it must never look like it could.
 - **Nothing on the card ranks a camp.** No stars, no scores, no "popular", no "top pick". The card says what the camp told us and the day we checked.
 - The provenance line is permanent, not a tooltip. A parent who shows up to a camp that moved has lost a workday.
 

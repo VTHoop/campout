@@ -115,15 +115,23 @@ test.describe('on a phone', () => {
     expect(overflow).toBe(0);
   });
 
-  test('keeps the week tab on the left of the camp name', async ({ page }) => {
+  test('keeps the date block on the left of the camp name', async ({ page }) => {
     await open(page, WEEK_6);
     const swim = card(page, SWIM_CAMP);
     const name = await boxOf(swim.getByRole('heading'));
-    const week = await boxOf(swim.getByText('Week 6', { exact: true }));
+    const week = await boxOf(swim.getByTestId('week-tab'));
 
     expect(week.x + week.width).toBeLessThanOrEqual(name.x);
     // Not truncated: the whole name is on the page.
     await expect(swim.getByRole('heading')).toHaveText(SWIM_CAMP);
+  });
+
+  test('stacks the footer on a phone: the register link, then Verified', async ({ page }) => {
+    await open(page, WEEK_6);
+    const swim = card(page, SWIM_CAMP);
+    const link = await boxOf(swim.getByRole('link', { name: /Register|Call|Camp's site/ }));
+    const verified = await boxOf(swim.getByText(/^Verified /));
+    expect(verified.y).toBeGreaterThanOrEqual(link.y + link.height);
   });
 
   test('keeps every card button at least 44px tall', async ({ page }) => {

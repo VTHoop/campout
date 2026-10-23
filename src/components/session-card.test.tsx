@@ -67,18 +67,19 @@ describe('SessionCard', () => {
   });
 
   describe('week tab', () => {
-    it('shows the week, month, dates and days', () => {
+    it('shows the month, dates and days, and no Week label', () => {
       renderCard(BASEBALL);
       const tab = screen.getByTestId('week-tab');
-      for (const text of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
+      for (const text of ['Aug', '3–5', 'Mon–Wed']) {
         expect(within(tab).getByText(text)).toBeInTheDocument();
       }
+      expect(within(tab).queryByText('Week 10')).toBeNull();
     });
 
     it('reads as one phrase', () => {
       renderCard(BASEBALL);
       expect(screen.getByText('Week 10, August 3 to 5, Monday to Wednesday')).toBeInTheDocument();
-      for (const piece of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
+      for (const piece of ['Aug', '3–5', 'Mon–Wed']) {
         expect(screen.getByText(piece).closest('[aria-hidden="true"]')).not.toBeNull();
       }
     });
@@ -95,10 +96,10 @@ describe('SessionCard', () => {
     });
   });
 
-  describe('data row', () => {
-    it('shows the hours, ages, grades and price', () => {
+  describe('facts', () => {
+    it('shows the hours, ages and grades, each under its label, and the price', () => {
       renderCard({ ...BASEBALL, ageRange: { min: 5, max: 15 }, gradeRange: { min: 0, max: 5 } });
-      for (const text of ['9:00am – 12:00pm', 'Ages 5–15', 'Grades K–5', '$299']) {
+      for (const text of ['Hours', '9:00am – 12:00pm', 'Ages', '5–15', 'Grades', 'K–5', '$299']) {
         expect(screen.getByText(text)).toBeInTheDocument();
       }
     });
@@ -111,8 +112,8 @@ describe('SessionCard', () => {
 
     it('omits unstated ages and grades', () => {
       renderCard(UNSTATED, 2);
-      expect(screen.queryByText(/^Ages/)).toBeNull();
-      expect(screen.queryByText(/^Grades/)).toBeNull();
+      expect(screen.queryByText('Ages')).toBeNull();
+      expect(screen.queryByText('Grades')).toBeNull();
     });
 
     it('shows the price note verbatim', () => {
@@ -129,15 +130,107 @@ describe('SessionCard', () => {
     }
   });
 
-  describe('partial-week callout', () => {
-    it('says how many days a short session covers, and that it ends at noon', () => {
+  it('has no Covers N of 5 days panel, for a partial week or a full one', () => {
+    renderCard(BASEBALL);
+    expect(screen.queryByText(/^Covers/)).toBeNull();
+  });
+
+  describe('week bar', () => {
+    it('marks the days a partial week runs, and the days it does not', () => {
       renderCard(BASEBALL);
-      expect(screen.getByText('Covers 3 of 5 days, and ends at noon')).toBeInTheDocument();
+      const bar = screen.getByTestId('week-bar');
+      const covered = within(bar)
+        .getAllByTestId('week-bar-day')
+        .map((day) => day.getAttribute('data-covered'));
+      expect(covered).toEqual(['true', 'true', 'true', 'false', 'false']);
+    });
+
+    it('is a decoration: the days are already in the spoken label', () => {
+      renderCard(BASEBALL);
+      expect(screen.getByTestId('week-bar')).toHaveAttribute('aria-hidden', 'true');
     });
 
     it('is absent for a full week', () => {
       renderCard(UNSTATED, 2);
-      expect(screen.queryByText(/^Covers/)).toBeNull();
+      expect(screen.queryByTestId('week-bar')).toBeNull();
+    });
+  });
+
+  describe('title row', () => {
+    it('puts the price beside the camp name, set as a heading-size figure', () => {
+      const item = renderCard(BASEBALL);
+      const row = within(item).getByRole('heading', {
+        name: 'Fixture Baseball Camp',
+      }).parentElement;
+      const price = within(item).getByText('$299');
+      expect(row).toContainElement(price);
+      expect(price).toHaveClass('text-heading');
+    });
+
+    it('says in the same place when the price is not stated', () => {
+      const item = renderCard(UNSTATED, 2);
+      const row = within(item).getByRole('heading', { name: 'Fixture Craft Week' }).parentElement;
+      expect(row).toContainElement(within(item).getByText('Price not stated'));
+    });
+  });
+
+  describe('location line', () => {
+    it('runs provider and city, then the distance slot, then the category', () => {
+      renderCard(BASEBALL);
+      expect(screen.getByTestId('location-line')).toHaveTextContent(
+        /Fixture Provider at Fixture Park, Chester.*— mi.*Sports/,
+      );
+    });
+
+    it('names the provider once when the location has the same name', () => {
+      renderCard({ ...BASEBALL, locationName: 'Fixture Provider' });
+      expect(screen.getByText('Fixture Provider, Chester')).toBeInTheDocument();
+      expect(screen.queryByText(/ at /)).toBeNull();
+    });
+
+    it('treats a trailing acronym on the provider as not part of its name', () => {
+      renderCard({
+        ...BASEBALL,
+        providerName: 'Fixture Center (FC)',
+        locationName: 'Fixture Center',
+      });
+      expect(screen.getByText('Fixture Center (FC), Chester')).toBeInTheDocument();
+    });
+  });
+
+  describe('ends early', () => {
+    it('is said under the hours, in words and with a decorative clock', () => {
+      renderCard(BASEBALL);
+      const early = screen.getByText('Ends early');
+      expect(screen.getByText('Hours').parentElement).toContainElement(early);
+      expect(early.parentElement?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    });
+
+    it('is absent for a session that runs to 3:00pm or later', () => {
+      renderCard({ ...BASEBALL, endTime: '15:00' });
+      expect(screen.queryByText('Ends early')).toBeNull();
+    });
+
+    it('is absent when the end time is not stated', () => {
+      renderCard(UNSTATED, 2);
+      expect(screen.queryByText('Ends early')).toBeNull();
+    });
+  });
+
+  describe('footer', () => {
+    it('puts Verified before the register link, with the link marked as leaving the site', () => {
+      const item = renderCard(BASEBALL);
+      const verified = within(item).getByText('Verified May 1, 2026');
+      const link = within(item).getByRole('link', { name: "Register on the camp's site" });
+      expect(
+        verified.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(link.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    });
+
+    it('offers no Add to plan until there is a plan to add to', () => {
+      const item = renderCard(BASEBALL);
+      expect(within(item).queryByText(/add to plan/i)).toBeNull();
     });
   });
 
@@ -193,11 +286,11 @@ describe('SessionCard', () => {
       expect(screen.getByText('Verified May 1, 2026')).toBeInTheDocument();
     });
 
-    it('sits below a hairline, as the last thing on the card', () => {
+    it('sits in the footer, below a hairline, as the last thing on the card', () => {
       const item = renderCard(BASEBALL);
-      const line = within(item).getByText('Verified May 1, 2026');
-      expect(line).toHaveClass('border-t', 'border-rule');
-      expect(item.lastElementChild?.lastElementChild).toBe(line);
+      const footer = within(item).getByText('Verified May 1, 2026').closest('footer');
+      expect(footer).toHaveClass('border-t', 'border-rule');
+      expect(item.lastElementChild?.lastElementChild).toBe(footer);
     });
 
     it('flags a draft with a pill beside the camp name, and never says it is verified', () => {

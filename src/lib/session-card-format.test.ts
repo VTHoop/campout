@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agesValue,
+  endsEarly,
   formatAddress,
   formatAges,
   formatGrades,
   formatHours,
   formatPrice,
   formatVerifiedOn,
-  partialWeekCallout,
+  gradesValue,
+  locationLine,
+  weekBar,
   weekTab,
 } from './session-card-format';
 
@@ -121,29 +125,87 @@ describe('weekTab', () => {
   });
 });
 
-describe('partialWeekCallout', () => {
-  it('says nothing for a session covering all five weekdays', () => {
-    expect(partialWeekCallout('2026-06-15', '2026-06-19', '14:00')).toBeUndefined();
-  });
-
-  it('counts the weekdays a shorter session covers', () => {
-    expect(partialWeekCallout('2026-06-15', '2026-06-18', '16:30')).toBe('Covers 4 of 5 days');
+describe('agesValue and gradesValue', () => {
+  it.each([
+    [{ min: 5, max: 15 }, '5–15'],
+    [{ min: 5 }, '5 and up'],
+    [{ max: 15 }, 'up to 15'],
+  ])('writes the ages %o as %s, without the word Ages', (range, ages) => {
+    expect(agesValue(range)).toBe(ages);
   });
 
   it.each([
-    ['at noon', '12:00'],
-    ['before noon', '11:30'],
-  ])('adds that it ends at noon when it ends %s', (_case, endTime) => {
-    expect(partialWeekCallout('2026-08-03', '2026-08-05', endTime)).toBe(
-      'Covers 3 of 5 days, and ends at noon',
+    [{ min: 0, max: 5 }, 'K–5'],
+    [{ min: 3, max: 8 }, '3–8'],
+    [{ min: 0 }, 'K and up'],
+    [{ max: 5 }, 'up to 5'],
+  ])('writes the grades %o as %s, without the word Grades', (range, grades) => {
+    expect(gradesValue(range)).toBe(grades);
+  });
+
+  it.each([undefined, {}])('omits both when the range is %o', (range) => {
+    expect(agesValue(range)).toBeUndefined();
+    expect(gradesValue(range)).toBeUndefined();
+  });
+});
+
+describe('weekBar', () => {
+  it('fills all five days for a Monday-to-Friday session', () => {
+    expect(weekBar('2026-06-15', '2026-06-19')).toEqual([true, true, true, true, true]);
+  });
+
+  it('fills Monday to Wednesday and leaves Thursday and Friday hollow', () => {
+    expect(weekBar('2026-08-03', '2026-08-05')).toEqual([true, true, true, false, false]);
+  });
+
+  it('fills only Friday for a Friday-only session', () => {
+    expect(weekBar('2027-06-11', '2027-06-11')).toEqual([false, false, false, false, true]);
+  });
+
+  it('leaves Monday hollow for a Tuesday-to-Friday session', () => {
+    expect(weekBar('2026-06-16', '2026-06-19')).toEqual([false, true, true, true, true]);
+  });
+
+  it('fills every weekday of a session that runs into a second week', () => {
+    expect(weekBar('2026-06-15', '2026-06-26')).toEqual([true, true, true, true, true]);
+  });
+});
+
+describe('endsEarly', () => {
+  it.each([
+    ['11:30', true],
+    ['12:30', true],
+    ['14:59', true],
+    ['15:00', false],
+    ['17:00', false],
+  ])('is %s → %s', (endTime, early) => {
+    expect(endsEarly(endTime)).toBe(early);
+  });
+
+  it('says nothing when the end time is not stated', () => {
+    expect(endsEarly(undefined)).toBe(false);
+  });
+});
+
+describe('locationLine', () => {
+  it('names the location when it is not the provider', () => {
+    expect(locationLine('Fixture Provider', 'Fixture Park', 'Chester')).toBe(
+      'Fixture Provider at Fixture Park, Chester',
     );
   });
 
-  it.each([
-    ['after noon', '12:30'],
-    ['at an unstated time', undefined],
-  ])('does not say it ends at noon when it ends %s', (_case, endTime) => {
-    expect(partialWeekCallout('2026-08-03', '2026-08-05', endTime)).toBe('Covers 3 of 5 days');
+  it('names the provider once when the location has the same name', () => {
+    expect(locationLine('Fixture Gym', 'Fixture Gym', 'Chester')).toBe('Fixture Gym, Chester');
+  });
+
+  it('ignores a trailing acronym in parentheses on the provider', () => {
+    expect(
+      locationLine('Sports Center of Richmond (SCOR)', 'Sports Center of Richmond', 'Richmond'),
+    ).toBe('Sports Center of Richmond (SCOR), Richmond');
+  });
+
+  it('ignores case and surrounding whitespace', () => {
+    expect(locationLine('Fixture Gym', '  fixture gym ', 'Chester')).toBe('Fixture Gym, Chester');
   });
 });
 

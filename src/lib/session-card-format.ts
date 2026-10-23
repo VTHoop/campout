@@ -1,11 +1,4 @@
-import {
-  addDays,
-  type CalendarDate,
-  compareDates,
-  isWeekend,
-  Weekday,
-  weekdayOf,
-} from '@campout/planner';
+import { addDays, type CalendarDate, compareDates, Weekday, weekdayOf } from '@campout/planner';
 import type { AgeRange, GradeRange, LocationAddress, WallClockTime } from './catalog/types';
 import { dayOfMonth, longMonth, longWeekday, shortMonth, shortWeekday } from './dates';
 
@@ -29,8 +22,19 @@ export interface WeekTab {
   readonly spoken: string;
 }
 
-const WEEKDAYS_IN_A_WEEK = 5;
-const NOON: WallClockTime = '12:00';
+const SCHOOL_WEEK = [
+  Weekday.Monday,
+  Weekday.Tuesday,
+  Weekday.Wednesday,
+  Weekday.Thursday,
+  Weekday.Friday,
+];
+
+/**
+ * A session that ends before this leaves the afternoon open. A stand-in for the
+ * household's workday, which the planner will supply (CAM-51).
+ */
+const EARLY_END: WallClockTime = '15:00';
 
 const WHOLE_DOLLARS = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -63,25 +67,38 @@ export function formatPrice(cents?: number): string | undefined {
   return format.format(cents / 100);
 }
 
-/** `Ages 5–15`, `Ages 5 and up`, `Ages up to 15`; undefined when neither end is stated. */
-function formatRange(
-  noun: string,
+/** `5–15`, `5 and up`, `up to 15`; undefined when neither end is stated. */
+function rangeValue(
   { min, max }: { readonly min?: number; readonly max?: number },
   label: (value: number) => string,
 ): string | undefined {
-  if (min !== undefined && max !== undefined) return `${noun} ${label(min)}–${label(max)}`;
-  if (min !== undefined) return `${noun} ${label(min)} and up`;
-  if (max !== undefined) return `${noun} up to ${label(max)}`;
+  if (min !== undefined && max !== undefined) return `${label(min)}–${label(max)}`;
+  if (min !== undefined) return `${label(min)} and up`;
+  if (max !== undefined) return `up to ${label(max)}`;
   return undefined;
 }
 
-export function formatAges(range?: AgeRange): string | undefined {
-  return range && formatRange('Ages', range, String);
+function withNoun(noun: string, value: string | undefined): string | undefined {
+  return value && `${noun} ${value}`;
+}
+
+const gradeLabel = (grade: number): string => (grade === 0 ? 'K' : String(grade));
+
+export function agesValue(range?: AgeRange): string | undefined {
+  return range && rangeValue(range, String);
 }
 
 /** Grade 0 is kindergarten. */
+export function gradesValue(range?: GradeRange): string | undefined {
+  return range && rangeValue(range, gradeLabel);
+}
+
+export function formatAges(range?: AgeRange): string | undefined {
+  return withNoun('Ages', agesValue(range));
+}
+
 export function formatGrades(range?: GradeRange): string | undefined {
-  return range && formatRange('Grades', range, (grade) => (grade === 0 ? 'K' : String(grade)));
+  return withNoun('Grades', gradesValue(range));
 }
 
 export function weekTab(start: CalendarDate, end: CalendarDate): WeekTab {
@@ -102,24 +119,32 @@ function spokenDates(start: CalendarDate, end: CalendarDate): string {
   return `${from} to ${sameMonth ? dayOfMonth(end) : `${longMonth(end)} ${dayOfMonth(end)}`}`;
 }
 
-function weekdaysCovered(start: CalendarDate, end: CalendarDate): number {
-  let count = 0;
+/** Monday to Friday, in order: whether the session runs that day. */
+export function weekBar(start: CalendarDate, end: CalendarDate): readonly boolean[] {
+  const running = new Set<Weekday>();
   for (let day = start; compareDates(day, end) <= 0; day = addDays(day, 1)) {
-    if (!isWeekend(day)) count += 1;
+    running.add(weekdayOf(day));
   }
-  return count;
+  return SCHOOL_WEEK.map((weekday) => running.has(weekday));
 }
 
-/** `Covers 3 of 5 days, and ends at noon`, or undefined for a full week. */
-export function partialWeekCallout(
-  start: CalendarDate,
-  end: CalendarDate,
-  endTime?: WallClockTime,
-): string | undefined {
-  const covered = weekdaysCovered(start, end);
-  if (covered >= WEEKDAYS_IN_A_WEEK) return undefined;
-  const endsByNoon = endTime !== undefined && endTime <= NOON;
-  return `Covers ${String(covered)} of ${String(WEEKDAYS_IN_A_WEEK)} days${endsByNoon ? ', and ends at noon' : ''}`;
+/** Whether a session ends before the afternoon; one that states no end time does not. */
+export function endsEarly(endTime?: WallClockTime): boolean {
+  return endTime !== undefined && endTime < EARLY_END;
+}
+
+const TRAILING_PARENTHETICAL = /\s*\([^)]*\)\s*$/;
+
+function sameName(provider: string, location: string): boolean {
+  const bare = (name: string) => name.replace(TRAILING_PARENTHETICAL, '').trim().toLowerCase();
+  return bare(provider) === bare(location);
+}
+
+/** `Provider, City`, or `Provider at Location, City` when the location has its own name. */
+export function locationLine(provider: string, location: string, city: string): string {
+  return sameName(provider, location)
+    ? `${provider}, ${city}`
+    : `${provider} at ${location}, ${city}`;
 }
 
 /** The day a session was verified, as the card says it: `May 1, 2026`. */
