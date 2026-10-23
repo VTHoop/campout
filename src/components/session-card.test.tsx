@@ -201,8 +201,8 @@ describe('SessionCard', () => {
   describe('ends early', () => {
     it('is said under the hours, in words and with a decorative clock', () => {
       renderCard(BASEBALL);
-      const hours = screen.getByText('Hours').parentElement;
-      const early = within(hours as HTMLElement).getByText('Ends early');
+      const early = screen.getByText('Ends early');
+      expect(screen.getByText('Hours').parentElement).toContainElement(early);
       expect(early.parentElement?.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     });
 
