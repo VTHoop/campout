@@ -67,18 +67,19 @@ describe('SessionCard', () => {
   });
 
   describe('week tab', () => {
-    it('shows the week, month, dates and days', () => {
+    it('shows the month, dates and days, and no Week label', () => {
       renderCard(BASEBALL);
       const tab = screen.getByTestId('week-tab');
-      for (const text of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
+      for (const text of ['Aug', '3–5', 'Mon–Wed']) {
         expect(within(tab).getByText(text)).toBeInTheDocument();
       }
+      expect(within(tab).queryByText('Week 10')).toBeNull();
     });
 
     it('reads as one phrase', () => {
       renderCard(BASEBALL);
       expect(screen.getByText('Week 10, August 3 to 5, Monday to Wednesday')).toBeInTheDocument();
-      for (const piece of ['Week 10', 'Aug', '3–5', 'Mon–Wed']) {
+      for (const piece of ['Aug', '3–5', 'Mon–Wed']) {
         expect(screen.getByText(piece).closest('[aria-hidden="true"]')).not.toBeNull();
       }
     });
@@ -95,10 +96,10 @@ describe('SessionCard', () => {
     });
   });
 
-  describe('data row', () => {
-    it('shows the hours, ages, grades and price', () => {
+  describe('facts', () => {
+    it('shows the hours, ages and grades, each under its label, and the price', () => {
       renderCard({ ...BASEBALL, ageRange: { min: 5, max: 15 }, gradeRange: { min: 0, max: 5 } });
-      for (const text of ['9:00am – 12:00pm', 'Ages 5–15', 'Grades K–5', '$299']) {
+      for (const text of ['Hours', '9:00am – 12:00pm', 'Ages', '5–15', 'Grades', 'K–5', '$299']) {
         expect(screen.getByText(text)).toBeInTheDocument();
       }
     });
@@ -111,8 +112,8 @@ describe('SessionCard', () => {
 
     it('omits unstated ages and grades', () => {
       renderCard(UNSTATED, 2);
-      expect(screen.queryByText(/^Ages/)).toBeNull();
-      expect(screen.queryByText(/^Grades/)).toBeNull();
+      expect(screen.queryByText('Ages')).toBeNull();
+      expect(screen.queryByText('Grades')).toBeNull();
     });
 
     it('shows the price note verbatim', () => {
@@ -129,16 +130,9 @@ describe('SessionCard', () => {
     }
   });
 
-  describe('partial-week callout', () => {
-    it('says how many days a short session covers, and that it ends at noon', () => {
-      renderCard(BASEBALL);
-      expect(screen.getByText('Covers 3 of 5 days, and ends at noon')).toBeInTheDocument();
-    });
-
-    it('is absent for a full week', () => {
-      renderCard(UNSTATED, 2);
-      expect(screen.queryByText(/^Covers/)).toBeNull();
-    });
+  it('has no Covers N of 5 days panel, for a partial week or a full one', () => {
+    renderCard(BASEBALL);
+    expect(screen.queryByText(/^Covers/)).toBeNull();
   });
 
   describe('registration', () => {
@@ -193,11 +187,11 @@ describe('SessionCard', () => {
       expect(screen.getByText('Verified May 1, 2026')).toBeInTheDocument();
     });
 
-    it('sits below a hairline, as the last thing on the card', () => {
+    it('sits in the footer, below a hairline, as the last thing on the card', () => {
       const item = renderCard(BASEBALL);
-      const line = within(item).getByText('Verified May 1, 2026');
-      expect(line).toHaveClass('border-t', 'border-rule');
-      expect(item.lastElementChild?.lastElementChild).toBe(line);
+      const footer = within(item).getByText('Verified May 1, 2026').closest('footer');
+      expect(footer).toHaveClass('border-t', 'border-rule');
+      expect(item.lastElementChild?.lastElementChild).toBe(footer);
     });
 
     it('flags a draft with a pill beside the camp name, and never says it is verified', () => {
