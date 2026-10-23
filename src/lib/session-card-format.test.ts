@@ -159,7 +159,7 @@ describe('weekBar', () => {
   });
 
   it('fills only Friday for a Friday-only session', () => {
-    expect(weekBar('2026-06-11', '2026-06-11')).toEqual([false, false, false, false, true]);
+    expect(weekBar('2027-06-11', '2027-06-11')).toEqual([false, false, false, false, true]);
   });
 
   it('leaves Monday hollow for a Tuesday-to-Friday session', () => {
