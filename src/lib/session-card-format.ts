@@ -131,3 +131,24 @@ export function formatVerifiedOn(date: CalendarDate): string {
 export function formatAddress(address: LocationAddress): string {
   return `${address.street}, ${address.city}, ${address.state} ${address.postalCode}`;
 }
+
+// CAM-51 stubs: the behaviour arrives with the green commit.
+export function agesValue(_range?: AgeRange): string | undefined {
+  return undefined;
+}
+
+export function gradesValue(_range?: GradeRange): string | undefined {
+  return undefined;
+}
+
+export function weekBar(_start: CalendarDate, _end: CalendarDate): readonly boolean[] {
+  return [];
+}
+
+export function endsEarly(_endTime?: WallClockTime): boolean {
+  return false;
+}
+
+export function locationLine(_provider: string, _location: string, _city: string): string {
+  return '';
+}
